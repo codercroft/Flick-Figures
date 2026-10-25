@@ -55,6 +55,7 @@ var _can_restart := false
 @onready var figures_root := $Figures
 @onready var aim_line := $AimLine
 @onready var ui := $UI
+@onready var game_feel := $GameFeel
 
 
 func _ready() -> void:
@@ -296,6 +297,9 @@ func _spawn_enemies() -> void:
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
 	figure.setup(data, team, figure_damping, stop_speed)
+	figure.flicked.connect(game_feel.on_flicked)
+	figure.impacted.connect(game_feel.on_impact)
+	figure.fell_off.connect(game_feel.on_fell_off)
 	figure.on_deck = team == Figure.Team.PLAYER
 	figure.position = pos
 	figures_root.add_child(figure)

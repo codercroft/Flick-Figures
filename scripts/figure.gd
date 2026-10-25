@@ -3,6 +3,11 @@ extends RigidBody2D
 ## One toy figure (player or enemy): a physics circle on a frictionless tabletop.
 ## What makes it special comes from its FigureData (stats) and ability (events).
 
+signal flicked(figure: Figure, impulse: Vector2)
+## Two figures collided. Only one of the two figures emits this per collision.
+signal impacted(figure: Figure, other: Figure, speed: float, point: Vector2)
+signal fell_off(figure: Figure)
+
 enum Team { PLAYER, ENEMY }
 
 # Collision layers (named in Project Settings > Layer Names > 2D Physics).
@@ -31,8 +36,19 @@ var on_deck := false:
 var knocked_off := false
 
 var _last_velocity := Vector2.ZERO
+var _prev_velocity := Vector2.ZERO  # the step before _last_velocity (to see speed before an impact)
 var _skip_knockback_frames := 0  # ignore our own flicks/blasts when measuring hits
 var _was_moving := false
+var _squash_amount := 0.0:  # + stretches along _squash_angle, - squashes
+	set(value):
+		_squash_amount = value
+		queue_redraw()
+var _squash_angle := 0.0
+var _squash_tween: Tween
+var _pop := 0.0:  # extra size while popping off the table
+	set(value):
+		_pop = value
+		queue_redraw()
 var _blast_radius := 0.0
 var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 	set(value):
@@ -97,12 +113,17 @@ func _update_collision() -> void:
 func _draw() -> void:
 	var greyed := team == Team.PLAYER and not on_deck
 	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
+	# The body squashes/stretches along _squash_angle; the details on top only grow.
+	var stretch := maxf(1.0 + _squash_amount, 0.2)
+	draw_set_transform(Vector2.ZERO, _squash_angle, Vector2(stretch, 1.0 / stretch) * (1.0 + _pop))
 	draw_circle(Vector2.ZERO, radius, fill)
 	draw_arc(Vector2.ZERO, radius - 3.0, 0.0, TAU, 48, fill.darkened(0.4), 6.0, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * (1.0 + _pop))
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
 	# First letter of the name, so you can tell figures apart.
 	draw_string(ThemeDB.fallback_font, Vector2(-radius, radius * 0.35), data.display_name.left(1),
 			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, int(radius), fill.darkened(0.5))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _blast_progress < 1.0:
 		var ring_radius := lerpf(radius, _blast_radius, _blast_progress)
 		draw_arc(Vector2.ZERO, ring_radius, 0.0, TAU, 64, Color(1, 0.8, 0.3, 1.0 - _blast_progress), 10.0, true)
@@ -129,6 +150,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		_was_moving = true
 
 	state.linear_velocity = velocity
+	_prev_velocity = _last_velocity
 	_last_velocity = velocity
 
 
@@ -136,6 +158,14 @@ func _on_body_entered(body: Node) -> void:
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
+		# Both figures get this signal; only the one with the lower id reports the impact.
+		var other: Figure = body
+		if get_instance_id() < other.get_instance_id():
+			# Velocities change in the same step as the collision, so look at the step before too.
+			var speed := maxf((_last_velocity - other._last_velocity).length(),
+					(_prev_velocity - other._prev_velocity).length())
+			var point := global_position + (other.global_position - global_position).normalized() * radius
+			emit_signal.call_deferred(&"impacted", self, other, speed, point)
 
 
 func is_resting() -> bool:
@@ -147,6 +177,7 @@ func launch(impulse: Vector2) -> void:
 	_skip_knockback_frames = 2
 	apply_central_impulse(impulse)
 	ability.on_flicked(self, impulse)
+	flicked.emit(self, impulse)
 
 
 ## Pushed by a hit-like effect (an explosion). Respects knockback_taken_multiplier.
@@ -178,8 +209,25 @@ func return_to_deck() -> void:
 	on_deck = true
 
 
+## Stretches (amount > 0) or squashes (amount < 0) the body along `direction`, then wobbles back.
+func play_squash(direction: Vector2, amount: float, duration: float) -> void:
+	_squash_angle = direction.angle()
+	if _squash_tween:
+		_squash_tween.kill()
+	_squash_tween = create_tween()
+	_squash_tween.tween_property(self, "_squash_amount", 0.0, duration).from(amount) \
+			.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+## Swells the figure by `swell` (0.5 = 50% bigger). Used as it gets knocked off.
+func play_pop(swell: float, duration: float) -> void:
+	create_tween().tween_property(self, "_pop", swell, duration) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
 func knock_off(fade_time: float) -> void:
 	knocked_off = true
+	fell_off.emit(self)
 	collision_layer = 0
 	collision_mask = 0
 	var tween := create_tween()

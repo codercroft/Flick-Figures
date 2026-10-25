@@ -41,6 +41,12 @@ Mobile game built in Godot 4 with GDScript.
 - `Figure.explode(radius, force)` pushes nearby figures (linear falloff) and fires `on_exploded` on them. `take_knockback()` and the collision handling in `_integrate_forces` apply `knockback_taken_multiplier`.
 - Bombo explodes on its first hit after each flick (resets on flick), and survives.
 
+## Game feel
+
+- `scripts/game_feel.gd` (GameFeel node, with a Camera2D child used for screen shake) holds all the "juice": squash/stretch, impact particles, screen shake, knock-off pop, and haptics (`Input.vibrate_handheld`, mobile only). Each effect has an `@export` bool switch on that node; all other numbers are exports too.
+- Figures only emit signals (`flicked`, `impacted`, `fell_off`); `main.gd` connects them to GameFeel when spawning. Impact speed is the relative speed just before the collision. Squash/pop are drawn in `Figure._draw` (the RigidBody is never scaled).
+- Android export preset needs the Vibrate permission ticked (`export_presets.cfg` is git-ignored, so set it locally).
+
 ## Project settings
 
 - Viewport 1080x1920, portrait, stretch mode `canvas_items`, aspect `keep_width`.
