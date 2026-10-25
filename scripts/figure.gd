@@ -25,7 +25,8 @@ var team := Team.PLAYER
 var data: FigureData
 var ability: FigureAbility
 var radius := 60.0
-var stop_speed := 15.0  # below this speed (px/s) the figure snaps to a stop
+var stop_speed := 15.0  # below this speed (px/s) the figure counts as slow
+var settle_frames := 5  # ...and after this many slow frames in a row it stops dead
 var deck_position := Vector2.ZERO  # where a player figure goes when reloaded
 
 # Player figures: true while waiting on deck (can be flicked), false once flicked (greyed out).
@@ -37,10 +38,17 @@ var on_deck := false:
 			queue_redraw()
 var knocked_off := false
 
+# Player figures: highlighted ring while chosen for aiming.
+var selected := false:
+	set(value):
+		selected = value
+		queue_redraw()
+
 var _last_velocity := Vector2.ZERO
 var _prev_velocity := Vector2.ZERO  # the step before _last_velocity (to see speed before an impact)
 var _skip_knockback_frames := 0  # ignore our own flicks/blasts when measuring hits
 var _was_moving := false
+var _slow_frames := 0  # consecutive physics frames spent below stop_speed
 var _squash_amount := 0.0:  # + stretches along _squash_angle, - squashes
 	set(value):
 		_squash_amount = value
@@ -59,13 +67,15 @@ var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 
 
 ## Call before adding the figure to the scene.
-func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float) -> void:
+func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float,
+		frames_to_settle := 5) -> void:
 	data = figure_data
 	team = figure_team
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
 	stop_speed = speed_to_stop
+	settle_frames = frames_to_settle
 	# Each figure gets its own copy so abilities can keep per-figure state.
 	ability = data.ability.duplicate() as FigureAbility if data.ability else FigureAbility.new()
 
@@ -122,6 +132,8 @@ func _draw() -> void:
 	# The ring shows which side the figure is on (any figure can be on either side).
 	draw_arc(Vector2.ZERO, radius - 4.0, 0.0, TAU, 48, ENEMY_RING if team == Team.ENEMY else PLAYER_RING, 8.0, true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * (1.0 + _pop))
+	if selected:
+		draw_arc(Vector2.ZERO, radius + 10.0, 0.0, TAU, 48, Color(1.0, 0.9, 0.3), 8.0, true)
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	var label := data.label if data.label != "" else data.display_name.left(1)
@@ -155,13 +167,17 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		if not is_equal_approx(multiplier, 1.0) and change.length() > KNOCKBACK_MIN_CHANGE:
 			velocity = _last_velocity + change * multiplier
 
-	# Damping alone never quite reaches zero, so stop crawling figures.
+	# Damping alone never quite reaches zero. Once a figure has stayed below stop_speed for
+	# settle_frames frames in a row, it stops dead.
 	if velocity.length() < stop_speed:
-		velocity = Vector2.ZERO
-		if _was_moving:
-			_was_moving = false
-			ability.on_stopped.call_deferred(self)
+		_slow_frames = mini(_slow_frames + 1, settle_frames)
+		if _slow_frames >= settle_frames:
+			velocity = Vector2.ZERO
+			if _was_moving:
+				_was_moving = false
+				ability.on_stopped.call_deferred(self)
 	else:
+		_slow_frames = 0
 		_was_moving = true
 
 	state.linear_velocity = velocity
@@ -203,13 +219,32 @@ func _on_body_entered(body: Node) -> void:
 			emit_signal.call_deferred(&"impacted", self, other, speed, point)
 
 
-func is_resting() -> bool:
+## Below the settle speed right now (not necessarily stopped for good yet).
+func is_slow() -> bool:
 	return linear_velocity.length() < stop_speed
+
+
+## Settled: has been slow for several frames in a row (and is still slow).
+func is_resting() -> bool:
+	return _slow_frames >= settle_frames and is_slow()
+
+
+## Safety net: stop right now.
+func force_settle() -> void:
+	linear_velocity = Vector2.ZERO
+	_slow_frames = settle_frames
+	_was_moving = false
+
+
+## For the "still moving" debug readout.
+func describe_motion() -> String:
+	return "%s %.0fpx/s" % [data.display_name, linear_velocity.length()]
 
 
 func launch(impulse: Vector2) -> void:
 	on_deck = false
 	_skip_knockback_frames = 2
+	_slow_frames = 0
 	apply_central_impulse(impulse)
 	ability.on_flicked(self, impulse)
 	flicked.emit(self, impulse)

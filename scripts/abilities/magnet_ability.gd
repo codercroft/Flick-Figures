@@ -12,7 +12,8 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 		return
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other == figure or other.knocked_off or other.is_resting():
+		# Never push figures that are already below the settle speed, or they never come to rest.
+		if other == figure or other.knocked_off or other.is_slow():
 			continue
 		var offset := figure.global_position - other.global_position
 		var distance := offset.length()

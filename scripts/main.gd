@@ -11,8 +11,8 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export_group("Flick")
 ## Impulse of a full-strength flick. Launch speed = force * figure's power multiplier / mass.
 @export var max_flick_force := 2400.0
-## Drag this far (px) for a full-strength flick.
-@export var max_pull_distance := 300.0
+## Drag this far, as a fraction of the screen width, for a full-strength flick.
+@export_range(0.1, 0.6) var max_pull_fraction := 0.3
 ## Drags shorter than this (px) are cancelled instead of flicking.
 @export var min_pull_distance := 40.0
 ## Extra px around a figure that still counts as touching it.
@@ -23,8 +23,10 @@ const MAP_SCENE := "res://scenes/map.tscn"
 ## Base damping for all figures; each FigureData multiplies it. Higher = stops sooner.
 ## Slide distance ~ speed / damping.
 @export var figure_damping := 1.5
-## Figures slower than this (px/s) stop dead.
+## Figures slower than this (px/s) count as slow...
 @export var stop_speed := 15.0
+## ...and stop dead after being slow for this many physics frames in a row.
+@export var settle_frames := 5
 
 @export_group("Enemy")
 ## Pause (seconds) before each enemy flicks.
@@ -33,6 +35,13 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export_group("Turn")
 ## Wait this long (seconds) after a flick before checking that everything has stopped.
 @export var settle_delay := 0.3
+## Safety net: if figures still move this long (seconds) after a flick, stop them all.
+@export var max_settle_time := 6.0
+## After this long (seconds) of waiting, show (and print) which figures are still moving.
+@export var settle_debug_after := 5.0
+@export var settle_debug := true
+## Last resort: if a whole turn takes this long (seconds), hand control back to the player.
+@export var turn_timeout := 90.0
 @export var knock_off_fade_time := 0.4
 ## Ignore taps this long (seconds) after the run-over screen appears.
 @export var restart_tap_delay := 0.5
@@ -43,6 +52,9 @@ var _state := State.PLAYER_TURN
 var _players: Array[Figure] = []
 var _enemies: Array[Figure] = []
 var _aim_figure: Figure
+var _selected: Figure  # the figure chosen for aiming (highlighted)
+var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
+var _busy_time := 0.0  # seconds spent settling or in the enemy turn
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _needs_reload := false  # player has nothing on deck: tap a board figure to reload it
@@ -68,10 +80,25 @@ func _physics_process(_delta: float) -> void:
 	_knock_off_fallen_figures()
 
 
+## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
+func _process(delta: float) -> void:
+	if _state != State.SETTLING and _state != State.ENEMY_TURN:
+		return
+	_busy_time += delta
+	if _busy_time > turn_timeout:
+		push_error("[turn] stuck for %.0fs in state %d; handing control back to the player" % [_busy_time, _state])
+		_turn_serial += 1
+		_force_settle()
+		_start_player_turn()
+
+
 # --- Input -------------------------------------------------------------------
 # Written against touch events; "emulate touch from mouse" makes the mouse work too.
 
 func _input(event: InputEvent) -> void:
+	# Only the player's turn (and the run-over screen) takes touches. Everything else is ignored.
+	if _state != State.PLAYER_TURN and _state != State.AIMING and _state != State.GAME_OVER:
+		return
 	if event is InputEventScreenTouch:
 		var pos := _to_world(event.position)
 		if event.pressed:
@@ -106,6 +133,12 @@ func _on_press(index: int, pos: Vector2) -> void:
 
 func _start_player_turn() -> void:
 	_state = State.PLAYER_TURN
+	_busy_time = 0.0
+	_touch_index = -1
+	_aim_figure = null
+	aim_line.clear()
+	_deselect()
+	ui.show_debug("")
 	_needs_reload = not _has_figure_on_deck()
 	if _needs_reload:
 		ui.show_your_turn("Your turn: tap a figure to reload")
@@ -122,15 +155,32 @@ func _try_reload(pos: Vector2) -> void:
 	ui.show_your_turn()
 
 
+## Press on a figure: it is selected and aimed in one motion. Press anywhere else: aims the
+## already selected figure. The drag is measured from where this touch started.
 func _begin_aim(index: int, pos: Vector2) -> void:
 	var figure := _player_figure_at(pos, true)
-	if figure == null:
-		return
+	if figure != null:
+		_select(figure)
+	elif _selected == null:
+		return  # nothing selected yet: tap a figure first
 	_state = State.AIMING
 	_touch_index = index
-	_aim_figure = figure
+	_aim_figure = _selected
 	_touch_start = pos
 	_update_aim(pos)
+
+
+func _select(figure: Figure) -> void:
+	_deselect()
+	_selected = figure
+	_selected.selected = true
+	ui.show_your_turn("Drag anywhere to flick")
+
+
+func _deselect() -> void:
+	if is_instance_valid(_selected):
+		_selected.selected = false
+	_selected = null
 
 
 func _update_aim(pos: Vector2) -> void:
@@ -157,27 +207,31 @@ func _release_aim(pos: Vector2) -> void:
 	aim_line.clear()
 	_aim_figure.launch(impulse)
 	_aim_figure = null
+	_deselect()
 	_touch_index = -1
 	_state = State.SETTLING
 	_finish_player_turn()
 
 
+## Gives up this drag. The figure stays selected, so you can drag again.
 func _cancel_aim() -> void:
 	aim_line.clear()
 	_aim_figure = null
 	_touch_index = -1
-	_state = State.PLAYER_TURN
+	if _state == State.AIMING:
+		_state = State.PLAYER_TURN
 
 
 ## The flick is opposite the drag, in any direction: drag down = flick up, drag up = flick down.
 ## Zero means "no flick".
 func _flick_impulse(pos: Vector2) -> Vector2:
 	var drag := pos - _touch_start
-	var pull := minf(drag.length(), max_pull_distance)
+	var max_pull := get_viewport_rect().size.x * max_pull_fraction
+	var pull := minf(drag.length(), max_pull)
 	if pull < min_pull_distance:
 		return Vector2.ZERO
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier
-	return -drag.normalized() * (pull / max_pull_distance) * full_force
+	return -drag.normalized() * (pull / max_pull) * full_force
 
 
 func _player_figure_at(pos: Vector2, on_deck: bool) -> Figure:
@@ -201,35 +255,58 @@ func _has_figure_on_deck() -> bool:
 # --- Turn loop ---------------------------------------------------------------
 
 func _finish_player_turn() -> void:
+	var serial := _turn_serial
 	await _wait_until_settled()
+	if serial != _turn_serial:
+		return
 	if _check_game_over():
 		return
 	await _run_enemy_turn()
 
 
+## A figure can be knocked off and freed while we wait, so always check before using one.
+func _is_alive(figure) -> bool:  # untyped on purpose: a freed Figure can't be passed as a Figure
+	return is_instance_valid(figure) and not figure.knocked_off
+
+
 func _run_enemy_turn() -> void:
+	var serial := _turn_serial
 	_state = State.ENEMY_TURN
 	ui.show_enemy_turn()
 	ai.clear_debug()
 	for enemy in _enemies.duplicate():
-		if enemy.knocked_off or not enemy.data.can_flick:
+		if not _is_alive(enemy) or not enemy.data.can_flick:
 			continue
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
+		if serial != _turn_serial:
+			return
+		if not _is_alive(enemy):
+			continue
 		var impulse := ai.choose_shot(enemy, _players, board.get_table_rect(), max_flick_force)
 		await get_tree().create_timer(enemy_think_time).timeout
-		if impulse == Vector2.ZERO:
+		if serial != _turn_serial:
+			return
+		if impulse == Vector2.ZERO or not _is_alive(enemy):
 			continue  # nothing good and nothing safe: the enemy passes
 		enemy.launch(impulse)
 		await _wait_until_settled()
+		if serial != _turn_serial:
+			return
 		if _check_game_over():
 			return
 	# Creepers (like Big Bad) slide toward your deck at the end of every enemy turn.
 	for enemy in _enemies.duplicate():
-		if enemy.knocked_off or enemy.data.creep_distance <= 0.0:
+		if not _is_alive(enemy) or enemy.data.creep_distance <= 0.0:
 			continue
 		await get_tree().create_timer(enemy_think_time).timeout
+		if serial != _turn_serial:
+			return
+		if not _is_alive(enemy):
+			continue
 		_creep(enemy)
 		await _wait_until_settled()
+		if serial != _turn_serial:
+			return
 		if _check_game_over():
 			return
 	_start_player_turn()
@@ -258,10 +335,41 @@ func _deck_line_breached() -> bool:
 	return false
 
 
+## Waits until every figure has stopped. Gives up after max_settle_time and stops them all.
 func _wait_until_settled() -> void:
 	await get_tree().create_timer(settle_delay).timeout
+	var waited := settle_delay
+	var next_print := settle_debug_after
 	while not _all_figures_resting():
+		if waited >= max_settle_time:
+			var report := _moving_report()
+			push_warning("[settle] forced after %.1fs, still moving: %s" % [waited, report])
+			print("[settle] forced after %.1fs, still moving: %s" % [waited, report])
+			_force_settle()
+			break
+		if settle_debug and waited >= settle_debug_after:
+			var report := _moving_report()
+			ui.show_debug("Waiting %.1fs for: %s" % [waited, report])
+			if waited >= next_print:
+				print("[settle] waiting %.1fs, still moving: %s" % [waited, report])
+				next_print += 1.0
 		await get_tree().physics_frame
+		waited += get_physics_process_delta_time()
+	ui.show_debug("")
+
+
+func _force_settle() -> void:
+	for figure in _all_figures():
+		figure.force_settle()
+
+
+## "Magnet 12px/s, Roller 40px/s" for the figures that have not settled.
+func _moving_report() -> String:
+	var parts: PackedStringArray = []
+	for figure in _all_figures():
+		if not figure.is_resting():
+			parts.append(figure.describe_motion())
+	return ", ".join(parts)
 
 
 func _all_figures_resting() -> bool:
@@ -318,7 +426,7 @@ func _spawn_enemies() -> void:
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	figure.setup(data, team, figure_damping, stop_speed)
+	figure.setup(data, team, figure_damping, stop_speed, settle_frames)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)

@@ -6,6 +6,7 @@ extends CanvasLayer
 
 @onready var turn_label: Label = $TurnLabel
 @onready var progress_label: Label = $ProgressLabel
+@onready var debug_label: Label = $DebugLabel
 @onready var result_panel: Control = $ResultPanel
 @onready var result_label: Label = $ResultPanel/ResultLabel
 
@@ -18,6 +19,12 @@ func show_your_turn(text := "Your turn") -> void:
 func show_enemy_turn() -> void:
 	turn_label.text = "Enemy turn"
 	turn_label.add_theme_color_override("font_color", enemy_turn_color)
+
+
+## Small orange readout (empty text hides it). Used to show what the turn is waiting for.
+func show_debug(text: String) -> void:
+	debug_label.text = text
+	debug_label.visible = text != ""
 
 
 func show_progress(text: String) -> void:
