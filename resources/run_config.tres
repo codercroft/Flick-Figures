@@ -23,6 +23,7 @@ registry = ExtResource("2")
 starting_figure = ExtResource("3")
 deck_size = 4
 grunts_per_combat = Array[int]([3, 2, 1, 0])
+enemy_flicks_per_combat = Array[int]([1, 1, 1, 1])
 enemies_per_combat = 3
 arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20")])
 starting_money = 0

@@ -10,3 +10,6 @@ extends Resource
 @export var map_color := Color(0.8, 0.2, 0.2)
 ## The enemy figures for the boss fight, left to right.
 @export var enemies: Array[FigureData] = []
+## How many flicks the enemy side takes per turn in this fight (each one is the best shot of
+## any enemy figure; the same figure can't flick twice in a row).
+@export var enemy_flicks_per_turn := 1

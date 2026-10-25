@@ -10,6 +10,8 @@ extends Resource
 ## One entry per combat before the boss: how many of that combat's enemies are grunts.
 ## The rest are random non-grunts. (Default: 3 grunts, then 2+1, 1+2, and 0+3.)
 @export var grunts_per_combat: Array[int] = [3, 2, 1, 0]
+## One entry per combat before the boss: how many flicks the enemy side takes each turn.
+@export var enemy_flicks_per_combat: Array[int] = [1, 1, 1, 1]
 @export var enemies_per_combat := 3
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []

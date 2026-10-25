@@ -10,6 +10,8 @@ var combat_index := 0
 var boss: BossData
 ## The enemies for the current combat.
 var enemies: Array[FigureData] = []
+## How many flicks the enemy side takes each turn in the current combat.
+var enemy_flicks_per_turn := 1
 ## The arena layout for the current combat.
 var arena: ArenaData
 var money := 0
@@ -125,11 +127,15 @@ func _build_lineup() -> void:
 	var registry := config.registry
 	if is_boss_combat():
 		enemies.append_array(boss.enemies)
+		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
 	else:
 		var grunt_count := config.grunts_per_combat[combat_index]
 		for i in grunt_count:
 			enemies.append(registry.random_grunt())
 		enemies.append_array(registry.random_non_grunts(config.enemies_per_combat - grunt_count))
+		enemy_flicks_per_turn = 1
+		if combat_index < config.enemy_flicks_per_combat.size():
+			enemy_flicks_per_turn = config.enemy_flicks_per_combat[combat_index]
 	_pick_arena()
 
 

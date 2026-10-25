@@ -31,6 +31,12 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export_group("Enemy")
 ## Pause (seconds) before each enemy flicks.
 @export var enemy_think_time := 0.6
+## The same enemy can't flick twice in a row (unless it is the only one that can flick).
+@export var no_repeat_enemy := true
+## Splitting (Slime) adds this many flicks to the enemy side's flicks per turn...
+@export var flicks_per_split := 1
+## ...but never above this many flicks per turn.
+@export var max_enemy_flicks := 4
 
 @export_group("Turn")
 ## Wait this long (seconds) after a flick before checking that everything has stopped.
@@ -51,6 +57,8 @@ const MAP_SCENE := "res://scenes/map.tscn"
 var _state := State.PLAYER_TURN
 var _players: Array[Figure] = []
 var _enemies: Array[Figure] = []
+var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager, grows with splits)
+var _last_flicker: Figure  # the enemy that flicked last (for no_repeat_enemy)
 var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
@@ -76,6 +84,7 @@ func _ready() -> void:
 		ui.show_arena_name(RunManager.arena.display_name)
 	_spawn_players()
 	_spawn_enemies()
+	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
 
@@ -278,21 +287,22 @@ func _run_enemy_turn() -> void:
 	_state = State.ENEMY_TURN
 	ui.show_enemy_turn()
 	ai.clear_debug()
-	for enemy in _enemies.duplicate():
-		if not _is_alive(enemy) or not enemy.data.can_flick:
-			continue
+	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
+	# _enemy_flicks is read every round because a split can raise it mid-turn.
+	var flicks_taken := 0
+	while flicks_taken < _enemy_flicks:
+		flicks_taken += 1
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		if serial != _turn_serial:
 			return
-		if not _is_alive(enemy):
-			continue
-		var impulse := ai.choose_shot(enemy, _players, board.get_table_rect(), max_flick_force)
+		var choice := ai.choose_flick(_flick_candidates(), _players, board.get_table_rect(), max_flick_force)
 		await get_tree().create_timer(enemy_think_time).timeout
 		if serial != _turn_serial:
 			return
-		if impulse == Vector2.ZERO or not _is_alive(enemy):
-			continue  # nothing good and nothing safe: the enemy passes
-		enemy.launch(impulse)
+		if choice.is_empty() or not _is_alive(choice.enemy):
+			break  # nothing good and nothing safe: the enemy side passes
+		_last_flicker = choice.enemy
+		choice.enemy.launch(choice.impulse)
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
@@ -314,6 +324,18 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 	_start_player_turn()
+
+
+## The enemies allowed to flick right now: alive, able to flick, and not the one that flicked
+## last (unless it is the only one).
+func _flick_candidates() -> Array:
+	var able: Array = []
+	for enemy in _enemies:
+		if _is_alive(enemy) and enemy.data.can_flick:
+			able.append(enemy)
+	if no_repeat_enemy and able.size() > 1 and _is_alive(_last_flicker):
+		able.erase(_last_flicker)
+	return able
 
 
 ## Slides the figure straight toward the deck by its creep_distance (same maths as the aim line:
@@ -462,6 +484,8 @@ func _on_split_requested(parent: Figure, pieces: Array) -> void:
 			_enemies.append(spawned)
 		else:
 			_players.append(spawned)
+	if parent.team == Figure.Team.ENEMY:
+		_enemy_flicks = mini(_enemy_flicks + flicks_per_split, maxi(max_enemy_flicks, _enemy_flicks))
 	_players.erase(parent)
 	_enemies.erase(parent)
 	parent.knock_off(knock_off_fade_time)

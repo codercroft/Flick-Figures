@@ -69,9 +69,38 @@ func clear_debug() -> void:
 	queue_redraw()
 
 
-## Returns the impulse for `enemy` to flick, or Vector2.ZERO to skip its turn.
+## Looks at every candidate enemy figure and returns the single best shot overall as
+## {"enemy": Figure, "impulse": Vector2}, or {} if nobody has anything worth doing (pass).
+## Real attacks beat repositioning, which beats passing; within a kind the higher score wins.
 ## Call from a physics-safe moment (it uses the physics space for shape casts).
-func choose_shot(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Vector2:
+func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
+	var best := {}
+	var best_enemy: Figure = null
+	for enemy in candidates:
+		var shot := _best_shot_for(enemy, players, table, max_force)
+		if shot.kind == "pass":
+			continue
+		if best.is_empty() or _shot_rank(shot) > _shot_rank(best):
+			best = shot
+			best_enemy = enemy
+	if best.is_empty():
+		return {}
+	# Small random aim error: worse accuracy = bigger error.
+	var error := _aim_error(best_enemy)
+	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
+	_record_debug(best_enemy, best, best_enemy.global_position + direction * best.distance)
+	return {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
+
+
+## Attacks (and ally shots) always outrank repositioning; the score breaks ties inside a kind.
+func _shot_rank(shot: Dictionary) -> float:
+	var tier := 0.0 if shot.kind == "reposition" else 1.0
+	return tier * 1000000.0 + shot.score
+
+
+## The best shot one enemy has: an attack if one scores above min_attack_score, otherwise a
+## small safe reposition, otherwise a pass.
+func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
 	var max_speed := max_force * enemy.data.flick_power_multiplier / enemy.mass
@@ -95,16 +124,7 @@ func choose_shot(enemy: Figure, players: Array[Figure], table: Rect2, max_force:
 			best = move
 		elif best.is_empty() or best.score <= 0.0:
 			best = {"kind": "pass", "score": 0.0}
-
-	if best.kind == "pass":
-		_record_debug(enemy, best, enemy.global_position)
-		return Vector2.ZERO
-
-	# Small random aim error: worse accuracy = bigger error.
-	var error := _aim_error(enemy)
-	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
-	_record_debug(enemy, best, enemy.global_position + direction * best.distance)
-	return direction * best.speed * enemy.mass
+	return best
 
 
 # --- Attacks -----------------------------------------------------------------
