@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=43 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=59 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -42,6 +42,22 @@
 [ext_resource type="Resource" path="res://resources/equipment/jet_pack.tres" id="70"]
 [ext_resource type="Resource" path="res://resources/equipment/wings.tres" id="71"]
 [ext_resource type="Resource" path="res://resources/equipment/lucky_charm.tres" id="72"]
+[ext_resource type="Script" path="res://scripts/finish_data.gd" id="80"]
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="81"]
+[ext_resource type="Resource" path="res://resources/finishes/glitter.tres" id="90"]
+[ext_resource type="Resource" path="res://resources/finishes/metallic.tres" id="91"]
+[ext_resource type="Resource" path="res://resources/finishes/glow.tres" id="92"]
+[ext_resource type="Resource" path="res://resources/finishes/translucent.tres" id="93"]
+[ext_resource type="Resource" path="res://resources/finishes/rubber.tres" id="94"]
+[ext_resource type="Resource" path="res://resources/upgrades/bombo_upgrade.tres" id="100"]
+[ext_resource type="Resource" path="res://resources/upgrades/powerhouse_upgrade.tres" id="101"]
+[ext_resource type="Resource" path="res://resources/upgrades/duwall_upgrade.tres" id="102"]
+[ext_resource type="Resource" path="res://resources/upgrades/magnet_upgrade.tres" id="103"]
+[ext_resource type="Resource" path="res://resources/upgrades/sneaky_bomber_upgrade.tres" id="104"]
+[ext_resource type="Resource" path="res://resources/upgrades/speedo_upgrade.tres" id="105"]
+[ext_resource type="Resource" path="res://resources/upgrades/ghost_upgrade.tres" id="106"]
+[ext_resource type="Resource" path="res://resources/upgrades/splitter_upgrade.tres" id="107"]
+[ext_resource type="Resource" path="res://resources/upgrades/cha_ching_upgrade.tres" id="108"]
 
 [resource]
 script = ExtResource("1")
@@ -64,3 +80,6 @@ power_pool = Array[ExtResource("40")]([ExtResource("41"), ExtResource("42"), Ext
 start_with_equipment = true
 starting_equipment_count = 2
 equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72")])
+show_upgrade_screen = true
+finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), ExtResource("92"), ExtResource("93"), ExtResource("94")])
+upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108")])

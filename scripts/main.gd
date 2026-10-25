@@ -569,7 +569,8 @@ func _spawn_players() -> void:
 	var slot_width := deck.size.x / RunManager.deck.size()
 	for i in RunManager.deck.size():
 		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
-		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos, RunManager.deck_equipment[i])
+		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos, RunManager.deck_equipment[i],
+				RunManager.deck_finish[i], RunManager.deck_upgrade[i])
 		figure.deck_position = pos
 		_players.append(figure)
 
@@ -586,9 +587,10 @@ func _spawn_enemies() -> void:
 		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
 
 
-func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null) -> Figure:
+func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
+		finish: FinishData = null, upgrade: UpgradeData = null) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	figure.setup(data, team, figure_damping, stop_speed, settle_frames, item)
+	figure.setup(data, team, figure_damping, stop_speed, settle_frames, item, finish, upgrade)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
@@ -698,11 +700,11 @@ func _take_snapshot() -> void:
 	var list: Array[Dictionary] = []
 	for figure in get_all_figures():
 		list.append({
-			"data": figure.data, "team": figure.team, "position": figure.global_position,
+			"data": figure.base_data, "team": figure.team, "position": figure.global_position,
 			"on_deck": figure.on_deck, "flickable": figure.flickable, "turn_flicks": figure.turn_flicks,
 			"deck_position": figure.deck_position, "radius": figure.radius, "mass": figure.mass,
 			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
-			"equipment": figure.equipment,
+			"equipment": figure.equipment, "finish": figure.finish, "upgrade": figure.upgrade,
 		})
 	_snapshot = {"figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
 
@@ -726,7 +728,7 @@ func rewind() -> bool:
 	_players.clear()
 	_enemies.clear()
 	for entry in _snapshot.figures:
-		var figure := _spawn_figure(entry.team, entry.data, entry.position, entry.equipment)
+		var figure := _spawn_figure(entry.team, entry.data, entry.position, entry.equipment, entry.finish, entry.upgrade)
 		figure.set_size(entry.radius, entry.mass)
 		figure.shrunk = entry.shrunk
 		figure.deck_position = entry.deck_position

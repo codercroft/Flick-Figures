@@ -34,7 +34,7 @@ func on_impact(figure: Figure, _other: Figure, speed: float, point: Vector2) -> 
 		var side := -1.0 + 2.0 * i / maxi(piece_count - 1, 1)  # -1 ... 1
 		pieces.append({
 			"data": piece,
-			"position": figure.global_position + away.orthogonal() * side * piece.radius * 1.05,
+			"position": figure.global_position + away.orthogonal() * (i - (piece_count - 1) / 2.0) * piece.radius * 2.2,
 			"velocity": away.rotated(deg_to_rad(burst_spread_degrees) * side) * burst_speed + figure.linear_velocity * inherit_velocity,
 		})
 	figure.split_into(pieces)

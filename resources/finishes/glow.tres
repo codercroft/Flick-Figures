@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FinishData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/finish_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Glow-in-the-dark"
+description = "Ability effects 50% stronger (radius, pull, bounce)."
+look = 2
+color = Color(0.55, 1.0, 0.45, 1)
+ability_strength = 1.5

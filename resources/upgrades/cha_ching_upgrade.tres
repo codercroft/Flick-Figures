@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/figures/cha_ching.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+figure = ExtResource("2")
+display_name = "Big Spender"
+description = "Pays +$3 instead of +$2."
+data_overrides = {"income_bonus": 3}

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="FinishData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/finish_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Metallic"
+description = "+50% mass and takes 25% less knockback."
+look = 1
+color = Color(0.8, 0.85, 0.95, 1)
+mass_multiplier = 1.5
+knockback_taken_multiplier = 0.75

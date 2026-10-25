@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FinishData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/finish_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/finishes/translucent_effect.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Translucent"
+description = "Ignores the first ally it touches each flick."
+look = 3
+color = Color(0.7, 0.9, 1.0, 1)
+effect = SubResource("Resource_1")

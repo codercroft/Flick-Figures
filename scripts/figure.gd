@@ -24,10 +24,17 @@ const ENEMY_RING := Color(0.95, 0.15, 0.15)
 ## Velocity changes smaller than this (px/s) are just damping, not a hit.
 const KNOCKBACK_MIN_CHANGE := 60.0
 const BLAST_RING_TIME := 0.35
+## Ability numbers that the Glow-in-the-dark finish makes stronger (radius, pull, bounce).
+const STRENGTH_PROPERTIES := ["explosion_radius", "pull_radius", "pull_acceleration", "bounce_boost", "bump_ratio", "nudge_speed"]
 
 var team := Team.PLAYER
-var data: FigureData
+var data: FigureData  # may be a modified copy of base_data (upgrades and finishes change stats)
+var base_data: FigureData  # the original, untouched figure data (what to respawn from)
 var ability: FigureAbility
+## The toy finish (one general upgrade) and the figure-specific upgrade on this figure, or null.
+var finish: FinishData
+var upgrade: UpgradeData
+var _fx_time := 0.0
 ## The equipment item attached to this figure (player figures only), or null.
 var equipment: EquipmentData
 var radius := 60.0
@@ -93,23 +100,48 @@ var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 
 ## Call before adding the figure to the scene.
 func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float,
-		frames_to_settle := 5, item: EquipmentData = null) -> void:
+		frames_to_settle := 5, item: EquipmentData = null, toy_finish: FinishData = null,
+		figure_upgrade: UpgradeData = null) -> void:
+	base_data = figure_data
 	data = figure_data
 	team = figure_team
 	equipment = item
+	finish = toy_finish
+	upgrade = figure_upgrade
+	# Stat changes go on a private copy so the shared FigureData resource is never touched.
+	if upgrade != null and not upgrade.data_overrides.is_empty() \
+			or finish != null and finish.knockback_taken_multiplier != 1.0:
+		data = figure_data.duplicate() as FigureData
+		if upgrade != null:
+			for key in upgrade.data_overrides:
+				data.set(key, upgrade.data_overrides[key])
+		if finish != null:
+			data.knockback_taken_multiplier *= finish.knockback_taken_multiplier
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
 	if equipment != null:
 		mass *= equipment.mass_multiplier
 		linear_damp *= equipment.damping_multiplier
+	if finish != null:
+		mass *= finish.mass_multiplier
 	stop_speed = speed_to_stop
 	settle_frames = frames_to_settle
 	# Each figure gets its own copy so abilities can keep per-figure state.
 	ability = data.ability.duplicate() as FigureAbility if data.ability else FigureAbility.new()
-	# Equipment with an effect runs next to the figure's own ability.
-	if equipment != null and equipment.effect != null:
-		ability = CombinedAbility.new(ability, equipment.effect.duplicate() as FigureAbility)
+	if upgrade != null:
+		for key in upgrade.ability_overrides:
+			if key in ability:
+				ability.set(key, upgrade.ability_overrides[key])
+	if finish != null and finish.ability_strength != 1.0:
+		for key in STRENGTH_PROPERTIES:
+			if key in ability:
+				ability.set(key, ability.get(key) * finish.ability_strength)
+	# Equipment, upgrades and finishes with an effect run next to the figure's own ability.
+	for extra in [equipment.effect if equipment != null else null,
+			upgrade.extra_effect if upgrade != null else null, finish.effect if finish != null else null]:
+		if extra != null:
+			ability = CombinedAbility.new(ability, extra.duplicate() as FigureAbility)
 
 
 func _ready() -> void:
@@ -123,6 +155,12 @@ func _ready() -> void:
 	max_contacts_reported = 8
 	body_entered.connect(_on_body_entered)
 	add_to_group("figures")
+	if finish != null:
+		if finish.look == FinishData.Look.TRANSLUCENT:
+			self_modulate.a = 0.55
+		set_process(finish.look in [FinishData.Look.SPARKLE, FinishData.Look.SHEEN, FinishData.Look.GLOW])
+	else:
+		set_process(false)
 
 	var material := PhysicsMaterial.new()
 	material.bounce = clampf(data.bounce + (equipment.bounce_bonus if equipment != null else 0.0), 0.0, 1.0)
@@ -137,6 +175,38 @@ func _ready() -> void:
 	add_child(collision)
 
 	_update_collision()
+
+
+## The toy finish drawn on top of the body: sparkle, sheen, glow or rubber (translucent is
+## just the figure's alpha).
+func _draw_finish() -> void:
+	if finish == null:
+		return
+	match finish.look:
+		FinishData.Look.SPARKLE:
+			for i in 7:
+				var spot := Vector2.from_angle(i * 1.9 + 0.7) * radius * (0.25 + 0.5 * fmod(i * 0.37, 1.0))
+				var twinkle := 0.5 + 0.5 * sin(_fx_time * 5.0 + i * 1.7)
+				var arm := radius * 0.16 * twinkle
+				var color := Color(finish.color, twinkle)
+				draw_line(spot + Vector2(-arm, 0.0), spot + Vector2(arm, 0.0), color, 3.0)
+				draw_line(spot + Vector2(0.0, -arm), spot + Vector2(0.0, arm), color, 3.0)
+				draw_line(spot + Vector2(-arm, -arm) * 0.6, spot + Vector2(arm, arm) * 0.6, color, 2.0)
+				draw_line(spot + Vector2(-arm, arm) * 0.6, spot + Vector2(arm, -arm) * 0.6, color, 2.0)
+		FinishData.Look.SHEEN:
+			draw_circle(Vector2.ZERO, radius - 4.0, Color(0.85, 0.88, 0.95, 0.35))
+			var sweep := _fx_time * 1.3
+			draw_arc(Vector2.ZERO, radius * 0.7, sweep, sweep + 0.9, 12, Color(1.0, 1.0, 1.0, 0.7), radius * 0.2, true)
+			draw_arc(Vector2.ZERO, radius * 0.7, sweep + PI, sweep + PI + 0.5, 8, Color(1.0, 1.0, 1.0, 0.4), radius * 0.12, true)
+		FinishData.Look.GLOW:
+			var pulse := 0.75 + 0.25 * sin(_fx_time * 3.0)
+			for i in 3:
+				draw_arc(Vector2.ZERO, radius + 6.0 + i * 9.0, 0.0, TAU, 40, Color(finish.color, (0.55 - 0.15 * i) * pulse), 8.0, true)
+		FinishData.Look.RUBBER:
+			draw_arc(Vector2.ZERO, radius - 2.0, 0.0, TAU, 40, Color(0.12, 0.12, 0.14, 0.9), 10.0, true)
+			for i in 10:
+				var direction := Vector2.from_angle(TAU * i / 10.0)
+				draw_line(direction * (radius - 12.0), direction * (radius + 1.0), Color(0.3, 0.3, 0.34), 3.0)
 
 
 ## Who collides with whom:
@@ -168,6 +238,7 @@ func _draw() -> void:
 	if selected:
 		draw_arc(Vector2.ZERO, radius + 10.0, 0.0, TAU, 48, Color(1.0, 0.9, 0.3), 8.0, true)
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
+	_draw_finish()
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	var label := data.label if data.label != "" else data.display_name.left(1)
 	var font_size := int(radius * (1.0 if label.length() <= 1 else 0.75))
@@ -182,6 +253,11 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
 		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if upgrade != null:
+		# A little gold pip in the upper right marks a figure-specific upgrade.
+		var pip := Vector2(radius, -radius) * 0.66
+		draw_circle(pip, radius * 0.17, Color(1.0, 0.85, 0.2))
+		draw_arc(pip, radius * 0.17, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
 	if equipment != null:
 		# A small badge in the lower right shows that this figure carries equipment.
 		var badge_center := Vector2(radius, radius) * 0.62
@@ -252,6 +328,11 @@ func _hardest_hitter(state: PhysicsDirectBodyState2D) -> Figure:
 	return best
 
 
+func _process(delta: float) -> void:
+	_fx_time += delta  # animates sparkle, sheen and glow
+	queue_redraw()
+
+
 func _physics_process(delta: float) -> void:
 	if not knocked_off:
 		ability.on_physics_process(self, delta)
@@ -271,6 +352,8 @@ func _on_body_entered(body: Node) -> void:
 		# Both figures get this signal; only the one with the lower id reports the impact.
 		if get_instance_id() < other.get_instance_id():
 			emit_signal.call_deferred(&"impacted", self, other, speed, point)
+	else:
+		ability.on_hit_wall.call_deferred(self, body)
 
 
 ## Below the settle speed right now (not necessarily stopped for good yet).

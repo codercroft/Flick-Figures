@@ -88,3 +88,8 @@ func extra_hit_knockback(figure: Figure, other: Figure, bonus: float) -> void:
 	if figure._prev_velocity.dot(direction) + other._prev_velocity.dot(direction) <= 0.0:
 		return
 	other.nudge((other.linear_velocity - other._prev_velocity) * bonus)
+
+
+## This figure touched a wall, pin or other non-figure body (called deferred).
+func on_hit_wall(_figure: Figure, _body: Node) -> void:
+	pass

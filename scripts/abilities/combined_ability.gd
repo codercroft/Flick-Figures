@@ -73,3 +73,8 @@ func get_flicks_per_turn(figure: Figure) -> int:
 
 func get_incoming_aim_error_degrees(figure: Figure) -> float:
 	return first.get_incoming_aim_error_degrees(figure) + second.get_incoming_aim_error_degrees(figure)
+
+
+func on_hit_wall(figure: Figure, body: Node) -> void:
+	first.on_hit_wall(figure, body)
+	second.on_hit_wall(figure, body)

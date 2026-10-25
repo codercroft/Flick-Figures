@@ -9,6 +9,10 @@ var deck: Array[FigureData] = []
 var deck_equipment: Array[EquipmentData] = []
 ## Equipment the player holds but has not attached to a figure yet.
 var equipment_inventory: Array[EquipmentData] = []
+## The toy finish and the figure-specific upgrade on each deck figure (same slots as `deck`).
+## They belong to the figure: replacing the figure removes them.
+var deck_finish: Array[FinishData] = []
+var deck_upgrade: Array[UpgradeData] = []
 ## 0 to combat_count() - 1 are the normal combats; combat_count() is the boss fight.
 var combat_index := 0
 var boss: BossData
@@ -36,10 +40,14 @@ func _ready() -> void:
 func start_new_run() -> void:
 	deck.clear()
 	deck_equipment.clear()
+	deck_finish.clear()
+	deck_upgrade.clear()
 	equipment_inventory.clear()
 	for i in config.deck_size:
 		deck.append(config.starting_figure)
 		deck_equipment.append(null)
+		deck_finish.append(null)
+		deck_upgrade.append(null)
 	if config.start_with_equipment:
 		var items := config.equipment_pool.duplicate()
 		items.shuffle()
@@ -109,7 +117,32 @@ func replace_figure(slot: int, new_figure: FigureData) -> void:
 	if deck_equipment[slot] != null:
 		equipment_inventory.append(deck_equipment[slot])
 		deck_equipment[slot] = null
+	deck_finish[slot] = null
+	deck_upgrade[slot] = null
 	deck[slot] = new_figure
+
+
+## The figure-specific upgrades in the pool that fit this figure.
+func upgrades_for(figure: FigureData) -> Array[UpgradeData]:
+	var found: Array[UpgradeData] = []
+	for upgrade in config.upgrade_pool:
+		if upgrade.figure == figure:
+			found.append(upgrade)
+	return found
+
+
+## Puts a toy finish on the figure in `slot` (null removes it). It replaces any earlier finish.
+func set_finish(slot: int, finish: FinishData) -> void:
+	deck_finish[slot] = finish
+
+
+## Puts a figure-specific upgrade on the figure in `slot` (null removes it). Returns false if the
+## upgrade is not for that figure.
+func set_upgrade(slot: int, upgrade: UpgradeData) -> bool:
+	if upgrade != null and upgrade.figure != deck[slot]:
+		return false
+	deck_upgrade[slot] = upgrade
+	return true
 
 
 ## Attaches an inventory item to the figure in `slot`. If that figure already holds one, the old

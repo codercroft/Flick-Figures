@@ -36,5 +36,11 @@ extends Resource
 @export var starting_equipment_count := 2
 ## Every equipment item that exists (add new EquipmentData resources here).
 @export var equipment_pool: Array[EquipmentData] = []
+## Every general toy finish and every figure-specific upgrade that exists.
+@export var finish_pool: Array[FinishData] = []
+@export var upgrade_pool: Array[UpgradeData] = []
+## For testing: a free "Upgrades" button on the map to put finishes and upgrades on your figures
+## (until rewards or the shop hand them out).
+@export var show_upgrade_screen := true
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

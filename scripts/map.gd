@@ -6,6 +6,7 @@ extends Control
 const COMBAT_SCENE := "res://scenes/main.tscn"
 const SHOP_SCENE := "res://scenes/shop.tscn"
 const EQUIP_SCENE := "res://scenes/equip.tscn"
+const UPGRADE_SCENE := "res://scenes/upgrade.tscn"
 const SHOP_RADIUS := 48.0
 const COMBAT_RADIUS := 60.0
 const BOSS_RADIUS := 80.0
@@ -39,6 +40,20 @@ func _ready() -> void:
 	button.offset_bottom = -120.0
 	button.pressed.connect(func(): get_tree().change_scene_to_file(EQUIP_SCENE))
 	add_child(button)
+	if RunManager.config.show_upgrade_screen:
+		var upgrades := Button.new()
+		upgrades.text = "Upgrades"
+		upgrades.add_theme_font_size_override("font_size", 34)
+		upgrades.anchor_left = 1.0
+		upgrades.anchor_right = 1.0
+		upgrades.anchor_top = 1.0
+		upgrades.anchor_bottom = 1.0
+		upgrades.offset_left = -300.0
+		upgrades.offset_right = -24.0
+		upgrades.offset_top = -310.0
+		upgrades.offset_bottom = -220.0
+		upgrades.pressed.connect(func(): get_tree().change_scene_to_file(UPGRADE_SCENE))
+		add_child(upgrades)
 
 
 func _process(delta: float) -> void:
