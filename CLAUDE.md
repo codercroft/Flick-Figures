@@ -5,7 +5,7 @@ Mobile game built in Godot 4 with GDScript.
 ## Concept
 
 - Turn-based roguelike, portrait orientation, playable entirely with one thumb.
-- Top-down tabletop view (no gravity). Little plastic toy figures are flicked UP the board at enemy figures.
+- Top-down tabletop view (no gravity). Little plastic toy figures are flicked (mostly UP the board) at enemy figures. The player can flick in any direction: drag opposite to where you want it to go.
 - **Win condition:** knock all of the opponent's figures off the board.
 
 ## Rules
@@ -35,7 +35,7 @@ Mobile game built in Godot 4 with GDScript.
 
 ## Enemy AI
 
-- `scripts/enemy_ai.gd` (`EnemyAI` node under Main). `choose_shot()` tries candidate shots for each enemy (every player figure x angle offsets x power levels), uses `PhysicsDirectSpaceState2D.cast_motion` to find the first figure each would hit, and scores them: big bonus for hitting a player figure (extra near the table edge in the push direction), big penalty for hitting an ally first (unless the ally is lined up with a player figure behind it), penalty if the shooter would probably slide off. If no attack scores well it makes a small safe repositioning flick, or passes.
+- `scripts/enemy_ai.gd` (`EnemyAI` node under Main). `choose_shot()` tries candidate shots for each enemy (every player figure x angle offsets x power levels), uses `PhysicsDirectSpaceState2D.cast_motion` to find the first figure each would hit, and scores them (candidate speeds are fractions of `reference_speed` x the figure's flick power; the shooter's own recoil is predicted with an elastic-collision guess, so light shooters bounce back): big bonus for hitting a player figure (extra near the table edge in the push direction), big penalty for hitting an ally first (unless the ally is lined up with a player figure behind it), penalty if the shooter would probably slide off. If no attack scores well it makes a small safe repositioning flick, or passes.
 - Aim error comes from `FigureData.accuracy` (1 = perfect) scaled by the AI's `max_aim_error_degrees`. Power levels, scores and distances are all exports on the EnemyAI node; `debug_draw_shots` draws each enemy's chosen shot (red attack, orange via ally, yellow reposition).
 - Prediction assumes linear damping: speed falls by `damp * distance`, so slide distance = (speed - stop_speed) / damp.
 
@@ -57,8 +57,14 @@ Mobile game built in Godot 4 with GDScript.
 ## Run structure
 
 - `scripts/run_manager.gd` is the `RunManager` autoload. It holds `deck` (4 `FigureData`), `combat_index`, `boss` and the current `enemies` lineup, and exposes `start_new_run()`, `combat_won()` (true when the boss was beaten), `offer_rewards()`, `replace_figure()`, `progress_text()` and `run_over_text()`. It never touches scenes.
-- Rules live in `resources/run_config.tres` (`RunConfig`): starting figure and deck size, `grunts_per_combat = [3, 2, 1, 0]` (the rest of each 3-enemy lineup are distinct random non-grunts), `boss_grunts` (boss fight = boss + 2 grunts), `reward_choices`.
-- Flow: `main.tscn` is one combat (it reads RunManager's deck and enemies). Win a normal combat: `RunManager.combat_won()`, then `scenes/reward.tscn` (pick 1 of 3 distinct draftables, then pick which deck figure it replaces; grunts listed first; a Back button), then `main.tscn` is loaded again, which fully resets the board. Lose, or beat the boss: the bottom-half result panel shows how far you got; tap calls `start_new_run()` and reloads. The reward screen's buttons are `FigureCard`s in a bottom-half column.
+- Rules live in `resources/run_config.tres` (`RunConfig`): starting figure and deck size, `grunts_per_combat = [3, 2, 1, 0]` (the rest of each 3-enemy lineup are distinct random non-grunts), `reward_choices`.
+- Flow: the run starts on `scenes/map.tscn` (the main scene): a vertical map with 4 combat nodes and the boss node on top (placeholder shapes; checked = done, glowing = current, tap the current node to fight). `main.tscn` is one combat (it reads RunManager's deck and enemies). Win a normal combat: `RunManager.combat_won()`, then `scenes/reward.tscn` (pick 1 of 3 distinct draftables, then pick which deck figure it replaces; grunts listed first; a Back button), then back to the map, and the next combat loads `main.tscn` fresh, which fully resets the board. Lose, or beat the boss: the bottom-half result panel shows how far you got; tap calls `start_new_run()` and goes to the map. The reward screen's buttons are `FigureCard`s in a bottom-half column.
+
+### Bosses
+
+- `scripts/boss_data.gd` (`BossData`): name, description, map label/color, and the `enemies` (FigureData list) for the fight. One is picked at random per run from `FigureRegistry.bosses` (`resources/figures/boss_*.tres`).
+- Boss stats live on the boss's figures in `resources/figures/`: mass, `accuracy`, `flick_power_multiplier`, and two FigureData fields: `can_flick` (false = the AI never flicks it) and `creep_distance` (slides that far straight toward the deck after every enemy turn; if its front edge reaches the deck line, the player loses; `board.show_deck_line` draws a faint dashed line there).
+- Big Bad (`big_bad.tres`): one huge (radius 130, mass 10) figure that never flicks and creeps 60px per turn; knock it off to win. Sniper Squad (`sniper.tres` x5): small, light, accuracy 0.98, flick power 1.2.
 
 ## Game feel
 

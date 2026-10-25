@@ -4,6 +4,7 @@ extends Node2D
 enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 
 const REWARD_SCENE := "res://scenes/reward.tscn"
+const MAP_SCENE := "res://scenes/map.tscn"
 
 @export var figure_scene: PackedScene
 
@@ -59,6 +60,7 @@ func _ready() -> void:
 	ui.show_progress(RunManager.progress_text())
 	_spawn_players()
 	_spawn_enemies()
+	board.show_deck_line = _has_creeper()
 	_start_player_turn()
 
 
@@ -97,7 +99,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 		State.GAME_OVER:
 			if _can_restart:
 				RunManager.start_new_run()
-				get_tree().reload_current_scene()
+				get_tree().change_scene_to_file(MAP_SCENE)
 
 
 # --- Player turn: reload, aim, flick -----------------------------------------
@@ -167,11 +169,12 @@ func _cancel_aim() -> void:
 	_state = State.PLAYER_TURN
 
 
-## The flick is opposite the drag. Drag down = flick up. Zero means "no flick".
+## The flick is opposite the drag, in any direction: drag down = flick up, drag up = flick down.
+## Zero means "no flick".
 func _flick_impulse(pos: Vector2) -> Vector2:
 	var drag := pos - _touch_start
 	var pull := minf(drag.length(), max_pull_distance)
-	if pull < min_pull_distance or drag.y <= 0.0:
+	if pull < min_pull_distance:
 		return Vector2.ZERO
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier
 	return -drag.normalized() * (pull / max_pull_distance) * full_force
@@ -209,7 +212,7 @@ func _run_enemy_turn() -> void:
 	ui.show_enemy_turn()
 	ai.clear_debug()
 	for enemy in _enemies.duplicate():
-		if enemy.knocked_off:
+		if enemy.knocked_off or not enemy.data.can_flick:
 			continue
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		var impulse := ai.choose_shot(enemy, _players, board.get_table_rect(), max_flick_force)
@@ -220,7 +223,39 @@ func _run_enemy_turn() -> void:
 		await _wait_until_settled()
 		if _check_game_over():
 			return
+	# Creepers (like Big Bad) slide toward your deck at the end of every enemy turn.
+	for enemy in _enemies.duplicate():
+		if enemy.knocked_off or enemy.data.creep_distance <= 0.0:
+			continue
+		await get_tree().create_timer(enemy_think_time).timeout
+		_creep(enemy)
+		await _wait_until_settled()
+		if _check_game_over():
+			return
 	_start_player_turn()
+
+
+## Slides the figure straight toward the deck by its creep_distance (same maths as the aim line:
+## slide distance = (speed - stop_speed) / damping).
+func _creep(enemy: Figure) -> void:
+	var speed := enemy.data.creep_distance * enemy.linear_damp + enemy.stop_speed
+	enemy.launch(Vector2.DOWN * speed * enemy.mass)
+
+
+func _has_creeper() -> bool:
+	for enemy in _enemies:
+		if enemy.data.creep_distance > 0.0:
+			return true
+	return false
+
+
+## A creeper has reached the deck line when its front edge touches the top of the deck.
+func _deck_line_breached() -> bool:
+	var line: float = board.deck_rect.position.y
+	for enemy in _enemies:
+		if enemy.data.creep_distance > 0.0 and enemy.global_position.y + enemy.radius >= line:
+			return true
+	return false
 
 
 func _wait_until_settled() -> void:
@@ -240,7 +275,7 @@ func _check_game_over() -> bool:
 	if _enemies.is_empty():
 		_end_game(true)
 		return true
-	if _players.is_empty():
+	if _players.is_empty() or _deck_line_breached():
 		_end_game(false)
 		return true
 	return false

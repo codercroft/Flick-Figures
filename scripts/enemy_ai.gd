@@ -7,9 +7,12 @@ extends Node2D
 @export_group("Candidate shots")
 ## Angles (degrees) tried either side of the straight line to each player figure.
 @export var angle_offsets_degrees: Array[float] = [-10.0, -5.0, 0.0, 5.0, 10.0]
-## Flick powers tried, as a fraction of the enemy's maximum flick speed. Higher = enemies hit
-## harder and knock more of your figures off (at full power they can wipe out your deck).
+## Flick powers tried, as a fraction of the enemy's top speed. Higher = enemies hit harder and
+## knock more of your figures off (at full power they can wipe out your deck).
 @export var power_levels: Array[float] = [0.3, 0.45, 0.6]
+## The speed (px/s) that a power level of 1.0 means for a figure with flick power 1. A figure with
+## flick power 2 (like the snipers' 1.6) gets that multiple, up to what it physically can flick.
+@export var reference_speed := 2400.0
 
 @export_group("Scoring")
 ## Score for a first hit on a player figure.
@@ -28,8 +31,6 @@ extends Node2D
 @export var ally_align_degrees := 8.0
 ## Penalty if the shooter would probably slide off the table.
 @export var shooter_off_penalty := 120.0
-## Fraction of its speed the shooter is guessed to keep after a hit (to predict where it ends up).
-@export var shooter_carry := 0.4
 ## Attacks scoring below this are skipped in favor of repositioning.
 @export var min_attack_score := 40.0
 
@@ -64,6 +65,7 @@ func choose_shot(enemy: Figure, players: Array[Figure], table: Rect2, max_force:
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
 	var max_speed := max_force * enemy.data.flick_power_multiplier / enemy.mass
+	var top_speed := minf(max_speed, reference_speed * enemy.data.flick_power_multiplier)
 
 	var best := {}
 	for target in players:
@@ -73,7 +75,7 @@ func choose_shot(enemy: Figure, players: Array[Figure], table: Rect2, max_force:
 		for offset in angle_offsets_degrees:
 			var direction := to_target.normalized().rotated(deg_to_rad(offset))
 			for level in power_levels:
-				var shot := _score_attack(enemy, shape, direction, level * max_speed, max_speed, players, table)
+				var shot := _score_attack(enemy, shape, direction, level * top_speed, top_speed, players, table)
 				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 					best = shot
 
@@ -125,9 +127,13 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		else:
 			score = -ally_hit_penalty
 
-	# Would the shooter itself slide off? (Guess where it ends up after the hit.)
-	var end_distance := hit_distance + hit_speed * shooter_carry / enemy.linear_damp
-	if end_distance >= _distance_to_edge(enemy.global_position, direction, table):
+	# Would the shooter itself slide off? Guess an elastic hit: it keeps (m1 - m2) / (m1 + m2) of
+	# its speed, so a light shooter hitting a heavy target bounces back (negative).
+	var carry := (enemy.mass - other.mass) / (enemy.mass + other.mass)
+	var contact := enemy.global_position + direction * hit_distance
+	var slide := absf(hit_speed * carry) / enemy.linear_damp
+	var slide_direction := direction if carry >= 0.0 else -direction
+	if slide >= _distance_to_edge(contact, slide_direction, table):
 		score -= shooter_off_penalty
 
 	return {"kind": kind, "score": score, "direction": direction, "speed": speed, "distance": hit_distance}

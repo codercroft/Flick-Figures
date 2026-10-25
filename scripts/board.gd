@@ -14,6 +14,13 @@ extends Node2D
 @export var board_color := Color(0.78, 0.66, 0.47)
 @export var border_color := Color(0.42, 0.3, 0.18)
 @export var deck_color := Color(0.2, 0.22, 0.28)
+## Faint line shown when a boss creeps toward your deck: where it has to get to.
+@export var deck_line_color := Color(1.0, 0.3, 0.3, 0.6)
+
+var show_deck_line := false:
+	set(value):
+		show_deck_line = value
+		queue_redraw()
 
 
 func get_table_rect() -> Rect2:
@@ -24,3 +31,6 @@ func _draw() -> void:
 	draw_rect(board_rect, board_color)
 	draw_rect(deck_rect, deck_color)
 	draw_rect(get_table_rect(), border_color, false, 8.0)
+	if show_deck_line:
+		var y := deck_rect.position.y
+		draw_dashed_line(Vector2(board_rect.position.x, y), Vector2(board_rect.end.x, y), deck_line_color, 10.0, 28.0)

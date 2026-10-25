@@ -9,14 +9,14 @@ extends Resource
 
 
 ## Boss figures, one of which a run picks to end on.
-@export var bosses: Array[FigureData] = []
+@export var bosses: Array[BossData] = []
 
 
 func random_grunt() -> FigureData:
 	return grunts.pick_random() if not grunts.is_empty() else null
 
 
-func random_boss() -> FigureData:
+func random_boss() -> BossData:
 	return bosses.pick_random() if not bosses.is_empty() else null
 
 

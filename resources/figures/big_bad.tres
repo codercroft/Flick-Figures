@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Big Bad"
+description = "Never flicks, just creeps toward your deck."
+label = "BB"
+icon = 2
+color = Color(0.4, 0.05, 0.12, 1)
+radius = 130.0
+mass = 10.0
+bounce = 0.7
+damping_multiplier = 1.5
+flick_power_multiplier = 1.0
+knockback_taken_multiplier = 1.0
+accuracy = 0.8
+can_flick = false
+creep_distance = 60.0

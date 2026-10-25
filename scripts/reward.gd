@@ -2,7 +2,7 @@ extends Control
 ## Reward screen after a won combat: pick 1 of 3 figures, then pick which of yours it replaces.
 ## Everything the player taps is in the bottom half of the screen.
 
-const COMBAT_SCENE := "res://scenes/main.tscn"
+const MAP_SCENE := "res://scenes/map.tscn"
 const OFFER_CARD_HEIGHT := 220.0
 const REPLACE_CARD_HEIGHT := 150.0
 
@@ -55,7 +55,7 @@ func _show_replacements() -> void:
 
 func _on_replace_chosen(slot: int) -> void:
 	RunManager.replace_figure(slot, _chosen)
-	get_tree().change_scene_to_file(COMBAT_SCENE)
+	get_tree().change_scene_to_file(MAP_SCENE)
 
 
 func _add_card(data: FigureData, card_height: float) -> FigureCard:

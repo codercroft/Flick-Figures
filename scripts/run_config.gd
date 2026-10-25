@@ -11,7 +11,5 @@ extends Resource
 ## The rest are random non-grunts. (Default: 3 grunts, then 2+1, 1+2, and 0+3.)
 @export var grunts_per_combat: Array[int] = [3, 2, 1, 0]
 @export var enemies_per_combat := 3
-## The boss fight is the boss plus this many grunts.
-@export var boss_grunts := 2
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

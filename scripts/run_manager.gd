@@ -7,7 +7,7 @@ var config: RunConfig = preload("res://resources/run_config.tres")
 var deck: Array[FigureData] = []
 ## 0 to combat_count() - 1 are the normal combats; combat_count() is the boss fight.
 var combat_index := 0
-var boss: FigureData
+var boss: BossData
 ## The enemies for the current combat.
 var enemies: Array[FigureData] = []
 
@@ -73,9 +73,7 @@ func _build_lineup() -> void:
 	enemies.clear()
 	var registry := config.registry
 	if is_boss_combat():
-		for i in config.boss_grunts:
-			enemies.append(registry.random_grunt())
-		enemies.insert(enemies.size() / 2, boss)  # boss in the middle
+		enemies.append_array(boss.enemies)
 		return
 	var grunt_count := config.grunts_per_combat[combat_index]
 	for i in grunt_count:
