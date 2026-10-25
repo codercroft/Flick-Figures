@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="RunConfig" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+registry = ExtResource("2")
+starting_figure = ExtResource("3")
+deck_size = 4
+grunts_per_combat = Array[int]([3, 2, 1, 0])
+enemies_per_combat = 3
+boss_grunts = 2
+reward_choices = 3

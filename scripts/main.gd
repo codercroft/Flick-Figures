@@ -3,6 +3,8 @@ extends Node2D
 
 enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 
+const REWARD_SCENE := "res://scenes/reward.tscn"
+
 @export var figure_scene: PackedScene
 
 @export_group("Flick")
@@ -16,10 +18,7 @@ enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 @export var grab_padding := 30.0
 
 @export_group("Figures")
-## The player's starting figures, one per deck slot. Each is a FigureData (resources/figures/).
-@export var player_figures: Array[FigureData]
-## What every enemy is made of.
-@export var enemy_figure: FigureData
+## (Which figures fight comes from the RunManager autoload: your deck and this combat's enemies.)
 ## Base damping for all figures; each FigureData multiplies it. Higher = stops sooner.
 ## Slide distance ~ speed / damping.
 @export var figure_damping := 1.5
@@ -27,7 +26,6 @@ enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 @export var stop_speed := 15.0
 
 @export_group("Enemy")
-@export var enemy_count := 3
 ## Pause (seconds) before each enemy flicks.
 @export var enemy_think_time := 0.6
 
@@ -35,8 +33,10 @@ enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 ## Wait this long (seconds) after a flick before checking that everything has stopped.
 @export var settle_delay := 0.3
 @export var knock_off_fade_time := 0.4
-## Ignore taps this long (seconds) after the win/lose screen appears.
+## Ignore taps this long (seconds) after the run-over screen appears.
 @export var restart_tap_delay := 0.5
+## Pause (seconds) after the last enemy falls before the reward screen.
+@export var reward_delay := 1.2
 
 var _state := State.PLAYER_TURN
 var _players: Array[Figure] = []
@@ -56,6 +56,7 @@ var _can_restart := false
 
 
 func _ready() -> void:
+	ui.show_progress(RunManager.progress_text())
 	_spawn_players()
 	_spawn_enemies()
 	_start_player_turn()
@@ -95,6 +96,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 				_begin_aim(index, pos)
 		State.GAME_OVER:
 			if _can_restart:
+				RunManager.start_new_run()
 				get_tree().reload_current_scene()
 
 
@@ -246,7 +248,14 @@ func _check_game_over() -> bool:
 
 func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
-	ui.show_result(won)
+	if won:
+		var run_complete := RunManager.combat_won()
+		if not run_complete:
+			ui.show_your_turn("Combat cleared!")
+			await get_tree().create_timer(reward_delay).timeout
+			get_tree().change_scene_to_file(REWARD_SCENE)
+			return
+	ui.show_result(RunManager.run_over_text(won))
 	await get_tree().create_timer(restart_tap_delay).timeout
 	_can_restart = true
 
@@ -255,21 +264,21 @@ func _end_game(won: bool) -> void:
 
 func _spawn_players() -> void:
 	var deck: Rect2 = board.deck_rect
-	var slot_width := deck.size.x / player_figures.size()
-	for i in player_figures.size():
+	var slot_width := deck.size.x / RunManager.deck.size()
+	for i in RunManager.deck.size():
 		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
-		var figure := _spawn_figure(Figure.Team.PLAYER, player_figures[i], pos)
+		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos)
 		figure.deck_position = pos
 		_players.append(figure)
 
 
 func _spawn_enemies() -> void:
 	var rect: Rect2 = board.board_rect
-	var slot_width := rect.size.x / enemy_count
-	for i in enemy_count:
+	var slot_width := rect.size.x / RunManager.enemies.size()
+	for i in RunManager.enemies.size():
 		# Stagger every other enemy so they are not in a straight line.
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + 160.0 + 120.0 * (i % 2))
-		_enemies.append(_spawn_figure(Figure.Team.ENEMY, enemy_figure, pos))
+		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
 
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:

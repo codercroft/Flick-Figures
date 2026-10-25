@@ -2,14 +2,32 @@ class_name FigureRegistry
 extends Resource
 ## Which figures exist and how a run may use them. A figure can be in both lists.
 
-## Basic figures the enemy side fields.
+## Basic figures: the enemy side's filler, and what the player's deck starts with.
 @export var grunts: Array[FigureData] = []
 ## Figures the player can be offered in a draft.
 @export var draftable: Array[FigureData] = []
 
 
+## Boss figures, one of which a run picks to end on.
+@export var bosses: Array[FigureData] = []
+
+
 func random_grunt() -> FigureData:
 	return grunts.pick_random() if not grunts.is_empty() else null
+
+
+func random_boss() -> FigureData:
+	return bosses.pick_random() if not bosses.is_empty() else null
+
+
+## Up to `count` different figures that are not grunts (drawn from the draftable list).
+func random_non_grunts(count: int) -> Array[FigureData]:
+	var pool: Array[FigureData] = []
+	for figure in draftable:
+		if not grunts.has(figure):
+			pool.append(figure)
+	pool.shuffle()
+	return pool.slice(0, count)
 
 
 ## Up to `count` different draftable figures, skipping any in `exclude`.

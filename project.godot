@@ -10,6 +10,10 @@ config/name="Flick Figures"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Mobile")
 
+[autoload]
+
+RunManager="*res://scripts/run_manager.gd"
+
 [display]
 
 window/size/viewport_width=1080

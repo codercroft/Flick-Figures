@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Powerhouse"
+description = "Flicks with double power."
 icon = 3
 color = Color(0.95, 0.55, 0.15, 1)
 radius = 60.0

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Grunt"
+description = "A plain, reliable figure."
 color = Color(0.85, 0.15, 0.15, 1)
 radius = 60.0
 mass = 1.0

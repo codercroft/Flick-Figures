@@ -1,24 +1,16 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/board.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/aim_line.gd" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/figure.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/ui.gd" id="5"]
-[ext_resource type="Script" path="res://scripts/figure_data.gd" id="6"]
-[ext_resource type="Resource" path="res://resources/figures/roller.tres" id="7"]
-[ext_resource type="Resource" path="res://resources/figures/duwall.tres" id="8"]
-[ext_resource type="Resource" path="res://resources/figures/powerhouse.tres" id="9"]
-[ext_resource type="Resource" path="res://resources/figures/bombo.tres" id="10"]
-[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="11"]
 [ext_resource type="Script" path="res://scripts/game_feel.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/enemy_ai.gd" id="13"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
 figure_scene = ExtResource("4")
-player_figures = Array[ExtResource("6")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10")])
-enemy_figure = ExtResource("11")
 
 [node name="Board" type="Node2D" parent="."]
 script = ExtResource("2")
@@ -55,6 +47,21 @@ text = "Your turn"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="ProgressLabel" type="Label" parent="UI"]
+anchors_preset = -1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7, 0.72, 0.8, 1)
+theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="ResultPanel" type="ColorRect" parent="UI"]
 visible = false
 anchors_preset = -1
@@ -73,6 +80,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_font_sizes/font_size = 80
+theme_override_font_sizes/font_size = 64
 horizontal_alignment = 1
 vertical_alignment = 1

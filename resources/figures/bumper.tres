@@ -9,6 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Bumper"
+description = "Anything bouncing off it is knocked harder."
 label = "BP"
 icon = 9
 color = Color(0.65, 0.4, 0.2, 1)

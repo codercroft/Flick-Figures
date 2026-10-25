@@ -5,6 +5,7 @@ extends CanvasLayer
 @export var enemy_turn_color := Color(1, 0.45, 0.4)
 
 @onready var turn_label: Label = $TurnLabel
+@onready var progress_label: Label = $ProgressLabel
 @onready var result_panel: Control = $ResultPanel
 @onready var result_label: Label = $ResultPanel/ResultLabel
 
@@ -19,7 +20,12 @@ func show_enemy_turn() -> void:
 	turn_label.add_theme_color_override("font_color", enemy_turn_color)
 
 
-func show_result(won: bool) -> void:
+func show_progress(text: String) -> void:
+	progress_label.text = text
+
+
+func show_result(text: String) -> void:
 	turn_label.hide()
-	result_label.text = ("YOU WIN!" if won else "YOU LOSE") + "\nTap to restart"
+	progress_label.hide()
+	result_label.text = text
 	result_panel.show()

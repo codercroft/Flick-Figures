@@ -9,6 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Crazy Man"
+description = "Extremely bouncy. Rebounds faster."
 label = "CM"
 icon = 5
 color = Color(1.0, 0.4, 0.7, 1)

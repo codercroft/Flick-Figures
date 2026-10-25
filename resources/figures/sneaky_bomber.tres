@@ -9,6 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Sneaky Bomber"
+description = "Explodes if its flick hits nothing."
 label = "SB"
 icon = 7
 color = Color(0.2, 0.25, 0.6, 1)

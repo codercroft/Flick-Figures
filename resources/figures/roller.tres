@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Roller"
+description = "Light and slippery. Slides far."
 icon = 1
 color = Color(0.25, 0.7, 0.95, 1)
 radius = 55.0

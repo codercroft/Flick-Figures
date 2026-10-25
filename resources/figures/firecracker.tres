@@ -9,6 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Firecracker"
+description = "Explodes when hit by an explosion."
 label = "FC"
 icon = 10
 color = Color(0.7, 0.9, 0.2, 1)

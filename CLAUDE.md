@@ -42,7 +42,7 @@ Mobile game built in Godot 4 with GDScript.
 ## Figures (data-driven)
 
 - `scripts/figure_data.gd` (`FigureData` Resource): display_name, color, radius, mass, bounce, damping_multiplier, flick_power_multiplier, knockback_taken_multiplier, and an `ability` slot. Figures are `.tres` files in `resources/figures/`: Roller, Duwall, Powerhouse, Bombo (player) and Grunt (enemy). Make a new figure by duplicating one in the editor.
-- Main's `player_figures` array is the player's starting roster (one of each, one deck slot per entry); `enemy_figure` is what every enemy uses; `figure_damping` is the base damping that each figure's `damping_multiplier` scales.
+- Which figures fight comes from the `RunManager` autoload (the player's deck and the current combat's enemy lineup), not from Main exports. Main's `figure_damping` is the base damping that each figure's `damping_multiplier` scales.
 - Abilities: `scripts/abilities/figure_ability.gd` (`FigureAbility` Resource) is the base class with no-op hooks `on_flicked`, `on_hit`, `on_stopped`, `on_exploded`. Subclass it (see `bombo_ability.gd`) and pick it in the FigureData's `ability` slot; ability tunables are `@export`s on the subclass. Each figure runs its own duplicate of the ability, so per-figure state is safe. To add a new event, call it from `figure.gd` (hooks are called deferred from physics callbacks).
 - `Figure.explode(radius, force)` pushes nearby figures (linear falloff) and fires `on_exploded` on them. `take_knockback()` and the collision handling in `_integrate_forces` apply `knockback_taken_multiplier`.
 - Bombo explodes on its first hit after each flick (resets on flick), and survives.
@@ -52,7 +52,13 @@ Mobile game built in Godot 4 with GDScript.
 - Every figure works on either side; a white ring means player, a red ring means enemy. Each figure shows a short `label` and a small `icon` (`FigureData.icon`, drawn by `scripts/figure_icons.gd`; add an enum entry + a `match` case to make a new one).
 - Figures: Roller (R), Duwall (D), Powerhouse (P), Bombo (B), Crazy Man (CM: bounce 1 + `bounce_boost`, since Godot sums bounce values and caps at 1), Mr Potential (MP: 2x knockback from own team while on board), Sneaky Bomber (SB: explodes at the end of a flick that touched nothing, pushes everyone), Magnet (MG: pulls moving figures of BOTH sides while on board), Bumper (BP: extra knockback on whatever bounces off it), Firecracker (FC: explodes when hit by an explosion; chain reactions, `rearm_ms` stops loops).
 - Extra ability hooks beyond the four events: `on_physics_process(figure, delta)` (continuous effects) and the modifier `get_knockback_multiplier(figure, source)` (applied to collisions and `take_knockback`).
-- `resources/figure_registry.tres` (`FigureRegistry`): `grunts` (enemy fodder) and `draftable` (player draft pool) lists, plus `random_grunt()` and `random_draftable(count, exclude)` for the run system. A figure can be in both lists.
+- `resources/figure_registry.tres` (`FigureRegistry`): `grunts` (just the plain Grunt), `draftable` (reward pool; every non-grunt figure), and `bosses` (Brute), plus `random_grunt()`, `random_non_grunts(count)`, `random_draftable(count)` and `random_boss()`. A figure can be in more than one list.
+
+## Run structure
+
+- `scripts/run_manager.gd` is the `RunManager` autoload. It holds `deck` (4 `FigureData`), `combat_index`, `boss` and the current `enemies` lineup, and exposes `start_new_run()`, `combat_won()` (true when the boss was beaten), `offer_rewards()`, `replace_figure()`, `progress_text()` and `run_over_text()`. It never touches scenes.
+- Rules live in `resources/run_config.tres` (`RunConfig`): starting figure and deck size, `grunts_per_combat = [3, 2, 1, 0]` (the rest of each 3-enemy lineup are distinct random non-grunts), `boss_grunts` (boss fight = boss + 2 grunts), `reward_choices`.
+- Flow: `main.tscn` is one combat (it reads RunManager's deck and enemies). Win a normal combat: `RunManager.combat_won()`, then `scenes/reward.tscn` (pick 1 of 3 distinct draftables, then pick which deck figure it replaces; grunts listed first; a Back button), then `main.tscn` is loaded again, which fully resets the board. Lose, or beat the boss: the bottom-half result panel shows how far you got; tap calls `start_new_run()` and reloads. The reward screen's buttons are `FigureCard`s in a bottom-half column.
 
 ## Game feel
 
