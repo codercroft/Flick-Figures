@@ -15,6 +15,12 @@ func on_hit(_figure: Figure, _other: Figure) -> void:
 	pass
 
 
+## This figure hit another figure at `speed` px/s (relative speed just before the hit) at `point`.
+## Called on both figures involved. Like on_hit, but with how hard it was.
+func on_impact(_figure: Figure, _other: Figure, _speed: float, _point: Vector2) -> void:
+	pass
+
+
 ## This figure was moving and has now come to rest.
 func on_stopped(_figure: Figure) -> void:
 	pass

@@ -7,6 +7,9 @@ signal flicked(figure: Figure, impulse: Vector2)
 ## Two figures collided. Only one of the two figures emits this per collision.
 signal impacted(figure: Figure, other: Figure, speed: float, point: Vector2)
 signal fell_off(figure: Figure)
+## A figure wants to be replaced by new figures (Slime splitting). `pieces` is an array of
+## {data, position, velocity} dictionaries; main.gd spawns them and removes `parent`.
+signal split_requested(parent: Figure, pieces: Array)
 
 enum Team { PLAYER, ENEMY }
 
@@ -210,13 +213,14 @@ func _on_body_entered(body: Node) -> void:
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
-		# Both figures get this signal; only the one with the lower id reports the impact.
 		var other: Figure = body
+		# Velocities change in the same step as the collision, so look at the step before too.
+		var speed := maxf((_last_velocity - other._last_velocity).length(),
+				(_prev_velocity - other._prev_velocity).length())
+		var point := global_position + (other.global_position - global_position).normalized() * radius
+		ability.on_impact.call_deferred(self, other, speed, point)
+		# Both figures get this signal; only the one with the lower id reports the impact.
 		if get_instance_id() < other.get_instance_id():
-			# Velocities change in the same step as the collision, so look at the step before too.
-			var speed := maxf((_last_velocity - other._last_velocity).length(),
-					(_prev_velocity - other._prev_velocity).length())
-			var point := global_position + (other.global_position - global_position).normalized() * radius
 			emit_signal.call_deferred(&"impacted", self, other, speed, point)
 
 
@@ -273,6 +277,11 @@ func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 			continue
 		other.take_knockback(offset.normalized() * force * (1.0 - distance / blast_radius), self)
 		other.ability.on_exploded.call_deferred(other, self)
+
+
+## Asks main.gd to replace this figure with `pieces` ({data, position, velocity} dictionaries).
+func split_into(pieces: Array) -> void:
+	split_requested.emit(self, pieces)
 
 
 func return_to_deck() -> void:

@@ -3,7 +3,7 @@ extends RefCounted
 ## Tiny line icons drawn on figures to hint at what they do. Pure drawing code: add a new
 ## entry to the enum and a new case in draw() to make another icon.
 
-enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER }
+enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -54,6 +54,10 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			for i in 4:
 				var direction := Vector2.from_angle(TAU * i / 4.0 + PI / 4.0)
 				canvas.draw_line(center + direction * s * 0.8, center + direction * s * 1.15, color, w)
+		Icon.SLIME:  # a blob face
+			canvas.draw_circle(center + Vector2(-s * 0.45, -s * 0.3), w * 0.9, color)
+			canvas.draw_circle(center + Vector2(s * 0.45, -s * 0.3), w * 0.9, color)
+			canvas.draw_arc(center + Vector2(0, s * 0.05), s * 0.6, 0.3, PI - 0.3, 12, color, w)
 		Icon.FIRECRACKER:  # a stick with a lit fuse
 			canvas.draw_rect(Rect2(center + Vector2(-s * 0.35, -s * 0.4), Vector2(s * 0.7, s * 1.4)), color, false, w)
 			canvas.draw_line(center + Vector2(0, -s * 0.4), center + Vector2(s * 0.3, -s * 0.8), color, w)

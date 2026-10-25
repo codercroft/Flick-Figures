@@ -436,10 +436,28 @@ func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
+	figure.split_requested.connect(_on_split_requested)
 	figure.on_deck = team == Figure.Team.PLAYER
 	figure.position = pos
 	figures_root.add_child(figure)
 	return figure
+
+
+## A figure (a Slime) splits: spawn its pieces on its team, then remove it. The pieces are new
+## enemies, so they take their own turns from the next enemy turn on.
+func _on_split_requested(parent: Figure, pieces: Array) -> void:
+	if not _is_alive(parent):
+		return
+	for piece in pieces:
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position)
+		spawned.apply_central_impulse(piece.velocity * spawned.mass)
+		if parent.team == Figure.Team.ENEMY:
+			_enemies.append(spawned)
+		else:
+			_players.append(spawned)
+	_players.erase(parent)
+	_enemies.erase(parent)
+	parent.knock_off(knock_off_fade_time)
 
 
 func _all_figures() -> Array[Figure]:
