@@ -8,11 +8,12 @@ extends Resource
 @export var starting_figure: FigureData
 @export var deck_size := 4
 ## One entry per combat before the boss: how many of that combat's enemies are grunts.
-## The rest are random non-grunts. (Default: 3 grunts, then 2+1, 1+2, and 0+3.)
-@export var grunts_per_combat: Array[int] = [3, 2, 1, 0]
+## The rest are random non-grunts (never economy figures). Default: 4 grunts, then 3+1, 2+2, 1+3, 0+4.
+@export var grunts_per_combat: Array[int] = [4, 3, 2, 1, 0]
 ## One entry per combat before the boss: how many flicks the enemy side takes each turn.
-@export var enemy_flicks_per_combat: Array[int] = [1, 1, 1, 1]
-@export var enemies_per_combat := 3
+@export var enemy_flicks_per_combat: Array[int] = [1, 1, 1, 1, 1]
+## How many enemies each regular combat has.
+@export var enemies_per_combat := 4
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []
 ## Money the run starts with.
@@ -21,7 +22,7 @@ extends Resource
 @export var income_per_figure := 1
 ## What the shop sells (see resources/shop_config.tres).
 @export var shop: ShopConfig
-## The shop sits on the map just before this combat (0 = the first combat): 2 = between combats 2 and 3.
-@export var shop_position := 2
+## The shop sits on the map just before this combat (0 = the first combat): 3 = between combats 3 and 4.
+@export var shop_position := 3
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

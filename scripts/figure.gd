@@ -40,6 +40,13 @@ var on_deck := false:
 		if is_node_ready():
 			_update_collision()
 			queue_redraw()
+# Player figures: true while this figure may be flicked this round; false once it has been
+# flicked (greyed out) until the whole squad has gone. Separate from on_deck, which is about
+# WHERE the figure is (and so who it collides with).
+var flickable := true:
+	set(value):
+		flickable = value
+		queue_redraw()
 var knocked_off := false
 
 # Player figures: highlighted ring while chosen for aiming.
@@ -127,7 +134,7 @@ func _update_collision() -> void:
 
 
 func _draw() -> void:
-	var greyed := team == Team.PLAYER and not on_deck
+	var greyed := team == Team.PLAYER and not flickable
 	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
 	# The body squashes/stretches along _squash_angle; the details on top only grow.
 	var stretch := maxf(1.0 + _squash_amount, 0.2)
@@ -248,6 +255,7 @@ func describe_motion() -> String:
 
 func launch(impulse: Vector2) -> void:
 	on_deck = false
+	flickable = false
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(impulse)
@@ -288,6 +296,7 @@ func return_to_deck() -> void:
 	linear_velocity = Vector2.ZERO
 	global_position = deck_position
 	on_deck = true
+	flickable = true
 
 
 ## Stretches (amount > 0) or squashes (amount < 0) the body along `direction`, then wobbles back.

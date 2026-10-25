@@ -12,6 +12,8 @@ var boss: BossData
 var enemies: Array[FigureData] = []
 ## How many flicks the enemy side takes each turn in the current combat.
 var enemy_flicks_per_turn := 1
+## True when the enemies start in one straight row (The Wall).
+var enemies_in_row := false
 ## The arena layout for the current combat.
 var arena: ArenaData
 var money := 0
@@ -128,12 +130,14 @@ func _build_lineup() -> void:
 	if is_boss_combat():
 		enemies.append_array(boss.enemies)
 		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
+		enemies_in_row = boss.straight_row
 	else:
 		var grunt_count := config.grunts_per_combat[combat_index]
 		for i in grunt_count:
 			enemies.append(registry.random_grunt())
 		enemies.append_array(registry.random_non_grunts(config.enemies_per_combat - grunt_count))
 		enemy_flicks_per_turn = 1
+		enemies_in_row = false
 		if combat_index < config.enemy_flicks_per_combat.size():
 			enemy_flicks_per_turn = config.enemy_flicks_per_combat[combat_index]
 	_pick_arena()

@@ -5,7 +5,7 @@ extends Resource
 ## Everything goes inside the board: keep the deck strip below it clear.
 
 @export var display_name := "Arena"
-## Whether a creeping boss (Big Bad) can use this arena. Turn this off for layouts with walls, pins
+## Whether a creeping boss (The Wall) can use this arena. Turn this off for layouts with walls, pins
 ## or patches in its path, since they would block or bend its creep.
 @export var creeper_safe := true
 @export var walls: Array[ArenaWall] = []

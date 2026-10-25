@@ -39,6 +39,10 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export var max_enemy_flicks := 4
 
 @export_group("Turn")
+## Old rule: once every figure has been flicked, the player taps one on the board to reload it
+## to the deck. Off (default): all remaining figures simply become flickable again where they
+## are. Either way every figure must be flicked before the same one can go again.
+@export var reload_enabled := false
 ## Wait this long (seconds) after a flick before checking that everything has stopped.
 @export var settle_delay := 0.3
 ## Safety net: if figures still move this long (seconds) after a flick, stop them all.
@@ -65,7 +69,7 @@ var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines sto
 var _busy_time := 0.0  # seconds spent settling or in the enemy turn
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
-var _needs_reload := false  # player has nothing on deck: tap a board figure to reload it
+var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
 
 @onready var board := $Board
@@ -152,11 +156,23 @@ func _start_player_turn() -> void:
 	aim_line.clear()
 	_deselect()
 	ui.show_debug("")
-	_needs_reload = not _has_figure_on_deck()
+	_needs_reload = false
+	if not _has_flickable_figure():
+		if reload_enabled:
+			_needs_reload = true
+		else:
+			_make_all_flickable()
 	if _needs_reload:
 		ui.show_your_turn("Your turn: tap a figure to reload")
 	else:
 		ui.show_your_turn()
+
+
+## Everyone has gone: the whole squad can be flicked again from where they stand.
+func _make_all_flickable() -> void:
+	for figure in _players:
+		if _is_alive(figure):
+			figure.flickable = true
 
 
 func _try_reload(pos: Vector2) -> void:
@@ -247,20 +263,20 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
-func _player_figure_at(pos: Vector2, on_deck: bool) -> Figure:
+func _player_figure_at(pos: Vector2, flickable: bool) -> Figure:
 	var best: Figure = null
 	var best_distance := INF
 	for figure in _players:
 		var distance := figure.global_position.distance_to(pos)
-		if figure.on_deck == on_deck and distance <= figure.radius + grab_padding and distance < best_distance:
+		if figure.flickable == flickable and distance <= figure.radius + grab_padding and distance < best_distance:
 			best = figure
 			best_distance = distance
 	return best
 
 
-func _has_figure_on_deck() -> bool:
+func _has_flickable_figure() -> bool:
 	for figure in _players:
-		if figure.on_deck:
+		if figure.flickable:
 			return true
 	return false
 
@@ -308,16 +324,19 @@ func _run_enemy_turn() -> void:
 			return
 		if _check_game_over():
 			return
-	# Creepers (like Big Bad) slide toward your deck at the end of every enemy turn.
-	for enemy in _enemies.duplicate():
-		if not _is_alive(enemy) or enemy.data.creep_distance <= 0.0:
-			continue
+	# Creepers (like The Wall's pieces) all slide toward your deck TOGETHER at the end of every
+	# enemy turn, each by the same distance from wherever it is now.
+	var creepers: Array[Figure] = []
+	for enemy in _enemies:
+		if _is_alive(enemy) and enemy.data.creep_distance > 0.0:
+			creepers.append(enemy)
+	if not creepers.is_empty():
 		await get_tree().create_timer(enemy_think_time).timeout
 		if serial != _turn_serial:
 			return
-		if not _is_alive(enemy):
-			continue
-		_creep(enemy)
+		for enemy in creepers:
+			if _is_alive(enemy):
+				_creep(enemy)
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
@@ -455,7 +474,8 @@ func _spawn_enemies() -> void:
 		# Stagger every other enemy so they are not in a straight line.
 		# Big figures start a bit lower so they don't overlap the arena's top wall.
 		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
-		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + 120.0 * (i % 2))
+		var stagger := 0.0 if RunManager.enemies_in_row else 120.0 * (i % 2)
+		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + stagger)
 		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
 
 

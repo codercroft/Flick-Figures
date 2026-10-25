@@ -1,7 +1,7 @@
 class_name BossData
 extends Resource
 ## One boss fight. Its enemy figures carry the stats you tune (mass, accuracy, flick power,
-## creep distance), so edit those in resources/figures/ (e.g. big_bad.tres, sniper.tres).
+## creep distance), so edit those in resources/figures/ (e.g. wall_piece.tres, sniper.tres).
 
 @export var display_name := "Boss"
 @export_multiline var description := ""
@@ -13,3 +13,5 @@ extends Resource
 ## How many flicks the enemy side takes per turn in this fight (each one is the best shot of
 ## any enemy figure; the same figure can't flick twice in a row).
 @export var enemy_flicks_per_turn := 1
+## Line the enemies up in one straight row across the board (The Wall) instead of staggering them.
+@export var straight_row := false

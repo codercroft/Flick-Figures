@@ -6,6 +6,9 @@ extends Resource
 @export var grunts: Array[FigureData] = []
 ## Figures the player can be offered in a draft.
 @export var draftable: Array[FigureData] = []
+## The "economy" tag: figures that only make sense for the player (like Cha-ching). They can be
+## drafted or sold, but are never put in an enemy lineup.
+@export var economy: Array[FigureData] = []
 
 
 ## Boss figures, one of which a run picks to end on.
@@ -20,11 +23,11 @@ func random_boss() -> BossData:
 	return bosses.pick_random() if not bosses.is_empty() else null
 
 
-## Up to `count` different figures that are not grunts (drawn from the draftable list).
+## Up to `count` different figures for an enemy lineup: draftable, not grunts, not economy.
 func random_non_grunts(count: int) -> Array[FigureData]:
 	var pool: Array[FigureData] = []
 	for figure in draftable:
-		if not grunts.has(figure):
+		if not grunts.has(figure) and not economy.has(figure):
 			pool.append(figure)
 	pool.shuffle()
 	return pool.slice(0, count)
@@ -46,3 +49,7 @@ func is_grunt(figure: FigureData) -> bool:
 
 func is_draftable(figure: FigureData) -> bool:
 	return draftable.has(figure)
+
+
+func is_economy(figure: FigureData) -> bool:
+	return economy.has(figure)

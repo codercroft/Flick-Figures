@@ -16,7 +16,7 @@ extends Node2D
 ## Slow patch: extra damping per second while on it (the normal damping is the Main node's figure_damping).
 @export var slow_damping := 3.0
 ## Boost patch: push in px/s per second. It adds no more speed once a figure goes this fast.
-@export var boost_acceleration := 1400.0
+@export var boost_acceleration := 470.0
 @export var boost_max_speed := 2400.0
 ## Turn patch: how fast a moving figure's direction curves, in degrees per second.
 @export var turn_rate_degrees := 110.0
