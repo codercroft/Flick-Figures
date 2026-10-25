@@ -274,16 +274,35 @@ func combat_won() -> bool:
 	return false
 
 
-## What a won combat offers, by node type (see reward.gd for how each step is shown).
+## What a won combat offers, by node type (RewardConfig has every chance and amount). Chance drops are
+## rolled here and marked "lucky" so the reward screen can celebrate them. See reward.gd for the steps.
 func build_rewards() -> void:
+	var rewards := config.rewards
 	reward_steps.clear()
 	match node.type:
 		MapNode.Type.ELITE:
-			reward_steps = [{"kind": "relic"}, {"kind": "power_chance"}, {"kind": "figures"}]
+			for i in rewards.elite_guaranteed_relics:
+				reward_steps.append({"kind": "relic"})
+			reward_steps.append({"kind": "figures"})
+			_roll_drop("power", rewards.elite_power_chance)
+			_roll_drop("equipment", rewards.elite_equipment_chance)
+			_roll_drop("finish", rewards.elite_finish_chance)
 		MapNode.Type.BOSS:
-			reward_steps = [{"kind": "relics"}, {"kind": "upgrade"}, {"kind": "figures"}]
+			reward_steps.append({"kind": "relics"})
+			reward_steps.append({"kind": "upgrade_item"})
+			reward_steps.append({"kind": "figures"})
+			# One guaranteed extra: a power or an equipment item.
+			reward_steps.append({"kind": "power" if randf() < rewards.boss_power_chance else "equipment"})
 		_:
-			reward_steps = [{"kind": "figures"}]
+			reward_steps.append({"kind": "figures"})
+			_roll_drop("power", rewards.combat_power_chance)
+			_roll_drop("equipment", rewards.combat_equipment_chance)
+
+
+## Adds a "lucky" drop step with the given chance.
+func _roll_drop(kind: String, chance: float) -> void:
+	if randf() < chance:
+		reward_steps.append({"kind": kind, "lucky": true})
 
 
 ## Called when the reward screens are done. After a boss the run moves on to the next act.
@@ -328,37 +347,40 @@ func random_equipment() -> EquipmentData:
 	return config.equipment_pool.pick_random() if not config.equipment_pool.is_empty() else null
 
 
+func random_finish() -> FinishData:
+	return config.finish_pool.pick_random() if not config.finish_pool.is_empty() else null
+
+
+## For the boss reward: a figure-specific upgrade that one of your figures can take (chance from
+## RewardConfig), otherwise a finish. Returns an UpgradeData, a FinishData or null.
+func random_upgrade_item() -> Resource:
+	if randf() < config.rewards.boss_specific_upgrade_chance:
+		var options: Array[UpgradeData] = []
+		for slot in deck.size():
+			for upgrade in upgrades_for(deck[slot]):
+				if deck_upgrade[slot] != upgrade and not options.has(upgrade):
+					options.append(upgrade)
+		if not options.is_empty():
+			return options.pick_random()
+	return random_finish()
+
+
 func has_free_power_slot() -> bool:
 	return powers.has(null)
 
 
-## Gives a random upgrade (a figure-specific one or a toy finish, not one it already has) to the
-## figure in `slot`. Returns a short message.
-func grant_random_upgrade(slot: int) -> String:
-	var options: Array = []
-	for upgrade in upgrades_for(deck[slot]):
-		if deck_upgrade[slot] != upgrade:
-			options.append(upgrade)
-	for finish in config.finish_pool:
-		if deck_finish[slot] != finish:
-			options.append(finish)
-	if options.is_empty():
-		return "%s has nothing left to gain." % deck[slot].display_name
-	var pick = options.pick_random()
-	if pick is UpgradeData:
-		set_upgrade(slot, pick)
-	else:
-		set_finish(slot, pick)
-	return "%s got %s!" % [deck[slot].display_name, pick.display_name]
-
-
-## The figures the reward screen offers: different from each other.
+## The figures a figure reward offers: different from each other, weighted by rarity for this act
+## (act 1 is mostly common figures, later acts lean rarer).
 func offer_rewards() -> Array[FigureData]:
-	var count := config.reward_choices
+	var count := config.rewards.figure_choices
 	for relic in relics:
 		if relic.effect != null:
 			count += relic.effect.get_reward_choice_bonus()
-	return config.registry.random_draftable(count)
+	return draft_figures(count)
+
+
+func draft_figures(count: int) -> Array[FigureData]:
+	return config.registry.random_draftable_weighted(count, config.rewards.rarity_weights(act))
 
 
 ## Puts a new figure in a deck slot. Equipment the old figure held goes back to the inventory.
@@ -423,7 +445,9 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 		if relic.effect != null:
 			bonus += relic.effect.get_income_bonus()
 	if node != null and node.type == MapNode.Type.ELITE:
-		bonus += config.difficulty.elite_extra_money
+		bonus += config.rewards.elite_bonus_money
+	elif node != null and node.type == MapNode.Type.BOSS:
+		bonus += config.rewards.boss_bonus_money
 	relic_notes.clear()
 	last_income = {"figures": figures_on_table.size(), "base": base, "bonus": bonus, "total": base + bonus}
 	money += base + bonus

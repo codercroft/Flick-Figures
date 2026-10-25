@@ -10,7 +10,7 @@ extends ShopItemType
 
 func create_offers(registry: FigureRegistry) -> Array[ShopOffer]:
 	var offers: Array[ShopOffer] = []
-	for figure in registry.random_draftable(count):
+	for figure in RunManager.draft_figures(count):
 		var offer := ShopOffer.new()
 		offer.title = figure.display_name
 		offer.description = figure.description

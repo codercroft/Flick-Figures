@@ -1,7 +1,10 @@
 extends Control
 ## Reward screens after a won combat, a treasure node or a boss. RunManager.reward_steps lists what
-## is on offer ("figures", "relic", "relics", "power_chance", "treasure", "upgrade"); each step is
-## shown in turn, and EVERY step has a skip button. Everything the player taps is in the bottom half.
+## is on offer; each drop is shown ONE AT A TIME, and every step has a skip option. Chance drops get a
+## little "Lucky!" flourish. Kinds: "figures" (pick 1 of N, then which figure it replaces), "relic"
+## (a random relic), "relics" (pick 1 of N), "power", "equipment", "finish" (pick which figure gets
+## it), "upgrade_item" (a finish or figure-specific upgrade for a figure you choose) and "treasure".
+## All chances and amounts are in RewardConfig. Everything the player taps is in the bottom half.
 
 const MAP_SCENE := "res://scenes/map.tscn"
 const OFFER_CARD_HEIGHT := 220.0
@@ -11,6 +14,7 @@ const ITEM_CARD_HEIGHT := 190.0
 var _steps: Array[Dictionary] = []
 var _offers: Array[FigureData] = []
 var _chosen: FigureData
+var _lucky := false  # the current step was a chance drop
 
 @onready var column: VBoxContainer = $Column
 @onready var title: Label = $Column/Title
@@ -30,7 +34,7 @@ func _earned_text() -> String:
 		MapNode.Type.COMBAT, MapNode.Type.ELITE:
 			return RunManager.income_text()
 		MapNode.Type.BOSS:
-			return "Boss defeated!"
+			return "Boss defeated! " + RunManager.income_text()
 	return ""
 
 
@@ -40,6 +44,7 @@ func _next_step() -> void:
 		get_tree().change_scene_to_file(MAP_SCENE)
 		return
 	var step: Dictionary = _steps.pop_front()
+	_lucky = step.get("lucky", false)
 	match step.kind:
 		"figures":
 			_offers = RunManager.offer_rewards()
@@ -47,13 +52,17 @@ func _next_step() -> void:
 		"relics":
 			_show_relic_choices()
 		"relic":
-			_show_found_relic()
-		"power_chance":
-			_show_power_chance()
+			_show_found_relic("You found a relic!")
+		"power":
+			_show_power()
+		"equipment":
+			_show_equipment("You found equipment!")
+		"finish":
+			_show_finish()
+		"upgrade_item":
+			_show_upgrade_item()
 		"treasure":
 			_show_treasure()
-		"upgrade":
-			_show_upgrade_figures()
 		_:
 			_next_step()
 
@@ -103,7 +112,7 @@ func _on_replace_chosen(slot: int) -> void:
 
 ## Boss: pick 1 of N relics you don't have yet.
 func _show_relic_choices() -> void:
-	var choices := RunManager.random_new_relics(RunManager.config.boss_relic_choices)
+	var choices := RunManager.random_new_relics(RunManager.config.rewards.boss_relic_choices)
 	if choices.is_empty():
 		_next_step()
 		return
@@ -115,13 +124,12 @@ func _show_relic_choices() -> void:
 	_add_button("Skip", _next_step)
 
 
-## Elite: a random relic you can take or skip.
-func _show_found_relic() -> void:
+func _show_found_relic(heading: String) -> void:
 	var found := RunManager.random_new_relics(1)
 	if found.is_empty():
 		_next_step()
 		return
-	_show_take_or_skip("You found a relic!", "%s\n%s" % [found[0].display_name, found[0].description], _take_relic.bind(found[0]))
+	_show_item(heading, "%s\n%s" % [found[0].display_name, found[0].description], _take_relic.bind(found[0]))
 
 
 func _take_relic(relic: RelicData) -> void:
@@ -129,17 +137,18 @@ func _take_relic(relic: RelicData) -> void:
 	_next_step()
 
 
-# --- Powers, treasure, upgrades --------------------------------------------------
+# --- Powers, equipment, finishes ----------------------------------------------------
 
-func _show_power_chance() -> void:
+func _show_power() -> void:
 	var power := RunManager.random_power()
-	if power == null or randf() >= RunManager.config.elite_power_chance:
+	if power == null:
 		_next_step()
 		return
-	if not RunManager.has_free_power_slot():
-		_show_message("You found a power (%s), but your power slots are full." % power.display_name)
-		return
-	_show_take_or_skip("You found a power!", "%s\n%s" % [power.display_name, power.description], _take_power.bind(power))
+	var text := "%s\n%s" % [power.display_name, power.description]
+	if RunManager.has_free_power_slot():
+		_show_item("You found a power!", text, _take_power.bind(power))
+	else:
+		_show_power_swap(power, text)
 
 
 func _take_power(power: PowerData) -> void:
@@ -147,17 +156,32 @@ func _take_power(power: PowerData) -> void:
 	_next_step()
 
 
-## Treasure node: a random relic or a piece of equipment.
-func _show_treasure() -> void:
-	var relic: Array[RelicData] = RunManager.random_new_relics(1)
-	var equipment := RunManager.random_equipment()
-	var want_relic := randf() < RunManager.config.treasure_relic_chance
-	if not relic.is_empty() and (want_relic or equipment == null):
-		_show_take_or_skip("Treasure: a relic!", "%s\n%s" % [relic[0].display_name, relic[0].description], _take_relic.bind(relic[0]))
-	elif equipment != null:
-		_show_take_or_skip("Treasure: equipment!", "%s\n%s" % [equipment.display_name, equipment.description], _take_equipment.bind(equipment))
-	else:
+## Slots are full: replace one of the held powers, or discard the new one.
+func _show_power_swap(power: PowerData, text: String) -> void:
+	_clear_cards()
+	title.text = "Your power slots are full. Replace one?"
+	_add_lucky_flourish()
+	_add_card(null, ITEM_CARD_HEIGHT * 0.7, "NEW: " + text)
+	for slot in RunManager.powers.size():
+		var held: PowerData = RunManager.powers[slot]
+		if held == null:
+			continue
+		var card := _add_card(null, 90.0, "Replace %s" % held.display_name)
+		card.pressed.connect(_replace_power.bind(slot, power))
+	_add_button("Discard the new power", _next_step)
+
+
+func _replace_power(slot: int, power: PowerData) -> void:
+	RunManager.powers[slot] = power
+	_next_step()
+
+
+func _show_equipment(heading: String) -> void:
+	var item := RunManager.random_equipment()
+	if item == null:
 		_next_step()
+		return
+	_show_item(heading, "%s\n%s" % [item.display_name, item.description], _take_equipment.bind(item))
 
 
 func _take_equipment(item: EquipmentData) -> void:
@@ -165,31 +189,100 @@ func _take_equipment(item: EquipmentData) -> void:
 	_next_step()
 
 
-## Boss: pick one of your figures to get a random upgrade.
-func _show_upgrade_figures() -> void:
+## A random finish; taking it means choosing which figure gets it.
+func _show_finish() -> void:
+	var finish := RunManager.random_finish()
+	if finish == null:
+		_next_step()
+		return
+	_show_item("You found a finish!", "%s\n%s" % [finish.display_name, finish.description], _pick_figure_for.bind(finish))
+
+
+## Boss: a finish or a figure-specific upgrade; you choose the figure.
+func _show_upgrade_item() -> void:
+	var item := RunManager.random_upgrade_item()
+	if item == null:
+		_next_step()
+		return
+	var heading := "Upgrade: %s" % ("a figure upgrade!" if item is UpgradeData else "a finish!")
+	_show_item(heading, "%s\n%s" % [item.display_name, item.description], _pick_figure_for.bind(item))
+
+
+## Pick which figure gets a finish or upgrade (an upgrade only fits its own figure).
+func _pick_figure_for(item: Resource) -> void:
 	_clear_cards()
-	title.text = "Upgrade which figure? (the upgrade is random)"
-	var card_height := minf(REPLACE_CARD_HEIGHT, 600.0 / maxi(RunManager.deck.size(), 1))
+	title.text = "Give %s to which figure?" % item.display_name
+	var shown := 0
+	var card_height := minf(REPLACE_CARD_HEIGHT, 560.0 / maxi(RunManager.deck.size(), 1))
 	for slot in RunManager.deck.size():
-		var card := _add_card(RunManager.deck[slot], card_height)
-		card.pressed.connect(_on_upgrade_figure.bind(slot))
+		if item is UpgradeData and RunManager.deck[slot] != item.figure:
+			continue
+		var held = RunManager.deck_upgrade[slot] if item is UpgradeData else RunManager.deck_finish[slot]
+		var note := "\nreplaces %s" % held.display_name if held != null else ""
+		var card := _add_card(RunManager.deck[slot], card_height, RunManager.deck[slot].display_name + note)
+		card.pressed.connect(_apply_to_figure.bind(item, slot))
+		shown += 1
+	if shown == 0:
+		title.text = "None of your figures can take %s." % item.display_name
 	_add_button("Skip", _next_step)
 
 
-func _on_upgrade_figure(slot: int) -> void:
-	_show_message(RunManager.grant_random_upgrade(slot))
+func _apply_to_figure(item: Resource, slot: int) -> void:
+	if item is UpgradeData:
+		RunManager.set_upgrade(slot, item)
+	else:
+		RunManager.set_finish(slot, item)
+	_show_message("%s got %s!" % [RunManager.deck[slot].display_name, item.display_name])
+
+
+## Treasure node: one random relic or one random equipment item.
+func _show_treasure() -> void:
+	var relic := RunManager.random_new_relics(1)
+	var want_relic := randf() < RunManager.config.rewards.treasure_relic_chance
+	if not relic.is_empty() and (want_relic or RunManager.random_equipment() == null):
+		_show_found_relic("Treasure: a relic!")
+	elif RunManager.random_equipment() != null:
+		_show_equipment("Treasure: equipment!")
+	else:
+		_next_step()
 
 
 # --- Small building blocks ---------------------------------------------------------
 
-## One item with Take and Skip buttons.
-func _show_take_or_skip(heading: String, text: String, on_take: Callable) -> void:
+## One drop with Take and Skip buttons (chance drops get the Lucky flourish).
+func _show_item(heading: String, text: String, on_take: Callable) -> void:
 	_clear_cards()
 	title.text = heading
+	_add_lucky_flourish()
 	var card := _add_card(null, ITEM_CARD_HEIGHT, text)
 	card.pressed.connect(on_take)
 	_add_button("Take it", on_take)
 	_add_button("Skip", _next_step)
+
+
+## A small gold "Lucky!" that pops in above a chance drop.
+func _add_lucky_flourish() -> void:
+	if not _lucky:
+		return
+	var label := Label.new()
+	label.text = "* Lucky! *"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 44)
+	label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+	label.add_theme_color_override("font_outline_color", Color(0.3, 0.2, 0.0))
+	label.add_theme_constant_override("outline_size", 8)
+	label.custom_minimum_size = Vector2(0.0, 56.0)
+	column.add_child(label)
+	label.pivot_offset = Vector2(column.size.x / 2.0, 28.0)
+	label.scale = Vector2(0.3, 0.3)
+	var tween := create_tween()
+	tween.tween_property(label, "scale", Vector2(1.25, 1.25), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "scale", Vector2.ONE, 0.15)
+	# After the pop it gently glows.
+	var breathe := create_tween().set_loops()
+	breathe.tween_interval(0.4)
+	breathe.tween_property(label, "modulate", Color(1.0, 1.0, 0.7), 0.5)
+	breathe.tween_property(label, "modulate", Color.WHITE, 0.5)
 
 
 func _show_message(text: String) -> void:

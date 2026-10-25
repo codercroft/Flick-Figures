@@ -25,33 +25,25 @@ extends Resource
 @export var shop: ShopConfig
 ## How many power slots the player has.
 @export var power_slots := 3
-## For testing: start each run with some random powers.
-@export var start_with_powers := true
+## For testing only (off by default: a run starts with just 4 Grunts and $0): start with some random powers.
+@export var start_with_powers := false
 @export var starting_power_count := 2
 ## Every power that exists (add new PowerData resources here).
 @export var power_pool: Array[PowerData] = []
-## For testing: start each run holding some random equipment (in the inventory).
-@export var start_with_equipment := true
+## For testing only (off by default): start holding some random equipment (in the inventory).
+@export var start_with_equipment := false
 @export var starting_equipment_count := 2
 ## Every equipment item that exists (add new EquipmentData resources here).
 @export var equipment_pool: Array[EquipmentData] = []
 ## Every general toy finish and every figure-specific upgrade that exists.
 @export var finish_pool: Array[FinishData] = []
 @export var upgrade_pool: Array[UpgradeData] = []
-## For testing: a free "Upgrades" button on the map to put finishes and upgrades on your figures
-## (until rewards or the shop hand them out).
-@export var show_upgrade_screen := true
-## For testing: start each run with some random relics.
-@export var start_with_relics := true
+## For testing only (off by default): a free "Upgrades" button on the map to put finishes and upgrades on your figures.
+@export var show_upgrade_screen := false
+## For testing only (off by default): start with some random relics.
+@export var start_with_relics := false
 @export var starting_relic_count := 3
 ## Every relic that exists (add new RelicData resources here).
 @export var relic_pool: Array[RelicData] = []
-@export_group("Rewards")
-## How many figures the reward screen offers.
-@export var reward_choices := 3
-## Elite fights: chance of a power as a reward.
-@export_range(0.0, 1.0) var elite_power_chance := 0.5
-## Treasure nodes: chance that the treasure is a relic (otherwise a piece of equipment).
-@export_range(0.0, 1.0) var treasure_relic_chance := 0.5
-## Boss rewards: how many relics to pick from.
-@export var boss_relic_choices := 3
+## Every chance and amount for rewards (see resources/reward_config.tres).
+@export var rewards: RewardConfig

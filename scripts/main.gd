@@ -564,18 +564,17 @@ func _check_game_over() -> bool:
 func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
 	if won:
-		var income := 0
-		if RunManager.node.type != MapNode.Type.BOSS:
-			var on_table: Array[FigureData] = []
-			var equipment_bonus := 0
-			for figure in _players:
-				if figure.data.pays_income:
-					on_table.append(figure.data)
-				if figure.equipment != null:
-					equipment_bonus += figure.equipment.income_bonus
-			RunManager.award_income(on_table, equipment_bonus)
-			RunManager.notify_combat_won({"figures_lost": _figures_lost})
-			income = RunManager.last_income.total
+		# Money for every win (elites and bosses pay a bonus on top: see RewardConfig).
+		var on_table: Array[FigureData] = []
+		var equipment_bonus := 0
+		for figure in _players:
+			if figure.data.pays_income:
+				on_table.append(figure.data)
+			if figure.equipment != null:
+				equipment_bonus += figure.equipment.income_bonus
+		RunManager.award_income(on_table, equipment_bonus)
+		RunManager.notify_combat_won({"figures_lost": _figures_lost})
+		var income: int = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
 		if not run_complete:
 			ui.show_your_turn("Combat cleared! +$%d" % income)

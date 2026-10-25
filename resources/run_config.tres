@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=83 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=84 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Resource" path="res://resources/shop_config.tres" id="30"]
 [ext_resource type="Resource" path="res://resources/difficulty_config.tres" id="140"]
 [ext_resource type="Resource" path="res://resources/map_config.tres" id="141"]
+[ext_resource type="Resource" path="res://resources/reward_config.tres" id="142"]
 [ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/arenas/open_corners.tres" id="12"]
@@ -92,21 +93,21 @@ arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResou
 starting_money = 0
 income_per_figure = 1
 shop = ExtResource("30")
-reward_choices = 3
 power_slots = 3
-start_with_powers = true
+start_with_powers = false
 starting_power_count = 2
 power_pool = Array[ExtResource("40")]([ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52")])
-start_with_equipment = true
+start_with_equipment = false
 starting_equipment_count = 2
 equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72")])
-show_upgrade_screen = true
+show_upgrade_screen = false
 finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), ExtResource("92"), ExtResource("93"), ExtResource("94")])
 upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108")])
-start_with_relics = true
+start_with_relics = false
 starting_relic_count = 3
 relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135")])
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
 elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])
+rewards = ExtResource("142")

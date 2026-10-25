@@ -57,6 +57,43 @@ func random_draftable(count: int, exclude: Array[FigureData] = []) -> Array[Figu
 	return pool.slice(0, count)
 
 
+## Up to `count` different draftable figures, with rarity weights (common, uncommon, rare): each pick
+## first rolls a rarity by weight, then takes a random figure of that rarity (rarities with no
+## figures left are skipped).
+func random_draftable_weighted(count: int, weights: Vector3, exclude: Array[FigureData] = []) -> Array[FigureData]:
+	var by_rarity: Array = [[], [], []]
+	for figure in draftable:
+		if not exclude.has(figure):
+			by_rarity[clampi(figure.rarity, 0, 2)].append(figure)
+	for list in by_rarity:
+		list.shuffle()
+	var picked: Array[FigureData] = []
+	while picked.size() < count:
+		var total := 0.0
+		for rarity in 3:
+			if not by_rarity[rarity].is_empty():
+				total += maxf(weights[rarity], 0.0)
+		var choice := -1
+		if total > 0.0:
+			var roll := randf() * total
+			for rarity in 3:
+				if by_rarity[rarity].is_empty():
+					continue
+				roll -= maxf(weights[rarity], 0.0)
+				if roll <= 0.0:
+					choice = rarity
+					break
+		if choice == -1:  # all weights are zero (or rounding): take whatever is left
+			for rarity in 3:
+				if not by_rarity[rarity].is_empty():
+					choice = rarity
+					break
+		if choice == -1:
+			break
+		picked.append(by_rarity[choice].pop_back())
+	return picked
+
+
 func is_grunt(figure: FigureData) -> bool:
 	return grunts.has(figure)
 

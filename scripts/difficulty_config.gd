@@ -29,8 +29,6 @@ extends Resource
 @export var elite_accuracy_multiplier := 1.1
 ## The enemy side takes this many extra flicks per turn in an elite fight.
 @export var elite_extra_flicks := 1
-## Extra money for winning an elite fight.
-@export var elite_extra_money := 3
 
 
 func _entry(values: Array, act: int, fallback: float) -> float:
