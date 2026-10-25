@@ -20,6 +20,10 @@ Mobile game built in Godot 4 with GDScript.
 
 - Keep ALL UI in the bottom half of the screen (thumb reach). The top half is the board/enemy area.
 
+## Workflow
+
+- Always commit and push directly to `main` (no branches or PRs). The developer pulls locally and tests in the Godot editor.
+
 ## Project settings
 
 - Viewport 1080x1920, portrait, stretch mode `canvas_items`, aspect `keep_width`.

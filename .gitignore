@@ -1,0 +1,26 @@
+# Godot 4+ specific ignores
+.godot/
+.nogit/
+
+# Export builds
+export/
+builds/
+*.apk
+*.aab
+*.ipa
+*.exe
+*.pck
+*.zip
+export_presets.cfg
+*.translation
+
+# Mono / C# (in case it's ever used)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
