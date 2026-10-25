@@ -23,6 +23,17 @@ var _time := 0.0
 
 
 func _ready() -> void:
+	# The relic icons sit in a row at the top of the map (the bottom half of the screen).
+	var relics := RelicBar.new()
+	relics.anchor_right = 1.0
+	relics.anchor_top = 0.5
+	relics.anchor_bottom = 0.5
+	relics.offset_left = 24.0
+	relics.offset_right = -24.0
+	relics.offset_top = 8.0
+	relics.offset_bottom = 64.0
+	relics.name = "RelicBar"
+	add_child(relics)
 	# The equip screen button sits at the bottom right, in thumb reach.
 	var button := Button.new()
 	var held := RunManager.equipment_inventory.size()
@@ -99,8 +110,8 @@ func _shop_center() -> Vector2:
 
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(0.0, size.y * 0.5 + 50.0), "Run map", HORIZONTAL_ALIGNMENT_CENTER, size.x, 44, dim_text_color)
-	draw_string(font, Vector2(0.0, size.y * 0.5 + 50.0), "$%d" % RunManager.money, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 40.0, 52, money_color)
+	draw_string(font, Vector2(0.0, size.y * 0.5 + 100.0), "Run map", HORIZONTAL_ALIGNMENT_CENTER, size.x, 44, dim_text_color)
+	draw_string(font, Vector2(0.0, size.y * 0.5 + 100.0), "$%d" % RunManager.money, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 40.0, 52, money_color)
 	for i in _node_count() - 1:
 		draw_line(_node_center(i), _node_center(i + 1), line_color, 8.0, true)
 	if RunManager.config.shop != null:

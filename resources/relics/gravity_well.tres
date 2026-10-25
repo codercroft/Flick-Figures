@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="RelicData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/relic_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/relics/gravity_well_effect.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Gravity Well"
+label = "GW"
+description = "Magnet-type pulls are twice as strong."
+color = Color(0.55, 0.4, 0.8, 1)
+effect = SubResource("Resource_1")

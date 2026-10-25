@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=59 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=75 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -58,6 +58,22 @@
 [ext_resource type="Resource" path="res://resources/upgrades/ghost_upgrade.tres" id="106"]
 [ext_resource type="Resource" path="res://resources/upgrades/splitter_upgrade.tres" id="107"]
 [ext_resource type="Resource" path="res://resources/upgrades/cha_ching_upgrade.tres" id="108"]
+[ext_resource type="Script" path="res://scripts/relic_data.gd" id="120"]
+[ext_resource type="Resource" path="res://resources/relics/blast_cap.tres" id="121"]
+[ext_resource type="Resource" path="res://resources/relics/opening_act.tres" id="122"]
+[ext_resource type="Resource" path="res://resources/relics/extra_pocket.tres" id="123"]
+[ext_resource type="Resource" path="res://resources/relics/reload_ring.tres" id="124"]
+[ext_resource type="Resource" path="res://resources/relics/aim_assist.tres" id="125"]
+[ext_resource type="Resource" path="res://resources/relics/grippy_table.tres" id="126"]
+[ext_resource type="Resource" path="res://resources/relics/home_field.tres" id="127"]
+[ext_resource type="Resource" path="res://resources/relics/bully.tres" id="128"]
+[ext_resource type="Resource" path="res://resources/relics/underdog.tres" id="129"]
+[ext_resource type="Resource" path="res://resources/relics/last_one_standing.tres" id="130"]
+[ext_resource type="Resource" path="res://resources/relics/second_wind.tres" id="131"]
+[ext_resource type="Resource" path="res://resources/relics/lucky_coin.tres" id="132"]
+[ext_resource type="Resource" path="res://resources/relics/trophy_case.tres" id="133"]
+[ext_resource type="Resource" path="res://resources/relics/gravity_well.tres" id="134"]
+[ext_resource type="Resource" path="res://resources/relics/clean_sheet.tres" id="135"]
 
 [resource]
 script = ExtResource("1")
@@ -83,3 +99,6 @@ equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"),
 show_upgrade_screen = true
 finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), ExtResource("92"), ExtResource("93"), ExtResource("94")])
 upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108")])
+start_with_relics = true
+starting_relic_count = 3
+relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135")])

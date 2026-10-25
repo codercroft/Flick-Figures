@@ -29,6 +29,12 @@ var money := 0
 var last_income := {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 var shop_offers: Array[ShopOffer] = []
 var shop_done := false  # visited (and left) the shop this run
+## The relics held this run (passive effects; never the same relic twice).
+var relics: Array[RelicData] = []
+## The Main node while a combat is running (null otherwise): relic effects read the board from it.
+var combat: Node
+## Short messages from relics after the last won combat (shown on the reward screen).
+var relic_notes: Array[String] = []
 ## The player's power slots (null = empty). They persist across combats until used.
 var powers: Array[PowerData] = []
 
@@ -59,8 +65,111 @@ func start_new_run() -> void:
 	shop_offers.clear()
 	shop_done = false
 	_reset_powers()
+	_reset_relics()
 	boss = config.registry.random_boss()
 	_build_lineup()
+
+
+func _reset_relics() -> void:
+	relics.clear()
+	relic_notes.clear()
+	if config.start_with_relics:
+		for i in config.starting_relic_count:
+			var relic := random_new_relic()
+			if relic != null:
+				add_relic(relic)
+
+
+## Adds a relic to the run. Returns false (and does nothing) if it is already held.
+func add_relic(relic: RelicData) -> bool:
+	if relic == null or relics.has(relic):
+		return false
+	relics.append(relic)
+	if relic.effect != null:
+		relic.effect.on_acquired(self)
+	return true
+
+
+## A relic from the pool that the run does not hold yet, or null if it holds them all.
+func random_new_relic() -> RelicData:
+	var choices: Array[RelicData] = []
+	for relic in config.relic_pool:
+		if not relics.has(relic):
+			choices.append(relic)
+	return choices.pick_random() if not choices.is_empty() else null
+
+
+## One more deck slot, filled with the starting figure (Extra Pocket).
+func add_deck_slot() -> void:
+	deck.append(config.starting_figure)
+	deck_equipment.append(null)
+	deck_finish.append(null)
+	deck_upgrade.append(null)
+
+
+func random_power() -> PowerData:
+	return config.power_pool.pick_random() if not config.power_pool.is_empty() else null
+
+
+# --- Relic queries: every held relic gets a say -------------------------------
+
+func _relic_product(method: StringName, args := []) -> float:
+	var result := 1.0
+	for relic in relics:
+		if relic.effect != null:
+			result *= relic.effect.callv(method, args)
+	return result
+
+
+func relic_explosion_multiplier() -> float:
+	return _relic_product(&"get_explosion_radius_multiplier")
+
+
+func relic_flick_multiplier(main, figure: Figure) -> float:
+	return _relic_product(&"get_flick_power_multiplier", [main, figure])
+
+
+func relic_player_damping() -> float:
+	return _relic_product(&"get_player_damping_multiplier")
+
+
+func relic_knockback_taken(figure: Figure, source: Figure) -> float:
+	return _relic_product(&"get_knockback_taken_multiplier", [figure, source])
+
+
+func relic_pull_multiplier() -> float:
+	return _relic_product(&"get_pull_multiplier")
+
+
+func relic_enables_reload() -> bool:
+	for relic in relics:
+		if relic.effect != null and relic.effect.enables_reload():
+			return true
+	return false
+
+
+func relic_shows_aim_bounce() -> bool:
+	for relic in relics:
+		if relic.effect != null and relic.effect.shows_aim_bounce():
+			return true
+	return false
+
+
+## True if a relic saves a player's figure that was about to be knocked off.
+func relic_saves_figure(main, figure: Figure) -> bool:
+	for relic in relics:
+		if relic.effect != null and relic.effect.on_player_figure_falling(main, figure):
+			return true
+	return false
+
+
+## Tells the relics a combat was won; their messages go to relic_notes.
+func notify_combat_won(info: Dictionary) -> void:
+	for relic in relics:
+		if relic.effect != null:
+			var note := relic.effect.on_combat_won(self, info)
+			if note != "":
+				relic_notes.append(note)
 
 
 func _reset_powers() -> void:
@@ -109,7 +218,11 @@ func combat_won() -> bool:
 
 ## The figures the reward screen offers: different from each other.
 func offer_rewards() -> Array[FigureData]:
-	return config.registry.random_draftable(config.reward_choices)
+	var count := config.reward_choices
+	for relic in relics:
+		if relic.effect != null:
+			count += relic.effect.get_reward_choice_bonus()
+	return config.registry.random_draftable(count)
 
 
 ## Puts a new figure in a deck slot. Equipment the old figure held goes back to the inventory.
@@ -170,6 +283,10 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 	var bonus := equipment_bonus
 	for figure in figures_on_table:
 		bonus += figure.income_bonus
+	for relic in relics:
+		if relic.effect != null:
+			bonus += relic.effect.get_income_bonus()
+	relic_notes.clear()
 	last_income = {"figures": figures_on_table.size(), "base": base, "bonus": bonus, "total": base + bonus}
 	money += base + bonus
 
@@ -178,7 +295,10 @@ func income_text() -> String:
 	var text := "Earned $%d: $%d for %d figures" % [last_income.total, last_income.base, last_income.figures]
 	if last_income.bonus > 0:
 		text += ", +$%d bonus" % last_income.bonus
-	return text + ". You have $%d." % money
+	text += ". You have $%d." % money
+	for note in relic_notes:
+		text += "\n" + note
+	return text
 
 
 func spend(amount: int) -> bool:

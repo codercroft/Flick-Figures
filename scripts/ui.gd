@@ -8,6 +8,7 @@ extends CanvasLayer
 signal power_pressed(slot: int)
 
 @onready var power_bar: HBoxContainer = $PowerBar
+@onready var relic_bar: RelicBar = $RelicBar
 @onready var turn_label: Label = $TurnLabel
 @onready var progress_label: Label = $ProgressLabel
 @onready var debug_label: Label = $DebugLabel
@@ -50,6 +51,7 @@ func show_progress(text: String) -> void:
 
 func show_result(text: String) -> void:
 	power_bar.hide()
+	relic_bar.hide()
 	turn_label.hide()
 	progress_label.hide()
 	result_label.text = text
@@ -92,8 +94,11 @@ func set_powers_enabled(enabled: bool) -> void:
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 
 
-## True if a screen position is over the power bar (so main.gd doesn't treat it as aiming).
+## True if a screen position is over the power bar or the relic icons (so main.gd doesn't treat
+## it as aiming).
 func is_over_power_bar(screen_pos: Vector2) -> bool:
+	if relic_bar.is_over(screen_pos):
+		return true
 	return power_bar.visible and power_bar.get_global_rect().has_point(screen_pos)
 
 

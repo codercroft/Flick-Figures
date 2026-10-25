@@ -286,7 +286,8 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		_skip_knockback_frames -= 1
 	elif state.get_contact_count() > 0:
 		var hitter := _hardest_hitter(state)
-		var multiplier := data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, hitter)
+		var multiplier := data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, hitter) \
+				* RunManager.relic_knockback_taken(self, hitter)
 		if hitter != null:
 			var impact := maxf((_last_velocity - hitter._last_velocity).length(),
 					(_prev_velocity - hitter._prev_velocity).length())
@@ -396,7 +397,8 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 	if is_frozen():
 		return
 	_skip_knockback_frames = 2
-	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source))
+	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source)
+			* RunManager.relic_knockback_taken(self, source))
 
 
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
@@ -468,6 +470,7 @@ func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
 ## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
 ## `force` at the center and fades to zero at the edge.
 func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
+	blast_radius *= RunManager.relic_explosion_multiplier()  # Blast Cap
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
 	Figure.blast(get_tree(), global_position, blast_radius, force, self, spared)

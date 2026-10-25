@@ -31,4 +31,4 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 			continue
 		var strength := (distance - inner_radius) / (pull_radius - inner_radius)
 		# Force = mass * acceleration, so heavy figures are pulled as hard as light ones.
-		other.apply_central_force(offset.normalized() * pull_acceleration * strength * other.mass)
+		other.apply_central_force(offset.normalized() * pull_acceleration * RunManager.relic_pull_multiplier() * strength * other.mass)

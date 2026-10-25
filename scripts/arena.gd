@@ -197,7 +197,7 @@ func _apply_zone(zone: Dictionary, figures: Array) -> void:
 			if figure.is_slow() or distance < zone.inner or distance > zone.radius:
 				continue
 			var strength: float = (distance - zone.inner) / (zone.radius - zone.inner)
-			figure.apply_central_force(offset.normalized() * zone.pull * strength * figure.mass)
+			figure.apply_central_force(offset.normalized() * zone.pull * RunManager.relic_pull_multiplier() * strength * figure.mass)
 		else:
 			# Only stops figures as they ENTER, so a figure flicked from inside can still leave.
 			var id := figure.get_instance_id()

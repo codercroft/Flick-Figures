@@ -74,6 +74,13 @@ var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
 
+# Relics read these.
+## Flicks the player has taken this combat (Opening Act: the first one is boosted).
+var player_flicks := 0
+## Second Wind: set once it has brought a figure back this combat.
+var second_wind_used := false
+var _figures_lost := 0  # player figures knocked off for good (Clean Sheet)
+
 # Powers (see "Powers API" below).
 ## Multiplies the next flick's force (Super Flick sets it to 3; it resets after a flick).
 var flick_boost := 1.0
@@ -93,6 +100,7 @@ var _snapshot := {}  # every figure as it was before the player's last flick (fo
 
 
 func _ready() -> void:
+	RunManager.combat = self
 	ui.power_pressed.connect(_on_power_slot_pressed)
 	ui.set_powers(RunManager.powers)
 	_update_status()
@@ -104,6 +112,11 @@ func _ready() -> void:
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
+
+
+func _exit_tree() -> void:
+	if RunManager.combat == self:
+		RunManager.combat = null
 
 
 func _physics_process(_delta: float) -> void:
@@ -189,7 +202,7 @@ func _start_player_turn(new_round := true) -> void:
 	ui.show_debug("")
 	_needs_reload = false
 	if not _has_flickable_figure():
-		if reload_enabled:
+		if reload_enabled or RunManager.relic_enables_reload():
 			_needs_reload = true
 		else:
 			_make_all_flickable()
@@ -254,7 +267,11 @@ func _update_aim(pos: Vector2) -> void:
 	var speed := impulse.length() / _aim_figure.mass
 	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
 	var direction := impulse.normalized()
-	aim_line.show_aim(_aim_figure.global_position + direction * _aim_figure.radius, direction, distance)
+	var origin := _aim_figure.global_position + direction * _aim_figure.radius
+	var bounce := {}
+	if RunManager.relic_shows_aim_bounce():
+		bounce = _predict_bounce(_aim_figure, _aim_figure.global_position, direction, distance + _aim_figure.radius)
+	aim_line.show_aim(origin, direction, distance, bounce)
 
 
 func _release_aim(pos: Vector2) -> void:
@@ -271,6 +288,7 @@ func _release_aim(pos: Vector2) -> void:
 	_bonus_figure = null
 	var flicked_figure := _aim_figure
 	_take_snapshot()
+	player_flicks += 1
 	flick_boost = 1.0
 	_update_status()
 	_aim_figure.launch(impulse)
@@ -331,7 +349,8 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	if pull < min_pull_distance:
 		return Vector2.ZERO
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost \
-			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure)
+			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure) \
+			* RunManager.relic_flick_multiplier(self, _aim_figure)
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
@@ -550,6 +569,7 @@ func _end_game(won: bool) -> void:
 				if figure.equipment != null:
 					equipment_bonus += figure.equipment.income_bonus
 			RunManager.award_income(on_table, equipment_bonus)
+			RunManager.notify_combat_won({"figures_lost": _figures_lost})
 			income = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
 		if not run_complete:
@@ -590,7 +610,8 @@ func _spawn_enemies() -> void:
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
 		finish: FinishData = null, upgrade: UpgradeData = null) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	figure.setup(data, team, figure_damping, stop_speed, settle_frames, item, finish, upgrade)
+	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else 1.0)
+	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
@@ -640,6 +661,10 @@ func _knock_off_fallen_figures() -> void:
 				continue
 			if figure.ability.on_left_table(figure, table):
 				continue  # saved (e.g. Ghost wrapped around)
+			if figure.team == Figure.Team.PLAYER and RunManager.relic_saves_figure(self, figure):
+				continue  # saved by a relic (Second Wind)
+			if figure.team == Figure.Team.PLAYER:
+				_figures_lost += 1
 			_players.erase(figure)
 			_enemies.erase(figure)
 			figure.knock_off(knock_off_fade_time)
@@ -673,6 +698,7 @@ func notice(text: String) -> void:
 
 ## Explosion at a point (Bomb Drop).
 func explode_at(point: Vector2, radius: float, force: float) -> void:
+	radius *= RunManager.relic_explosion_multiplier()  # Blast Cap
 	var picture := BlastEffect.new()
 	picture.position = point
 	add_child(picture)
@@ -706,7 +732,7 @@ func _take_snapshot() -> void:
 			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
 			"equipment": figure.equipment, "finish": figure.finish, "upgrade": figure.upgrade,
 		})
-	_snapshot = {"figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
+	_snapshot = {"player_flicks": player_flicks, "figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
 
 
 ## Rewind: replaces every figure with a fresh copy from before the last flick (so knocked-off
@@ -743,6 +769,7 @@ func rewind() -> bool:
 			figure.freeze_for(entry.frozen)
 		if entry.bubble > 0:
 			figure.set_bubble(entry.bubble)
+	player_flicks = _snapshot.player_flicks
 	flick_boost = _snapshot.boost
 	extra_turns = _snapshot.extra
 	_enemy_flicks = _snapshot.enemy_flicks
@@ -875,3 +902,41 @@ func _update_status() -> void:
 	if extra_turns > 0:
 		text += "  |  Extra flick x%d" % extra_turns
 	ui.show_progress(text)
+
+
+## Relics read these.
+func get_player_count() -> int:
+	return _players.size()
+
+
+func get_enemy_count() -> int:
+	return _enemies.size()
+
+
+## Aim Assist: where the shot from `start` along `direction` (up to `distance`) first hits something,
+## and where it bounces to. Returns {} if it hits nothing, else {point, direction, length}.
+func _predict_bounce(figure: Figure, start: Vector2, direction: Vector2, distance: float) -> Dictionary:
+	var space := get_world_2d().direct_space_state
+	var shape := CircleShape2D.new()
+	shape.radius = figure.radius
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape
+	query.transform = Transform2D(0.0, start)
+	query.motion = direction * distance
+	query.collision_mask = Figure.LAYER_FLICKED | Figure.LAYER_ENEMY | Figure.LAYER_ARENA
+	query.exclude = [figure.get_rid()]
+	var fractions := space.cast_motion(query)
+	if fractions.size() < 2 or fractions[1] >= 1.0:
+		return {}
+	var contact := start + direction * distance * fractions[1]
+	query.transform = Transform2D(0.0, contact)
+	query.motion = Vector2.ZERO
+	var rest := space.get_rest_info(query)
+	if rest.is_empty():
+		return {}
+	var normal: Vector2 = rest.normal
+	if normal.dot(direction) > 0.0:
+		normal = -normal
+	var travelled := distance * fractions[1]
+	return {"point": contact, "direction": direction.bounce(normal), "length": (distance - travelled) * 0.6,
+			"travelled": travelled}

@@ -42,5 +42,10 @@ extends Resource
 ## For testing: a free "Upgrades" button on the map to put finishes and upgrades on your figures
 ## (until rewards or the shop hand them out).
 @export var show_upgrade_screen := true
+## For testing: start each run with some random relics.
+@export var start_with_relics := true
+@export var starting_relic_count := 3
+## Every relic that exists (add new RelicData resources here).
+@export var relic_pool: Array[RelicData] = []
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

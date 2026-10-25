@@ -23,8 +23,10 @@ func _ready() -> void:
 func _show_offers() -> void:
 	_clear_cards()
 	title.text = "Combat cleared! Pick a reward"
+	# With more than 3 choices (Trophy Case) the cards shrink so they all fit.
+	var card_height := minf(OFFER_CARD_HEIGHT, 640.0 / maxi(_offers.size(), 1))
 	for offer in _offers:
-		var card := _add_card(offer, OFFER_CARD_HEIGHT)
+		var card := _add_card(offer, card_height)
 		card.pressed.connect(_on_offer_chosen.bind(offer))
 
 
