@@ -25,6 +25,13 @@ jobs:
           use-dotnet: false
           include-templates: true
 
+      - name: Make sure the Android SDK pieces Godot 4.3 wants are installed
+        run: |
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" "build-tools;34.0.0" "platforms;android-34" "cmdline-tools;latest" > /dev/null || true
+          echo "SDK: $ANDROID_SDK_ROOT"; ls "$ANDROID_SDK_ROOT" "$ANDROID_SDK_ROOT/build-tools" "$ANDROID_SDK_ROOT/platforms"
+          echo "JAVA17: $JAVA_HOME_17_X64"; ls "$JAVA_HOME_17_X64/bin" | head -3
+
       - name: Tell Godot where the Android SDK, Java and debug key are
         run: |
           mkdir -p ~/.config/godot build
@@ -46,7 +53,7 @@ jobs:
         run: godot --headless --import || true
 
       - name: Export APK
-        run: godot --headless --export-debug "Android" build/FlickFigures.apk
+        run: godot --headless --verbose --export-debug "Android" build/FlickFigures.apk
 
       - uses: actions/upload-artifact@v4
         with:
