@@ -1,12 +1,12 @@
 class_name BumperAbility
 extends FigureAbility
-## Anything that bounces off it gets extra knockback, away from the bumper.
+## Anything that bounces off it is launched away from it, hard.
 
-## Extra push as a fraction of the other figure's speed after the bounce.
-@export var bump_ratio := 0.8
+## Extra push as a multiple of the other figure's speed after the bounce (1.8 = nearly triples it).
+@export var bump_ratio := 1.8
 ## Ignore bounces slower than this (px/s).
 @export var min_bump_speed := 100.0
-@export var max_bump_speed := 1800.0
+@export var max_bump_speed := 2400.0
 
 
 func on_hit(figure: Figure, other: Figure) -> void:

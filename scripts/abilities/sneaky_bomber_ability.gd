@@ -3,7 +3,7 @@ extends FigureAbility
 ## If its flick ends without touching any figure, it explodes where it stops,
 ## pushing away EVERY figure in range, allies included.
 
-@export var explosion_radius := 360.0
+@export var explosion_radius := 270.0
 @export var explosion_force := 2200.0
 
 var _flicking := false

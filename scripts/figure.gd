@@ -257,14 +257,14 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source))
 
 
-## Pushes every other figure within blast_radius away. The push is `force` at the
-## center and fades to zero at the edge.
-func explode(blast_radius: float, force: float) -> void:
+## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
+## `force` at the center and fades to zero at the edge.
+func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
 	for node in get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other == self or other.knocked_off:
+		if other == self or other == spared or other.knocked_off:
 			continue
 		var offset := other.global_position - global_position
 		var distance := offset.length()

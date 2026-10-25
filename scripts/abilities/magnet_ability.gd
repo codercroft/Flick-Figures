@@ -1,10 +1,18 @@
 class_name MagnetAbility
 extends FigureAbility
-## While on the board, gently pulls moving figures toward it (friends and enemies alike).
+## While on the board, bends the path of moving figures that pass near it (friends and enemies
+## alike) for slingshot curve shots. The pull is weak near the magnet and strongest at the edge
+## of its range, so a shot is caught as it passes by, not dragged straight in. The magnet never
+## pulls resting figures and is never moved by its own pull.
 
-@export var pull_radius := 450.0
-## Pull (px/s per second) right next to the magnet; fades to zero at pull_radius.
-@export var pull_acceleration := 600.0
+## How far (px from the magnet's center) the pull reaches.
+@export var pull_radius := 500.0
+## Inside this distance (px) there is no pull at all.
+@export var inner_radius := 150.0
+## Pull (px/s per second) at pull_radius. It fades linearly to zero at inner_radius.
+@export var pull_acceleration := 1200.0
+## Figures slower than this (px/s) are left alone, so resting figures are never dragged in.
+@export var min_pull_speed := 60.0
 
 
 func on_physics_process(figure: Figure, _delta: float) -> void:
@@ -12,13 +20,15 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 		return
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
-		# Never push figures that are already below the settle speed, or they never come to rest.
+		# `other == figure`: a magnet is never moved by its own pull.
 		if other == figure or other.knocked_off or other.is_slow():
+			continue
+		if other.linear_velocity.length() < min_pull_speed:
 			continue
 		var offset := figure.global_position - other.global_position
 		var distance := offset.length()
-		if distance >= pull_radius or distance <= figure.radius + other.radius:
-			continue  # too far, or already touching
+		if distance < inner_radius or distance > pull_radius:
+			continue
+		var strength := (distance - inner_radius) / (pull_radius - inner_radius)
 		# Force = mass * acceleration, so heavy figures are pulled as hard as light ones.
-		var pull := pull_acceleration * (1.0 - distance / pull_radius)
-		other.apply_central_force(offset.normalized() * pull * other.mass)
+		other.apply_central_force(offset.normalized() * pull_acceleration * strength * other.mass)
