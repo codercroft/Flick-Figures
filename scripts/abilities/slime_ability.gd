@@ -42,4 +42,4 @@ func on_impact(figure: Figure, _other: Figure, speed: float, point: Vector2) -> 
 			"position": figure.global_position + away.orthogonal() * side * piece.radius * 1.05,
 			"velocity": away.rotated(deg_to_rad(burst_spread_degrees) * side) * burst_speed + figure.linear_velocity * inherit_velocity,
 		})
-	figure.split_into(pieces)
+	figure.split_into(pieces, true)

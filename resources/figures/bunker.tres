@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/bunker_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Bunker"
+description = "Immune to explosion knockback, and heavier after every explosion."
+rarity = 1
+label = "BK"
+icon = 19
+color = Color(0.3, 0.4, 0.55, 1)
+radius = 65.0
+mass = 2.0
+bounce = 0.5
+flick_power_multiplier = 1.0
+ability = SubResource("Resource_1")

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Mini"
+description = "A piece of a Splitter."
+label = "s"
+color = Color(0.4, 0.7, 1.0, 1)
+radius = 36.0
+mass = 0.5
+bounce = 0.7
+pays_income = false

@@ -43,6 +43,8 @@ const TOUCH_MARGIN := 4.0
 @export var self_knock_off_penalty := 300.0
 ## Attacks scoring below this are skipped in favor of repositioning.
 @export var min_attack_score := 40.0
+## An EXTRA flick (Speedo's second shot) is only taken if the attack scores at least this much.
+@export var bonus_flick_min_score := 120.0
 
 @export_group("Repositioning")
 ## How far (px) a repositioning flick slides.
@@ -73,12 +75,16 @@ func clear_debug() -> void:
 ## {"enemy": Figure, "impulse": Vector2}, or {} if nobody has anything worth doing (pass).
 ## Real attacks beat repositioning, which beats passing; within a kind the higher score wins.
 ## Call from a physics-safe moment (it uses the physics space for shape casts).
-func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
+## With `min_score` set (extra flicks), only attacks scoring at least that are considered.
+func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_force: float,
+		min_score := -INF) -> Dictionary:
 	var best := {}
 	var best_enemy: Figure = null
 	for enemy in candidates:
 		var shot := _best_shot_for(enemy, players, table, max_force)
 		if shot.kind == "pass":
+			continue
+		if min_score > -INF and (shot.kind == "reposition" or shot.score < min_score):
 			continue
 		if best.is_empty() or _shot_rank(shot) > _shot_rank(best):
 			best = shot

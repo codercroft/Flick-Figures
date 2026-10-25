@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="FigureRegistry" load_steps=19 format=3]
+[gd_resource type="Resource" script_class="FigureRegistry" load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_registry.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
@@ -18,10 +18,19 @@
 [ext_resource type="Resource" path="res://resources/figures/boss_sniper_squad.tres" id="16"]
 [ext_resource type="Resource" path="res://resources/figures/boss_slime.tres" id="17"]
 [ext_resource type="Resource" path="res://resources/figures/cha_ching.tres" id="18"]
+[ext_resource type="Resource" path="res://resources/figures/speedo.tres" id="20"]
+[ext_resource type="Resource" path="res://resources/figures/ghost.tres" id="21"]
+[ext_resource type="Resource" path="res://resources/figures/glue_guy.tres" id="22"]
+[ext_resource type="Resource" path="res://resources/figures/splitter.tres" id="23"]
+[ext_resource type="Resource" path="res://resources/figures/rally.tres" id="24"]
+[ext_resource type="Resource" path="res://resources/figures/popcorn.tres" id="25"]
+[ext_resource type="Resource" path="res://resources/figures/bunker.tres" id="26"]
+[ext_resource type="Resource" path="res://resources/figures/piggy_bank.tres" id="27"]
+[ext_resource type="Resource" path="res://resources/figures/pinata.tres" id="28"]
 
 [resource]
 script = ExtResource("1")
 grunts = Array[ExtResource("2")]([ExtResource("3")])
-draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18")])
-economy = Array[ExtResource("2")]([ExtResource("18")])
+draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28")])
+economy = Array[ExtResource("2")]([ExtResource("18"), ExtResource("27"), ExtResource("28")])
 bosses = Array[ExtResource("14")]([ExtResource("15"), ExtResource("16"), ExtResource("17")])

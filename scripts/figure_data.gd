@@ -31,5 +31,7 @@ extends Resource
 @export_enum("Common", "Uncommon", "Rare") var rarity := 0
 ## Extra money earned at the end of a won combat if this figure is still on the table.
 @export var income_bonus := 0
+## False for figures that should not earn the $1-per-figure income (e.g. Splitter's minis).
+@export var pays_income := true
 ## Optional special behavior. Pick a FigureAbility subclass (e.g. BomboAbility) in the Inspector.
 @export var ability: FigureAbility

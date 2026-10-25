@@ -3,7 +3,8 @@ extends RefCounted
 ## Tiny line icons drawn on figures to hint at what they do. Pure drawing code: add a new
 ## entry to the enum and a new case in draw() to make another icon.
 
-enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN }
+enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, POPCORN, BUNKER, PIGGY, PINATA }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -66,3 +67,45 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_rect(Rect2(center + Vector2(-s * 0.35, -s * 0.4), Vector2(s * 0.7, s * 1.4)), color, false, w)
 			canvas.draw_line(center + Vector2(0, -s * 0.4), center + Vector2(s * 0.3, -s * 0.8), color, w)
 			canvas.draw_circle(center + Vector2(s * 0.45, -s * 0.95), w, color)
+		Icon.DOUBLE:  # two chevrons: two flicks
+			for x in [-s * 0.5, s * 0.3]:
+				canvas.draw_polyline(PackedVector2Array([
+					center + Vector2(x, -s * 0.7), center + Vector2(x + s * 0.6, 0),
+					center + Vector2(x, s * 0.7)]), color, w)
+		Icon.GHOST:  # a sheet ghost
+			canvas.draw_arc(center + Vector2(0, -s * 0.1), s * 0.7, PI, TAU, 14, color, w)
+			canvas.draw_line(center + Vector2(-s * 0.7, -s * 0.1), center + Vector2(-s * 0.7, s * 0.8), color, w)
+			canvas.draw_line(center + Vector2(s * 0.7, -s * 0.1), center + Vector2(s * 0.7, s * 0.8), color, w)
+			canvas.draw_polyline(PackedVector2Array([
+				center + Vector2(-s * 0.7, s * 0.8), center + Vector2(-s * 0.35, s * 0.5),
+				center + Vector2(0, s * 0.8), center + Vector2(s * 0.35, s * 0.5),
+				center + Vector2(s * 0.7, s * 0.8)]), color, w)
+		Icon.GLUE:  # two circles stuck together
+			canvas.draw_arc(center + Vector2(-s * 0.5, 0), s * 0.5, 0.0, TAU, 14, color, w)
+			canvas.draw_arc(center + Vector2(s * 0.5, 0), s * 0.5, 0.0, TAU, 14, color, w)
+		Icon.SPLIT:  # one stem splitting in two
+			canvas.draw_line(center + Vector2(0, s), center + Vector2(0, 0), color, w)
+			canvas.draw_line(center, center + Vector2(-s * 0.8, -s * 0.8), color, w)
+			canvas.draw_line(center, center + Vector2(s * 0.8, -s * 0.8), color, w)
+		Icon.RALLY:  # an arrow up with side ticks: the team moves up
+			canvas.draw_line(center + Vector2(0, s), center + Vector2(0, -s), color, w)
+			canvas.draw_line(center + Vector2(-s * 0.5, -s * 0.4), center + Vector2(0, -s), color, w)
+			canvas.draw_line(center + Vector2(s * 0.5, -s * 0.4), center + Vector2(0, -s), color, w)
+			canvas.draw_line(center + Vector2(-s * 0.9, s * 0.3), center + Vector2(-s * 0.9, -s * 0.4), color, w)
+			canvas.draw_line(center + Vector2(s * 0.9, s * 0.3), center + Vector2(s * 0.9, -s * 0.4), color, w)
+		Icon.POPCORN:  # kernels
+			canvas.draw_circle(center + Vector2(-s * 0.55, s * 0.3), s * 0.38, color)
+			canvas.draw_circle(center + Vector2(s * 0.55, s * 0.3), s * 0.38, color)
+			canvas.draw_circle(center + Vector2(0, -s * 0.35), s * 0.45, color)
+		Icon.BUNKER:  # a block with a slit
+			canvas.draw_rect(Rect2(center + Vector2(-s, -s * 0.7), Vector2(s * 2.0, s * 1.4)), color, false, w)
+			canvas.draw_line(center + Vector2(-s * 0.5, -s * 0.1), center + Vector2(s * 0.5, -s * 0.1), color, w)
+		Icon.PIGGY:  # a round body with a coin slot
+			canvas.draw_arc(center + Vector2(0, s * 0.15), s * 0.85, 0.0, TAU, 20, color, w)
+			canvas.draw_line(center + Vector2(-s * 0.35, -s * 0.3), center + Vector2(s * 0.35, -s * 0.3), color, w)
+		Icon.PINATA:  # a hanging diamond
+			canvas.draw_line(center + Vector2(0, -s), center + Vector2(0, -s * 0.5), color, w)
+			canvas.draw_polyline(PackedVector2Array([
+				center + Vector2(0, -s * 0.5), center + Vector2(s * 0.8, s * 0.1),
+				center + Vector2(0, s * 0.9), center + Vector2(-s * 0.8, s * 0.1),
+				center + Vector2(0, -s * 0.5)]), color, w)

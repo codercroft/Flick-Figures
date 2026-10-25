@@ -9,7 +9,7 @@ signal impacted(figure: Figure, other: Figure, speed: float, point: Vector2)
 signal fell_off(figure: Figure)
 ## A figure wants to be replaced by new figures (Slime splitting). `pieces` is an array of
 ## {data, position, velocity} dictionaries; main.gd spawns them and removes `parent`.
-signal split_requested(parent: Figure, pieces: Array)
+signal split_requested(parent: Figure, pieces: Array, grants_flicks: bool)
 
 enum Team { PLAYER, ENEMY }
 
@@ -48,6 +48,12 @@ var flickable := true:
 		flickable = value
 		queue_redraw()
 var knocked_off := false
+## Flicks this figure has taken this turn (main.gd resets it each turn; Speedo can take 2).
+var turn_flicks := 0
+## True once this figure has touched anything (a figure or a wall) since it was last flicked.
+var touched_since_flick := false
+## Glue Guy: the joints holding this figure to others (stale ones may linger; check validity).
+var glue_joints: Array[PinJoint2D] = []
 
 # Player figures: highlighted ring while chosen for aiming.
 var selected := false:
@@ -217,6 +223,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
+	touched_since_flick = true
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
@@ -256,6 +263,8 @@ func describe_motion() -> String:
 func launch(impulse: Vector2) -> void:
 	on_deck = false
 	flickable = false
+	turn_flicks += 1
+	touched_since_flick = false
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(impulse)
@@ -268,6 +277,70 @@ func launch(impulse: Vector2) -> void:
 func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 	_skip_knockback_frames = 2
 	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source))
+
+
+## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
+## get_explosion_multiplier (0 = immune).
+func take_explosion(impulse: Vector2, source: Figure) -> void:
+	unglue()
+	var multiplier := ability.get_explosion_multiplier(self, source)
+	if multiplier > 0.0:
+		take_knockback(impulse * multiplier, source)
+
+
+## Changes velocity by `velocity_change` px/s directly (ignores knockback multipliers).
+func nudge(velocity_change: Vector2) -> void:
+	_skip_knockback_frames = 2
+	_slow_frames = 0
+	apply_central_impulse(velocity_change * mass)
+
+
+## Glues this figure to `other`: they move as one heavier body until an explosion hits either.
+func glue_to(other: Figure) -> void:
+	if knocked_off or other.knocked_off or get_parent() == null:
+		return
+	var joint := PinJoint2D.new()
+	get_parent().add_child(joint)
+	joint.global_position = (global_position + other.global_position) / 2.0
+	joint.node_a = joint.get_path_to(self)
+	joint.node_b = joint.get_path_to(other)
+	joint.softness = 0.0
+	glue_joints.append(joint)
+	other.glue_joints.append(joint)
+
+
+func is_glued() -> bool:
+	for joint in glue_joints:
+		if is_instance_valid(joint) and not joint.is_queued_for_deletion():
+			return true
+	return false
+
+
+## Breaks every glue joint on this figure.
+func unglue() -> void:
+	for joint in glue_joints:
+		if is_instance_valid(joint):
+			joint.queue_free()
+	glue_joints.clear()
+
+
+## A short floating text above the figure (e.g. "+$2").
+func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
+	var label := Label.new()
+	label.text = text
+	label.position = Vector2(-80.0, -radius - 70.0)
+	label.size = Vector2(160.0, 50.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 48)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 10)
+	label.z_index = 10
+	add_child(label)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(label, "position:y", label.position.y - 90.0, 1.0)
+	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_delay(0.4)
+	tween.chain().tween_callback(label.queue_free)
 
 
 ## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
@@ -283,13 +356,14 @@ func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 		var distance := offset.length()
 		if distance >= blast_radius:
 			continue
-		other.take_knockback(offset.normalized() * force * (1.0 - distance / blast_radius), self)
+		other.take_explosion(offset.normalized() * force * (1.0 - distance / blast_radius), self)
 		other.ability.on_exploded.call_deferred(other, self)
 
 
 ## Asks main.gd to replace this figure with `pieces` ({data, position, velocity} dictionaries).
-func split_into(pieces: Array) -> void:
-	split_requested.emit(self, pieces)
+## `grants_flicks` = the enemy side gets an extra flick per turn for it (Slime does, Splitter doesn't).
+func split_into(pieces: Array, grants_flicks := false) -> void:
+	split_requested.emit(self, pieces, grants_flicks)
 
 
 func return_to_deck() -> void:
@@ -316,6 +390,7 @@ func play_pop(swell: float, duration: float) -> void:
 
 
 func knock_off(fade_time: float) -> void:
+	unglue()
 	knocked_off = true
 	fell_off.emit(self)
 	collision_layer = 0

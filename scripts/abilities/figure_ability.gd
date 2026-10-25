@@ -40,3 +40,20 @@ func on_physics_process(_figure: Figure, _delta: float) -> void:
 ## it or exploded next to it; null if unknown). 1.0 = normal, 2.0 = double.
 func get_knockback_multiplier(_figure: Figure, _source: Figure) -> float:
 	return 1.0
+
+
+## Modifier: how much of an explosion's push `figure` takes (applied before the normal push).
+## 1.0 = normal, 0.0 = immune. Collisions use get_knockback_multiplier instead.
+func get_explosion_multiplier(_figure: Figure, _source: Figure) -> float:
+	return 1.0
+
+
+## Modifier: how many flicks this figure gets per turn (the extra ones come after the board settles).
+func get_flicks_per_turn(_figure: Figure) -> int:
+	return 1
+
+
+## The figure's center just left the table. Return true to save it (e.g. move it back on);
+## return false and it is knocked off.
+func on_left_table(_figure: Figure, _table: Rect2) -> bool:
+	return false

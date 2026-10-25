@@ -61,6 +61,8 @@ const MAP_SCENE := "res://scenes/map.tscn"
 var _state := State.PLAYER_TURN
 var _players: Array[Figure] = []
 var _enemies: Array[Figure] = []
+var _last_player_flicker: Figure
+var _bonus_figure: Figure  # Speedo: the figure that may take its extra flick right now
 var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager, grows with splits)
 var _last_flicker: Figure  # the enemy that flicked last (for no_repeat_enemy)
 var _aim_figure: Figure
@@ -149,6 +151,10 @@ func _on_press(index: int, pos: Vector2) -> void:
 # --- Player turn: reload, aim, flick -----------------------------------------
 
 func _start_player_turn() -> void:
+	for figure in _players:
+		if _is_alive(figure):
+			figure.turn_flicks = 0
+	_bonus_figure = null
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
@@ -187,7 +193,7 @@ func _try_reload(pos: Vector2) -> void:
 ## Press on a figure: it is selected and aimed in one motion. Press anywhere else: aims the
 ## already selected figure. The drag is measured from where this touch started.
 func _begin_aim(index: int, pos: Vector2) -> void:
-	var figure := _player_figure_at(pos, true)
+	var figure := _player_figure_at(pos, true) if _bonus_figure == null else null
 	if figure != null:
 		_select(figure)
 	elif _selected == null:
@@ -231,15 +237,52 @@ func _release_aim(pos: Vector2) -> void:
 		return
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
-		_cancel_aim()
+		if _bonus_figure != null:
+			_skip_bonus_flick()  # a tap: no extra flick
+		else:
+			_cancel_aim()
 		return
 	aim_line.clear()
+	_bonus_figure = null
+	var flicked_figure := _aim_figure
 	_aim_figure.launch(impulse)
 	_aim_figure = null
+	_last_player_flicker = flicked_figure
 	_deselect()
 	_touch_index = -1
 	_state = State.SETTLING
 	_finish_player_turn()
+
+
+## Speedo: after its flick settles, the player may flick it again (or tap to skip).
+func _offer_bonus_flick(figure: Figure) -> void:
+	_bonus_figure = figure
+	_state = State.PLAYER_TURN
+	_busy_time = 0.0
+	_touch_index = -1
+	_aim_figure = null
+	aim_line.clear()
+	_select(figure)
+	ui.show_your_turn("%s: flick again, or tap to skip" % figure.data.display_name)
+
+
+func _skip_bonus_flick() -> void:
+	var figure := _bonus_figure
+	_bonus_figure = null
+	aim_line.clear()
+	_aim_figure = null
+	_touch_index = -1
+	_deselect()
+	if is_instance_valid(figure):
+		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
+## True if this figure still has a flick left this turn.
+func _has_flick_left(figure) -> bool:
+	return _is_alive(figure) and figure.data.can_flick \
+			and figure.turn_flicks < figure.ability.get_flicks_per_turn(figure)
 
 
 ## Gives up this drag. The figure stays selected, so you can drag again.
@@ -290,6 +333,9 @@ func _finish_player_turn() -> void:
 		return
 	if _check_game_over():
 		return
+	if _has_flick_left(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
+		_offer_bonus_flick(_last_player_flicker)
+		return
 	await _run_enemy_turn()
 
 
@@ -303,6 +349,9 @@ func _run_enemy_turn() -> void:
 	_state = State.ENEMY_TURN
 	ui.show_enemy_turn()
 	ai.clear_debug()
+	for enemy in _enemies:
+		if _is_alive(enemy):
+			enemy.turn_flicks = 0
 	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
 	# _enemy_flicks is read every round because a split can raise it mid-turn.
 	var flicks_taken := 0
@@ -324,6 +373,24 @@ func _run_enemy_turn() -> void:
 			return
 		if _check_game_over():
 			return
+		# Speedo-style extra flicks: only taken when the shot scores well.
+		var shooter: Figure = choice.enemy
+		while _has_flick_left(shooter):
+			await get_tree().physics_frame
+			if serial != _turn_serial:
+				return
+			var extra := ai.choose_flick([shooter], _players, board.get_table_rect(), max_flick_force, ai.bonus_flick_min_score)
+			await get_tree().create_timer(enemy_think_time).timeout
+			if serial != _turn_serial:
+				return
+			if extra.is_empty() or not _is_alive(shooter):
+				break
+			shooter.launch(extra.impulse)
+			await _wait_until_settled()
+			if serial != _turn_serial:
+				return
+			if _check_game_over():
+				return
 	# Creepers (like The Wall's pieces) all slide toward your deck TOGETHER at the end of every
 	# enemy turn, each by the same distance from wherever it is now.
 	var creepers: Array[Figure] = []
@@ -441,7 +508,8 @@ func _end_game(won: bool) -> void:
 		if not RunManager.is_boss_combat():
 			var on_table: Array[FigureData] = []
 			for figure in _players:
-				on_table.append(figure.data)
+				if figure.data.pays_income:
+					on_table.append(figure.data)
 			RunManager.award_income(on_table)
 			income = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
@@ -494,7 +562,7 @@ func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
 
 ## A figure (a Slime) splits: spawn its pieces on its team, then remove it. The pieces are new
 ## enemies, so they take their own turns from the next enemy turn on.
-func _on_split_requested(parent: Figure, pieces: Array) -> void:
+func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> void:
 	if not _is_alive(parent):
 		return
 	for piece in pieces:
@@ -503,8 +571,12 @@ func _on_split_requested(parent: Figure, pieces: Array) -> void:
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)
 		else:
+			# Born out on the board: not on deck, and it waits for the next round like its parent.
+			spawned.on_deck = false
+			spawned.flickable = false
+			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
-	if parent.team == Figure.Team.ENEMY:
+	if grants_flicks and parent.team == Figure.Team.ENEMY:
 		_enemy_flicks = mini(_enemy_flicks + flicks_per_split, maxi(max_enemy_flicks, _enemy_flicks))
 	_players.erase(parent)
 	_enemies.erase(parent)
@@ -522,6 +594,8 @@ func _knock_off_fallen_figures() -> void:
 	var table: Rect2 = board.get_table_rect()
 	for figure in _all_figures():
 		if not table.has_point(figure.global_position):
+			if figure.ability.on_left_table(figure, table):
+				continue  # saved (e.g. Ghost wrapped around)
 			_players.erase(figure)
 			_enemies.erase(figure)
 			figure.knock_off(knock_off_fade_time)
