@@ -374,11 +374,13 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 		# Speedo-style extra flicks: only taken when the shot scores well.
-		var shooter: Figure = choice.enemy
+		var shooter = choice.enemy  # untyped on purpose: it may have split or fallen off and been freed
 		while _has_flick_left(shooter):
 			await get_tree().physics_frame
 			if serial != _turn_serial:
 				return
+			if not _is_alive(shooter):
+				break
 			var extra := ai.choose_flick([shooter], _players, board.get_table_rect(), max_flick_force, ai.bonus_flick_min_score)
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
