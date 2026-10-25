@@ -28,10 +28,6 @@ enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 
 @export_group("Enemy")
 @export var enemy_count := 3
-## Each enemy aims at the nearest player figure, off by up to this many degrees either way.
-@export var enemy_angle_error := 8.0
-## Enemies flick hard enough to travel this far (px) past their target.
-@export var enemy_overshoot := 40.0
 ## Pause (seconds) before each enemy flicks.
 @export var enemy_think_time := 0.6
 
@@ -56,6 +52,7 @@ var _can_restart := false
 @onready var aim_line := $AimLine
 @onready var ui := $UI
 @onready var game_feel := $GameFeel
+@onready var ai: EnemyAI = $EnemyAI
 
 
 func _ready() -> void:
@@ -208,39 +205,20 @@ func _finish_player_turn() -> void:
 func _run_enemy_turn() -> void:
 	_state = State.ENEMY_TURN
 	ui.show_enemy_turn()
+	ai.clear_debug()
 	for enemy in _enemies.duplicate():
-		await get_tree().create_timer(enemy_think_time).timeout
 		if enemy.knocked_off:
 			continue
-		var target := _nearest_player_figure(enemy)
-		if target == null:
-			break
-		enemy.launch(_enemy_impulse(enemy, target))
+		await get_tree().physics_frame  # the AI shape-casts in the physics space
+		var impulse := ai.choose_shot(enemy, _players, board.get_table_rect(), max_flick_force)
+		await get_tree().create_timer(enemy_think_time).timeout
+		if impulse == Vector2.ZERO:
+			continue  # nothing good and nothing safe: the enemy passes
+		enemy.launch(impulse)
 		await _wait_until_settled()
 		if _check_game_over():
 			return
 	_start_player_turn()
-
-
-## Enemy AI: flick at the nearest player figure (on deck or not), with some angle error.
-func _enemy_impulse(enemy: Figure, target: Figure) -> Vector2:
-	var to_target := target.global_position - enemy.global_position
-	var error := deg_to_rad(randf_range(-enemy_angle_error, enemy_angle_error))
-	var direction := to_target.normalized().rotated(error)
-	# Same maths as the aim line: slide distance = (speed - stop_speed) / damping.
-	var speed := (to_target.length() + enemy_overshoot) * enemy.linear_damp + stop_speed
-	return direction * minf(speed * enemy.mass, max_flick_force * enemy.data.flick_power_multiplier)
-
-
-func _nearest_player_figure(from: Figure) -> Figure:
-	var best: Figure = null
-	var best_distance := INF
-	for figure in _players:
-		var distance := from.global_position.distance_to(figure.global_position)
-		if distance < best_distance:
-			best = figure
-			best_distance = distance
-	return best
 
 
 func _wait_until_settled() -> void:

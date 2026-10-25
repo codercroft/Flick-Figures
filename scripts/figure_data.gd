@@ -14,5 +14,7 @@ extends Resource
 @export var flick_power_multiplier := 1.0
 ## Multiplies the speed this figure gains from being hit or blasted. 0.5 = half knockback.
 @export var knockback_taken_multiplier := 1.0
+## Enemy aim quality: 1 = perfect, 0 = the widest aim error (set on the EnemyAI node).
+@export_range(0.0, 1.0) var accuracy := 0.8
 ## Optional special behavior. Pick a FigureAbility subclass (e.g. BomboAbility) in the Inspector.
 @export var ability: FigureAbility

@@ -12,3 +12,4 @@ bounce = 0.7
 damping_multiplier = 1.0
 flick_power_multiplier = 1.0
 knockback_taken_multiplier = 1.0
+accuracy = 0.8

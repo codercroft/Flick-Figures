@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/board.gd" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://resources/figures/bombo.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="11"]
 [ext_resource type="Script" path="res://scripts/game_feel.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/enemy_ai.gd" id="13"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -26,6 +27,9 @@ script = ExtResource("2")
 
 [node name="AimLine" type="Node2D" parent="."]
 script = ExtResource("3")
+
+[node name="EnemyAI" type="Node2D" parent="."]
+script = ExtResource("13")
 
 [node name="GameFeel" type="Node2D" parent="."]
 script = ExtResource("12")
