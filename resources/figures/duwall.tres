@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Duwall"
+color = Color(0.3, 0.6, 0.4, 1)
+radius = 70.0
+mass = 2.5
+bounce = 0.5
+damping_multiplier = 1.0
+flick_power_multiplier = 1.5
+knockback_taken_multiplier = 0.5

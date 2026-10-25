@@ -3,18 +3,10 @@ extends Node2D
 
 enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 
-const PLAYER_COLORS := [
-	Color(0.25, 0.5, 0.9),
-	Color(0.3, 0.75, 0.35),
-	Color(0.95, 0.75, 0.2),
-	Color(0.7, 0.4, 0.9),
-]
-const ENEMY_COLOR := Color(0.85, 0.15, 0.15)
-
 @export var figure_scene: PackedScene
 
 @export_group("Flick")
-## Impulse of a full-strength flick. Launch speed = force / mass.
+## Impulse of a full-strength flick. Launch speed = force * figure's power multiplier / mass.
 @export var max_flick_force := 2400.0
 ## Drag this far (px) for a full-strength flick.
 @export var max_pull_distance := 300.0
@@ -23,13 +15,14 @@ const ENEMY_COLOR := Color(0.85, 0.15, 0.15)
 ## Extra px around a figure that still counts as touching it.
 @export var grab_padding := 30.0
 
-@export_group("Figure physics")
-@export var figure_count := 4
-@export var figure_radius := 60.0
-@export var figure_mass := 1.0
-## How quickly figures slow down. Higher = stops sooner. Slide distance ~ speed / damping.
+@export_group("Figures")
+## The player's starting figures, one per deck slot. Each is a FigureData (resources/figures/).
+@export var player_figures: Array[FigureData]
+## What every enemy is made of.
+@export var enemy_figure: FigureData
+## Base damping for all figures; each FigureData multiplies it. Higher = stops sooner.
+## Slide distance ~ speed / damping.
 @export var figure_damping := 1.5
-@export var figure_bounciness := 0.7
 ## Figures slower than this (px/s) stop dead.
 @export var stop_speed := 15.0
 
@@ -146,10 +139,10 @@ func _update_aim(pos: Vector2) -> void:
 		aim_line.clear()
 		return
 	# Roughly where the figure will come to rest (ignores bumping into things).
-	var speed := impulse.length() / figure_mass
-	var distance := maxf(speed - stop_speed, 0.0) / figure_damping
+	var speed := impulse.length() / _aim_figure.mass
+	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
 	var direction := impulse.normalized()
-	aim_line.show_aim(_aim_figure.global_position + direction * figure_radius, direction, distance)
+	aim_line.show_aim(_aim_figure.global_position + direction * _aim_figure.radius, direction, distance)
 
 
 func _release_aim(pos: Vector2) -> void:
@@ -180,7 +173,8 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	var pull := minf(drag.length(), max_pull_distance)
 	if pull < min_pull_distance or drag.y <= 0.0:
 		return Vector2.ZERO
-	return -drag.normalized() * (pull / max_pull_distance) * max_flick_force
+	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier
+	return -drag.normalized() * (pull / max_pull_distance) * full_force
 
 
 func _player_figure_at(pos: Vector2, on_deck: bool) -> Figure:
@@ -233,8 +227,8 @@ func _enemy_impulse(enemy: Figure, target: Figure) -> Vector2:
 	var error := deg_to_rad(randf_range(-enemy_angle_error, enemy_angle_error))
 	var direction := to_target.normalized().rotated(error)
 	# Same maths as the aim line: slide distance = (speed - stop_speed) / damping.
-	var speed := (to_target.length() + enemy_overshoot) * figure_damping + stop_speed
-	return direction * minf(speed * figure_mass, max_flick_force)
+	var speed := (to_target.length() + enemy_overshoot) * enemy.linear_damp + stop_speed
+	return direction * minf(speed * enemy.mass, max_flick_force * enemy.data.flick_power_multiplier)
 
 
 func _nearest_player_figure(from: Figure) -> Figure:
@@ -282,10 +276,10 @@ func _end_game(won: bool) -> void:
 
 func _spawn_players() -> void:
 	var deck: Rect2 = board.deck_rect
-	var slot_width := deck.size.x / figure_count
-	for i in figure_count:
+	var slot_width := deck.size.x / player_figures.size()
+	for i in player_figures.size():
 		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
-		var figure := _spawn_figure(Figure.Team.PLAYER, PLAYER_COLORS[i % PLAYER_COLORS.size()], pos)
+		var figure := _spawn_figure(Figure.Team.PLAYER, player_figures[i], pos)
 		figure.deck_position = pos
 		_players.append(figure)
 
@@ -296,19 +290,13 @@ func _spawn_enemies() -> void:
 	for i in enemy_count:
 		# Stagger every other enemy so they are not in a straight line.
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + 160.0 + 120.0 * (i % 2))
-		_enemies.append(_spawn_figure(Figure.Team.ENEMY, ENEMY_COLOR, pos))
+		_enemies.append(_spawn_figure(Figure.Team.ENEMY, enemy_figure, pos))
 
 
-func _spawn_figure(team: Figure.Team, color: Color, pos: Vector2) -> Figure:
+func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	figure.team = team
+	figure.setup(data, team, figure_damping, stop_speed)
 	figure.on_deck = team == Figure.Team.PLAYER
-	figure.radius = figure_radius
-	figure.mass = figure_mass
-	figure.linear_damp = figure_damping
-	figure.bounciness = figure_bounciness
-	figure.stop_speed = stop_speed
-	figure.color = color
 	figure.position = pos
 	figures_root.add_child(figure)
 	return figure

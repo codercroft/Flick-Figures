@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Roller"
+color = Color(0.25, 0.7, 0.95, 1)
+radius = 55.0
+mass = 0.8
+bounce = 0.8
+damping_multiplier = 0.5
+flick_power_multiplier = 1.0
+knockback_taken_multiplier = 1.0

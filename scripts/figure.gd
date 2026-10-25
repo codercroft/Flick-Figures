@@ -1,6 +1,7 @@
 class_name Figure
 extends RigidBody2D
 ## One toy figure (player or enemy): a physics circle on a frictionless tabletop.
+## What makes it special comes from its FigureData (stats) and ability (events).
 
 enum Team { PLAYER, ENEMY }
 
@@ -9,12 +10,14 @@ const LAYER_ON_DECK := 1 << 0  # layer 1: player figures waiting on deck
 const LAYER_FLICKED := 1 << 1  # layer 2: player figures out on the board
 const LAYER_ENEMY := 1 << 2  # layer 3: enemy figures
 const GREYED_OUT := Color(0.5, 0.5, 0.5)
+## Velocity changes smaller than this (px/s) are just damping, not a hit.
+const KNOCKBACK_MIN_CHANGE := 60.0
+const BLAST_RING_TIME := 0.35
 
-# Set by main.gd before the figure is added to the scene.
 var team := Team.PLAYER
+var data: FigureData
+var ability: FigureAbility
 var radius := 60.0
-var color := Color.WHITE
-var bounciness := 0.7
 var stop_speed := 15.0  # below this speed (px/s) the figure snaps to a stop
 var deck_position := Vector2.ZERO  # where a player figure goes when reloaded
 
@@ -27,6 +30,27 @@ var on_deck := false:
 			queue_redraw()
 var knocked_off := false
 
+var _last_velocity := Vector2.ZERO
+var _skip_knockback_frames := 0  # ignore our own flicks/blasts when measuring hits
+var _was_moving := false
+var _blast_radius := 0.0
+var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
+	set(value):
+		_blast_progress = value
+		queue_redraw()
+
+
+## Call before adding the figure to the scene.
+func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float) -> void:
+	data = figure_data
+	team = figure_team
+	radius = data.radius
+	mass = data.mass
+	linear_damp = base_damping * data.damping_multiplier
+	stop_speed = speed_to_stop
+	# Each figure gets its own copy so abilities can keep per-figure state.
+	ability = data.ability.duplicate() as FigureAbility if data.ability else FigureAbility.new()
+
 
 func _ready() -> void:
 	# A tabletop: no gravity, no spinning, slowing down only through linear_damp.
@@ -35,9 +59,13 @@ func _ready() -> void:
 	can_sleep = false
 	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	continuous_cd = RigidBody2D.CCD_MODE_CAST_RAY
+	contact_monitor = true
+	max_contacts_reported = 8
+	body_entered.connect(_on_body_entered)
+	add_to_group("figures")
 
 	var material := PhysicsMaterial.new()
-	material.bounce = bounciness
+	material.bounce = data.bounce
 	material.friction = 0.0
 	physics_material_override = material
 
@@ -68,16 +96,46 @@ func _update_collision() -> void:
 
 func _draw() -> void:
 	var greyed := team == Team.PLAYER and not on_deck
-	var fill := color.lerp(GREYED_OUT, 0.85) if greyed else color
+	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
 	draw_circle(Vector2.ZERO, radius, fill)
 	draw_arc(Vector2.ZERO, radius - 3.0, 0.0, TAU, 48, fill.darkened(0.4), 6.0, true)
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
+	# First letter of the name, so you can tell figures apart.
+	draw_string(ThemeDB.fallback_font, Vector2(-radius, radius * 0.35), data.display_name.left(1),
+			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, int(radius), fill.darkened(0.5))
+	if _blast_progress < 1.0:
+		var ring_radius := lerpf(radius, _blast_radius, _blast_progress)
+		draw_arc(Vector2.ZERO, ring_radius, 0.0, TAU, 64, Color(1, 0.8, 0.3, 1.0 - _blast_progress), 10.0, true)
 
 
 func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+	var velocity := state.linear_velocity
+
+	# Knockback multiplier: scale how much a collision changed our velocity.
+	if _skip_knockback_frames > 0:
+		_skip_knockback_frames -= 1
+	elif data.knockback_taken_multiplier != 1.0 and state.get_contact_count() > 0:
+		var change := velocity - _last_velocity
+		if change.length() > KNOCKBACK_MIN_CHANGE:
+			velocity = _last_velocity + change * data.knockback_taken_multiplier
+
 	# Damping alone never quite reaches zero, so stop crawling figures.
-	if state.linear_velocity.length() < stop_speed:
-		state.linear_velocity = Vector2.ZERO
+	if velocity.length() < stop_speed:
+		velocity = Vector2.ZERO
+		if _was_moving:
+			_was_moving = false
+			ability.on_stopped.call_deferred(self)
+	else:
+		_was_moving = true
+
+	state.linear_velocity = velocity
+	_last_velocity = velocity
+
+
+func _on_body_entered(body: Node) -> void:
+	if body is Figure:
+		# Deferred: physics callbacks can't change physics state directly.
+		ability.on_hit.call_deferred(self, body)
 
 
 func is_resting() -> bool:
@@ -86,7 +144,32 @@ func is_resting() -> bool:
 
 func launch(impulse: Vector2) -> void:
 	on_deck = false
+	_skip_knockback_frames = 2
 	apply_central_impulse(impulse)
+	ability.on_flicked(self, impulse)
+
+
+## Pushed by a hit-like effect (an explosion). Respects knockback_taken_multiplier.
+func take_knockback(impulse: Vector2) -> void:
+	_skip_knockback_frames = 2
+	apply_central_impulse(impulse * data.knockback_taken_multiplier)
+
+
+## Pushes every other figure within blast_radius away. The push is `force` at the
+## center and fades to zero at the edge.
+func explode(blast_radius: float, force: float) -> void:
+	_blast_radius = blast_radius
+	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == self or other.knocked_off:
+			continue
+		var offset := other.global_position - global_position
+		var distance := offset.length()
+		if distance >= blast_radius:
+			continue
+		other.take_knockback(offset.normalized() * force * (1.0 - distance / blast_radius))
+		other.ability.on_exploded.call_deferred(other, self)
 
 
 func return_to_deck() -> void:

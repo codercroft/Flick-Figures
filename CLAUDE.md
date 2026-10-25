@@ -33,6 +33,14 @@ Mobile game built in Godot 4 with GDScript.
 - Collision layers: 1 `on_deck`, 2 `flicked`, 3 `enemy`. On-deck figures are NOT frozen (enemies can shove them): layer 1, mask 3. Flicked player figures: layer 2, mask 2+3. Enemies: layer 3, mask 1+2+3. So player flicks ignore on-deck figures, but enemies hit them.
 - The "table" is `board_rect` merged with `deck_rect` (Board node exports). Any figure (either team, on deck or not) whose center leaves the table is knocked off.
 
+## Figures (data-driven)
+
+- `scripts/figure_data.gd` (`FigureData` Resource): display_name, color, radius, mass, bounce, damping_multiplier, flick_power_multiplier, knockback_taken_multiplier, and an `ability` slot. Figures are `.tres` files in `resources/figures/`: Roller, Duwall, Powerhouse, Bombo (player) and Grunt (enemy). Make a new figure by duplicating one in the editor.
+- Main's `player_figures` array is the player's starting roster (one of each, one deck slot per entry); `enemy_figure` is what every enemy uses; `figure_damping` is the base damping that each figure's `damping_multiplier` scales.
+- Abilities: `scripts/abilities/figure_ability.gd` (`FigureAbility` Resource) is the base class with no-op hooks `on_flicked`, `on_hit`, `on_stopped`, `on_exploded`. Subclass it (see `bombo_ability.gd`) and pick it in the FigureData's `ability` slot; ability tunables are `@export`s on the subclass. Each figure runs its own duplicate of the ability, so per-figure state is safe. To add a new event, call it from `figure.gd` (hooks are called deferred from physics callbacks).
+- `Figure.explode(radius, force)` pushes nearby figures (linear falloff) and fires `on_exploded` on them. `take_knockback()` and the collision handling in `_integrate_forces` apply `knockback_taken_multiplier`.
+- Bombo explodes on its first hit after each flick (resets on flick), and survives.
+
 ## Project settings
 
 - Viewport 1080x1920, portrait, stretch mode `canvas_items`, aspect `keep_width`.
