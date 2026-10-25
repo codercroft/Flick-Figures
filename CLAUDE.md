@@ -24,6 +24,14 @@ Mobile game built in Godot 4 with GDScript.
 
 - Always commit and push directly to `main` (no branches or PRs). The developer pulls locally and tests in the Godot editor.
 
+## Project structure
+
+- `scenes/main.tscn` (main scene): Main (`main.gd`) > Board (`board.gd`), Figures (container), AimLine (`aim_line.gd`).
+- `scenes/figure.tscn`: a bare RigidBody2D with `figure.gd`; collision shape and physics are set up in code.
+- `scripts/main.gd`: spawns figures, handles touch input, runs the turn (IDLE > AIMING > MOVING), knocks figures off. All feel tunables are `@export`s on the Main node.
+- Collision layers: 1 `on_deck`, 2 `flicked`. On-deck figures are frozen on layer 1 with mask 0. Flicked figures use layer 2 and mask 2, so they ignore on-deck figures and hit each other. Enemies will need mask 1 to hit on-deck figures.
+- Board and deck rectangles are `@export`s on the Board node; a figure whose center leaves `board_rect` (after entering it) is knocked off.
+
 ## Project settings
 
 - Viewport 1080x1920, portrait, stretch mode `canvas_items`, aspect `keep_width`.

@@ -1,0 +1,18 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/board.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/aim_line.gd" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/figure.tscn" id="4"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1")
+figure_scene = ExtResource("4")
+
+[node name="Board" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="Figures" type="Node2D" parent="."]
+
+[node name="AimLine" type="Node2D" parent="."]
+script = ExtResource("3")
