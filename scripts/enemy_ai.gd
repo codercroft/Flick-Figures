@@ -1,5 +1,9 @@
 class_name EnemyAI
 extends Node2D
+
+## Figures this close (px) to the shooter's edge count as already touching it.
+const TOUCH_MARGIN := 4.0
+
 ## Enemy brain. For each enemy it tries many candidate shots (targets x angles x power levels),
 ## shape-casts each one to find the first figure it would hit, scores them, and picks the best.
 ## If nothing scores well it makes a small safe repositioning flick instead.
@@ -9,7 +13,7 @@ extends Node2D
 @export var angle_offsets_degrees: Array[float] = [-10.0, -5.0, 0.0, 5.0, 10.0]
 ## Flick powers tried, as a fraction of the enemy's top speed. Higher = enemies hit harder and
 ## knock more of your figures off (at full power they can wipe out your deck).
-@export var power_levels: Array[float] = [0.3, 0.45, 0.6]
+@export var power_levels: Array[float] = [0.2, 0.3, 0.4, 0.5, 0.6]
 ## The speed (px/s) that a power level of 1.0 means for a figure with flick power 1. A figure with
 ## flick power 2 (like the snipers' 1.6) gets that multiple, up to what it physically can flick.
 @export var reference_speed := 2400.0
@@ -17,20 +21,26 @@ extends Node2D
 @export_group("Scoring")
 ## Score for a first hit on a player figure.
 @export var hit_player_bonus := 100.0
-## Extra score (up to this) when the hit figure is near the table edge in the push direction.
+## Extra score (up to this) for pushing the target toward the table edge. Full when it is pushed
+## all the way to the edge.
 @export var edge_bonus := 60.0
-## A target this close (px) to the edge, along the shot, gets the full edge bonus.
+## Extra score when the target is predicted to be knocked off the table (scaled by how likely).
+@export var kill_bonus := 100.0
+## Score taken off for power, so of two shots that do the same job the gentler one wins: the
+## AI uses the lowest power that still knocks the target off. Scaled by power (0 to 1).
+@export var overpower_penalty := 20.0
+## A target this close (px) to the edge, along the shot, gets the full "via ally" edge bonus.
 @export var edge_reach := 450.0
-## Extra score (up to this) for hitting hard.
-@export var hit_speed_bonus := 10.0
 ## Penalty for hitting another enemy first.
 @export var ally_hit_penalty := 150.0
 ## Hitting an ally that is lined up with a player figure behind it scores this fraction of a normal hit.
 @export var ally_strategic_factor := 0.5
 ## How far off line (degrees) an ally can be and still count as "lined up" with a player figure.
 @export var ally_align_degrees := 8.0
-## Penalty if the shooter would probably slide off the table.
-@export var shooter_off_penalty := 120.0
+## Penalty if the shooter itself is predicted to slide off the table after the hit (scaled by how
+## likely). Keep it above kill_bonus + hit_player_bonus + edge_bonus and a self-knockoff always
+## outweighs the kill it comes with.
+@export var self_knock_off_penalty := 300.0
 ## Attacks scoring below this are skipped in favor of repositioning.
 @export var min_attack_score := 40.0
 
@@ -91,7 +101,7 @@ func choose_shot(enemy: Figure, players: Array[Figure], table: Rect2, max_force:
 		return Vector2.ZERO
 
 	# Small random aim error: worse accuracy = bigger error.
-	var error := deg_to_rad((1.0 - enemy.data.accuracy) * max_aim_error_degrees)
+	var error := _aim_error(enemy)
 	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
 	_record_debug(enemy, best, enemy.global_position + direction * best.distance)
 	return direction * best.speed * enemy.mass
@@ -112,12 +122,18 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	# Speed falls linearly with distance traveled under linear damping: v = v0 - damp * x.
 	var hit_speed := maxf(speed - enemy.linear_damp * hit_distance, 0.0)
 
+	# Predict the collision (masses, bounce, power) to see where both figures end up.
+	var contact := enemy.global_position + direction * hit_distance
+	var outcome := _predict_collision(enemy, other, direction * hit_speed, contact)
+	var target_velocity: Vector2 = outcome.target
+	var shooter_velocity: Vector2 = outcome.shooter
+
 	var score := 0.0
 	var kind := "attack"
 	if other.team == Figure.Team.PLAYER:
-		score = hit_player_bonus \
-				+ edge_bonus * _edge_factor(other.global_position, direction, table) \
-				+ hit_speed_bonus * hit_speed / max_speed
+		var knocked_off := _leave_chance(other, other.global_position, target_velocity, table)
+		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
+		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * pushed_toward_edge
 	else:
 		var behind := _player_behind_ally(enemy, other, direction, players)
 		if behind:
@@ -127,16 +143,71 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		else:
 			score = -ally_hit_penalty
 
-	# Would the shooter itself slide off? Guess an elastic hit: it keeps (m1 - m2) / (m1 + m2) of
-	# its speed, so a light shooter hitting a heavy target bounces back (negative).
-	var carry := (enemy.mass - other.mass) / (enemy.mass + other.mass)
-	var contact := enemy.global_position + direction * hit_distance
-	var slide := absf(hit_speed * carry) / enemy.linear_damp
-	var slide_direction := direction if carry >= 0.0 else -direction
-	if slide >= _distance_to_edge(contact, slide_direction, table):
-		score -= shooter_off_penalty
+	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
+	score -= self_knock_off_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
+	# Aim error can make the shot miss, and a shooter that misses just keeps sliding. Count that risk.
+	var to_other := other.global_position - enemy.global_position
+	var miss_chance := 1.0 - _hit_chance(direction.angle_to(to_other), _aim_error(enemy),
+			asin(clampf((enemy.radius + other.radius) / to_other.length(), 0.0, 1.0)))
+	if miss_chance > 0.0:
+		score -= self_knock_off_penalty * miss_chance * _leave_chance(enemy, enemy.global_position, direction * speed, table)
+	# Prefer the lowest power that gets the job done.
+	score -= overpower_penalty * speed / max_speed
 
 	return {"kind": kind, "score": score, "direction": direction, "speed": speed, "distance": hit_distance}
+
+
+## The enemy's aim error in radians (either way), from its accuracy.
+func _aim_error(enemy: Figure) -> float:
+	return deg_to_rad((1.0 - enemy.data.accuracy) * max_aim_error_degrees)
+
+
+## Chance (0 to 1) that a shot aimed `angle_off` radians away from the target's center still hits,
+## given a random aim error of up to `error` either way and a target that is hit within
+## `half_width` radians of its center.
+func _hit_chance(angle_off: float, error: float, half_width: float) -> float:
+	if error <= 0.0:
+		return 1.0 if absf(angle_off) <= half_width else 0.0
+	var overlap := minf(angle_off + error, half_width) - maxf(angle_off - error, -half_width)
+	return clampf(overlap / (2.0 * error), 0.0, 1.0)
+
+
+## Predicts a collision between the moving `shooter` (velocity `velocity` at `contact`, the
+## position of its center when it touches) and a resting `target`. Elastic-collision maths along
+## the line between the centers, with Godot's combined bounce and the figures' knockback
+## multipliers. Returns the velocities both figures have right after: {shooter, target}.
+func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, contact: Vector2) -> Dictionary:
+	var normal := (target.global_position - contact).normalized()
+	var closing := maxf(velocity.dot(normal), 0.0)
+	var bounce := clampf(shooter.data.bounce + target.data.bounce, 0.0, 1.0)
+	var total_mass := shooter.mass + target.mass
+	var shooter_change := -(1.0 + bounce) * target.mass / total_mass * closing * normal
+	var target_change := (1.0 + bounce) * shooter.mass / total_mass * closing * normal
+	shooter_change *= shooter.data.knockback_taken_multiplier * shooter.ability.get_knockback_multiplier(shooter, target)
+	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter)
+	return {"shooter": velocity + shooter_change, "target": target_change}
+
+
+## How far a figure at `from` moving at `velocity` slides, compared with the distance to the table
+## edge in that direction (1 = just reaches it). Returns -1 if it is not moving.
+func _slide_ratio(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> float:
+	var speed := velocity.length()
+	if speed <= figure.stop_speed:
+		return -1.0
+	var slide := (speed - figure.stop_speed) / figure.linear_damp
+	var edge := _distance_to_edge(from, velocity / speed, table)
+	return INF if edge <= 0.0 else slide / edge
+
+
+## 0 to 1: how likely the figure is to leave the table. Ramps up from sliding 70% of the way to
+## the edge to sliding 120% of the way, since the prediction is only a guess.
+func _leave_chance(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> float:
+	return clampf((_slide_ratio(figure, from, velocity, table) - 0.7) / 0.5, 0.0, 1.0)
+
+
+## 0 to 1: how far toward the edge the figure ends up.
+func _push_progress(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> float:
+	return clampf(_slide_ratio(figure, from, velocity, table), 0.0, 1.0)
 
 
 ## An ally is a strategic target if it sits between the shooter and a player figure and is
@@ -195,6 +266,19 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 	query.motion = direction * length
 	query.collision_mask = shooter.collision_mask
 	query.exclude = [shooter.get_rid()]
+	# A sweep misses figures that are already touching the shooter, so check those first: if the
+	# shot pushes into one, it is hit right away.
+	var touch_shape := CircleShape2D.new()
+	touch_shape.radius = shooter.radius + TOUCH_MARGIN
+	var touch_query := PhysicsShapeQueryParameters2D.new()
+	touch_query.shape = touch_shape
+	touch_query.transform = query.transform
+	touch_query.collision_mask = query.collision_mask
+	touch_query.exclude = query.exclude
+	for result in space.intersect_shape(touch_query, 8):
+		var touching := result.collider as Figure
+		if touching != null and direction.dot((touching.global_position - shooter.global_position).normalized()) > 0.05:
+			return {"collider": touching, "distance": 0.0}
 	var fractions := space.cast_motion(query)  # [safe, unsafe]; unsafe = 1 means nothing hit
 	if fractions.size() < 2 or fractions[1] >= 1.0:
 		return {}
