@@ -54,12 +54,18 @@ var turn_flicks := 0
 var touched_since_flick := false
 ## Glue Guy: the joints holding this figure to others (stale ones may linger; check validity).
 var glue_joints: Array[PinJoint2D] = []
+## Powers: rounds left of Freeze Ray / Bubble Shield (0 = not active), and Shrink Ray.
+var frozen_rounds := 0
+var bubble_rounds := 0
+var shrunk := false
 
 # Player figures: highlighted ring while chosen for aiming.
 var selected := false:
 	set(value):
 		selected = value
 		queue_redraw()
+
+var _circle: CircleShape2D
 
 var _last_velocity := Vector2.ZERO
 var _prev_velocity := Vector2.ZERO  # the step before _last_velocity (to see speed before an impact)
@@ -117,6 +123,7 @@ func _ready() -> void:
 	var collision := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
 	circle.radius = radius
+	_circle = circle
 	collision.shape = circle
 	add_child(collision)
 
@@ -166,6 +173,12 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
 		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if frozen_rounds > 0:
+		draw_circle(Vector2.ZERO, radius, Color(0.6, 0.9, 1.0, 0.55))
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(0.85, 1.0, 1.0), 6.0, true)
+	if bubble_rounds > 0:
+		draw_arc(Vector2.ZERO, radius + 16.0, 0.0, TAU, 48, Color(0.5, 0.85, 1.0, 0.9), 8.0, true)
+		draw_arc(Vector2.ZERO, radius + 16.0, 0.0, TAU, 48, Color(0.5, 0.85, 1.0, 0.25), 18.0, true)
 	if _blast_progress < 1.0:
 		var ring_radius := lerpf(radius, _blast_radius, _blast_progress)
 		draw_arc(Vector2.ZERO, ring_radius, 0.0, TAU, 64, Color(1, 0.8, 0.3, 1.0 - _blast_progress), 10.0, true)
@@ -275,6 +288,8 @@ func launch(impulse: Vector2) -> void:
 ## Pushed by a hit-like effect (an explosion or bump). `source` is the figure that caused it.
 ## Respects knockback_taken_multiplier and the ability's get_knockback_multiplier.
 func take_knockback(impulse: Vector2, source: Figure = null) -> void:
+	if is_frozen():
+		return
 	_skip_knockback_frames = 2
 	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source))
 
@@ -290,6 +305,8 @@ func take_explosion(impulse: Vector2, source: Figure) -> void:
 
 ## Changes velocity by `velocity_change` px/s directly (ignores knockback multipliers).
 func nudge(velocity_change: Vector2) -> void:
+	if is_frozen():
+		return
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(velocity_change * mass)
@@ -348,22 +365,82 @@ func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
 func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
-	for node in get_tree().get_nodes_in_group("figures"):
+	Figure.blast(get_tree(), global_position, blast_radius, force, self, spared)
+
+
+## An explosion at `center` (set off by `source`, which may be null for a power) that pushes every
+## figure within blast_radius away, except `source` and `spared`.
+static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: float,
+		source: Figure = null, spared: Figure = null) -> void:
+	for node in tree.get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other == self or other == spared or other.knocked_off:
+		if other == source or other == spared or other.knocked_off:
 			continue
-		var offset := other.global_position - global_position
+		var offset := other.global_position - center
 		var distance := offset.length()
 		if distance >= blast_radius:
 			continue
-		other.take_explosion(offset.normalized() * force * (1.0 - distance / blast_radius), self)
-		other.ability.on_exploded.call_deferred(other, self)
+		var direction := offset.normalized() if distance > 0.01 else Vector2.UP
+		other.take_explosion(direction * force * (1.0 - distance / blast_radius), source)
+		other.ability.on_exploded.call_deferred(other, source)
 
 
 ## Asks main.gd to replace this figure with `pieces` ({data, position, velocity} dictionaries).
 ## `grants_flicks` = the enemy side gets an extra flick per turn for it (Slime does, Splitter doesn't).
 func split_into(pieces: Array, grants_flicks := false) -> void:
 	split_requested.emit(self, pieces, grants_flicks)
+
+
+## Power: can't flick and can't be moved (a static body) for `rounds` rounds.
+func freeze_for(rounds: int) -> void:
+	frozen_rounds = rounds
+	linear_velocity = Vector2.ZERO
+	force_settle()
+	freeze_mode = RigidBody2D.FREEZE_MODE_STATIC
+	freeze = true
+	queue_redraw()
+
+
+func thaw() -> void:
+	frozen_rounds = 0
+	freeze = false
+	queue_redraw()
+
+
+func is_frozen() -> bool:
+	return frozen_rounds > 0
+
+
+## Power: for `rounds` rounds it stops at the table edge instead of falling off.
+func set_bubble(rounds: int) -> void:
+	bubble_rounds = rounds
+	queue_redraw()
+
+
+## Power: smaller and lighter for the rest of the combat.
+func shrink(size_factor: float, mass_factor: float) -> void:
+	shrunk = true
+	set_size(radius * size_factor, mass * mass_factor)
+
+
+## Changes the figure's radius and mass (the collision shape and the picture follow).
+func set_size(new_radius: float, new_mass: float) -> void:
+	radius = new_radius
+	mass = new_mass
+	if _circle != null:
+		_circle.radius = new_radius
+	queue_redraw()
+
+
+## Called by main.gd at the start of each round: powers that last "a round" count down here.
+func tick_round() -> void:
+	if frozen_rounds > 0:
+		frozen_rounds -= 1
+		if frozen_rounds == 0:
+			thaw()
+	if bubble_rounds > 0:
+		bubble_rounds -= 1
+		queue_redraw()
 
 
 func return_to_deck() -> void:

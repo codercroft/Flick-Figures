@@ -4,6 +4,10 @@ extends CanvasLayer
 @export var your_turn_color := Color(1, 1, 1)
 @export var enemy_turn_color := Color(1, 0.45, 0.4)
 
+## A power slot button was pressed (slot index).
+signal power_pressed(slot: int)
+
+@onready var power_bar: HBoxContainer = $PowerBar
 @onready var turn_label: Label = $TurnLabel
 @onready var progress_label: Label = $ProgressLabel
 @onready var debug_label: Label = $DebugLabel
@@ -45,7 +49,60 @@ func show_progress(text: String) -> void:
 
 
 func show_result(text: String) -> void:
+	power_bar.hide()
 	turn_label.hide()
 	progress_label.hide()
 	result_label.text = text
 	result_panel.show()
+
+
+# --- Power bar (bottom of the screen) ---------------------------------------
+
+var _power_buttons: Array[Button] = []
+
+
+## Shows the player's power slots. `active_slot` is highlighted (the power waiting for a target).
+func set_powers(powers: Array, active_slot := -1) -> void:
+	for button in _power_buttons:
+		button.queue_free()
+	_power_buttons.clear()
+	for i in powers.size():
+		var power: PowerData = powers[i]
+		var button := Button.new()
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.add_theme_font_size_override("font_size", 28)
+		button.disabled = power == null
+		button.text = "Empty" if power == null else power.display_name
+		var color := Color(0.18, 0.19, 0.24) if power == null else power.color.darkened(0.45)
+		var border := Color(1.0, 0.9, 0.3) if i == active_slot else color.lightened(0.25)
+		for style_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+			button.add_theme_stylebox_override(style_name, _power_box(color, border, i == active_slot))
+		button.add_theme_color_override("font_disabled_color", Color(0.45, 0.47, 0.53))
+		button.pressed.connect(power_pressed.emit.bind(i))
+		power_bar.add_child(button)
+		_power_buttons.append(button)
+
+
+## Powers can only be used on the player's turn: grey the bar out otherwise.
+func set_powers_enabled(enabled: bool) -> void:
+	power_bar.modulate.a = 1.0 if enabled else 0.45
+	for button in _power_buttons:
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+
+
+## True if a screen position is over the power bar (so main.gd doesn't treat it as aiming).
+func is_over_power_bar(screen_pos: Vector2) -> bool:
+	return power_bar.visible and power_bar.get_global_rect().has_point(screen_pos)
+
+
+func _power_box(background: Color, border: Color, thick: bool) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = background
+	box.set_corner_radius_all(14)
+	box.set_border_width_all(6 if thick else 3)
+	box.border_color = border
+	box.content_margin_left = 8.0
+	box.content_margin_right = 8.0
+	return box

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=17 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -16,6 +16,19 @@
 [ext_resource type="Resource" path="res://resources/arenas/speedway.tres" id="18"]
 [ext_resource type="Resource" path="res://resources/arenas/whirlpool.tres" id="19"]
 [ext_resource type="Resource" path="res://resources/arenas/crosswinds.tres" id="20"]
+[ext_resource type="Script" path="res://scripts/power_data.gd" id="40"]
+[ext_resource type="Resource" path="res://resources/powers/super_flick.tres" id="41"]
+[ext_resource type="Resource" path="res://resources/powers/freeze_ray.tres" id="42"]
+[ext_resource type="Resource" path="res://resources/powers/bubble_shield.tres" id="43"]
+[ext_resource type="Resource" path="res://resources/powers/rewind.tres" id="44"]
+[ext_resource type="Resource" path="res://resources/powers/swap.tres" id="45"]
+[ext_resource type="Resource" path="res://resources/powers/bomb_drop.tres" id="46"]
+[ext_resource type="Resource" path="res://resources/powers/earthquake.tres" id="47"]
+[ext_resource type="Resource" path="res://resources/powers/brick.tres" id="48"]
+[ext_resource type="Resource" path="res://resources/powers/extra_turn.tres" id="49"]
+[ext_resource type="Resource" path="res://resources/powers/magnet_throw.tres" id="50"]
+[ext_resource type="Resource" path="res://resources/powers/glue_puddle.tres" id="51"]
+[ext_resource type="Resource" path="res://resources/powers/shrink_ray.tres" id="52"]
 
 [resource]
 script = ExtResource("1")
@@ -31,3 +44,7 @@ income_per_figure = 1
 shop = ExtResource("30")
 shop_position = 3
 reward_choices = 3
+power_slots = 3
+start_with_powers = true
+starting_power_count = 2
+power_pool = Array[ExtResource("40")]([ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52")])

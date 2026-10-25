@@ -21,6 +21,8 @@ var money := 0
 var last_income := {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 var shop_offers: Array[ShopOffer] = []
 var shop_done := false  # visited (and left) the shop this run
+## The player's power slots (null = empty). They persist across combats until used.
+var powers: Array[PowerData] = []
 
 
 func _ready() -> void:
@@ -36,8 +38,35 @@ func start_new_run() -> void:
 	last_income = {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 	shop_offers.clear()
 	shop_done = false
+	_reset_powers()
 	boss = config.registry.random_boss()
 	_build_lineup()
+
+
+func _reset_powers() -> void:
+	powers.clear()
+	for i in config.power_slots:
+		powers.append(null)
+	if config.start_with_powers:
+		var pool := config.power_pool.duplicate()
+		pool.shuffle()
+		for i in mini(config.starting_power_count, pool.size()):
+			add_power(pool[i])
+
+
+## Puts a power in the first empty slot. Returns false if all slots are full.
+func add_power(power: PowerData) -> bool:
+	for i in powers.size():
+		if powers[i] == null:
+			powers[i] = power
+			return true
+	return false
+
+
+## Uses up the power in a slot.
+func use_power(slot: int) -> void:
+	if slot >= 0 and slot < powers.size():
+		powers[slot] = null
 
 
 func combat_count() -> int:

@@ -23,6 +23,9 @@ extends Node2D
 
 var _data: ArenaData
 var _origin := Vector2.ZERO
+# Things placed by powers: bricks (temporary walls) and zones (magnet fields, glue puddles).
+var _bricks: Array[Dictionary] = []  # {body, rounds}
+var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
 
 
 ## Builds the layout. `board_rect` is the board in world space; layout positions are relative to it.
@@ -99,16 +102,109 @@ func _kick(figure: Figure) -> void:
 # --- Floor patches -----------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	if _data == null or _data.patches.is_empty():
-		return
+	var figures := get_tree().get_nodes_in_group("figures")
+	if _data != null and not _data.patches.is_empty():
+		for node in figures:
+			var figure := node as Figure
+			# Resting figures are never touched, so patches can't keep anything moving forever.
+			if figure.on_deck or figure.knocked_off or figure.is_slow():
+				continue
+			for patch in _data.patches:
+				if _patch_rect(patch).has_point(figure.global_position):
+					_apply_patch(patch, figure, delta)
+	for zone in _zones:
+		_apply_zone(zone, figures)
+
+
+# --- Power-placed things -----------------------------------------------------
+
+## A short temporary wall (Brick power). Returns false if a figure is in the way.
+func add_brick(center: Vector2, size: Vector2, rounds: int) -> bool:
+	var rect := Rect2(center - size / 2.0, size)
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
-		# Resting figures are never touched, so patches can't keep anything moving forever.
-		if figure.on_deck or figure.knocked_off or figure.is_slow():
+		if not figure.knocked_off and rect.grow(figure.radius + 4.0).has_point(figure.global_position):
+			return false
+	var body := _make_static_body(wall_bounce)
+	body.position = center
+	var shape_rect := RectangleShape2D.new()
+	shape_rect.size = size
+	var shape := CollisionShape2D.new()
+	shape.shape = shape_rect
+	body.add_child(shape)
+	var corners := PackedVector2Array([-size / 2.0, Vector2(size.x, -size.y) / 2.0, size / 2.0, Vector2(-size.x, size.y) / 2.0])
+	var fill := Polygon2D.new()
+	fill.polygon = corners
+	fill.color = Color(0.7, 0.32, 0.22)
+	body.add_child(fill)
+	var outline := Line2D.new()
+	outline.points = corners
+	outline.closed = true
+	outline.width = 5.0
+	outline.default_color = Color(0.95, 0.6, 0.45)
+	body.add_child(outline)
+	add_child(body)
+	_bricks.append({"body": body, "rounds": rounds})
+	return true
+
+
+## A magnet field that bends the path of moving figures (Magnet Throw power).
+func add_magnet_zone(center: Vector2, radius: float, inner: float, pull: float, rounds: int) -> void:
+	_add_zone(ZoneVisual.Kind.MAGNET, center, radius, rounds, {"inner": inner, "pull": pull})
+
+
+## A puddle that stops any figure sliding into it (Glue Puddle power). rounds 0 = the whole combat.
+func add_glue_puddle(center: Vector2, radius: float, rounds: int) -> void:
+	_add_zone(ZoneVisual.Kind.PUDDLE, center, radius, rounds, {})
+
+
+func _add_zone(kind: int, center: Vector2, radius: float, rounds: int, extra: Dictionary) -> void:
+	var node := ZoneVisual.new()
+	node.kind = kind
+	node.radius = radius
+	node.position = center
+	node.z_index = -1
+	add_child(node)
+	var zone := {"kind": kind, "center": center, "radius": radius, "rounds": rounds, "node": node, "inside": {}}
+	zone.merge(extra)
+	_zones.append(zone)
+
+
+## One round has passed: bricks and zones with a limited life count down and vanish.
+func tick_round() -> void:
+	for i in range(_bricks.size() - 1, -1, -1):
+		_bricks[i].rounds -= 1
+		if _bricks[i].rounds <= 0:
+			_bricks[i].body.queue_free()
+			_bricks.remove_at(i)
+	for i in range(_zones.size() - 1, -1, -1):
+		if _zones[i].rounds <= 0:
+			continue  # lasts the whole combat
+		_zones[i].rounds -= 1
+		if _zones[i].rounds <= 0:
+			_zones[i].node.queue_free()
+			_zones.remove_at(i)
+
+
+func _apply_zone(zone: Dictionary, figures: Array) -> void:
+	for node in figures:
+		var figure := node as Figure
+		if figure.knocked_off:
 			continue
-		for patch in _data.patches:
-			if _patch_rect(patch).has_point(figure.global_position):
-				_apply_patch(patch, figure, delta)
+		var offset: Vector2 = zone.center - figure.global_position
+		var distance := offset.length()
+		if zone.kind == ZoneVisual.Kind.MAGNET:
+			if figure.is_slow() or distance < zone.inner or distance > zone.radius:
+				continue
+			var strength: float = (distance - zone.inner) / (zone.radius - zone.inner)
+			figure.apply_central_force(offset.normalized() * zone.pull * strength * figure.mass)
+		else:
+			# Only stops figures as they ENTER, so a figure flicked from inside can still leave.
+			var id := figure.get_instance_id()
+			var inside: bool = distance <= zone.radius
+			if inside and not zone.inside.get(id, false) and not figure.is_frozen():
+				figure.linear_velocity = Vector2.ZERO
+			zone.inside[id] = inside
 
 
 func _patch_rect(patch: ArenaPatch) -> Rect2:

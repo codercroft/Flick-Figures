@@ -24,5 +24,12 @@ extends Resource
 @export var shop: ShopConfig
 ## The shop sits on the map just before this combat (0 = the first combat): 3 = between combats 3 and 4.
 @export var shop_position := 3
+## How many power slots the player has.
+@export var power_slots := 3
+## For testing: start each run with some random powers.
+@export var start_with_powers := true
+@export var starting_power_count := 2
+## Every power that exists (add new PowerData resources here).
+@export var power_pool: Array[PowerData] = []
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

@@ -74,6 +74,15 @@ var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
 
+# Powers (see "Powers API" below).
+## Multiplies the next flick's force (Super Flick sets it to 3; it resets after a flick).
+var flick_boost := 1.0
+## Extra flicks owed to the player (Extra Turn): taken right after the next flick settles.
+var extra_turns := 0
+var _power_slot := -1  # the power waiting for a target (-1 = none)
+var _power_targets: Array = []
+var _snapshot := {}  # every figure as it was before the player's last flick (for Rewind)
+
 @onready var board := $Board
 @onready var arena: Arena = $Arena
 @onready var figures_root := $Figures
@@ -84,7 +93,9 @@ var _can_restart := false
 
 
 func _ready() -> void:
-	ui.show_progress(RunManager.progress_text())
+	ui.power_pressed.connect(_on_power_slot_pressed)
+	ui.set_powers(RunManager.powers)
+	_update_status()
 	arena.build(RunManager.arena, board.board_rect)
 	if RunManager.arena != null:
 		ui.show_arena_name(RunManager.arena.display_name)
@@ -101,6 +112,7 @@ func _physics_process(_delta: float) -> void:
 
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
 func _process(delta: float) -> void:
+	ui.set_powers_enabled(_state == State.PLAYER_TURN)
 	if _state != State.SETTLING and _state != State.ENEMY_TURN:
 		return
 	_busy_time += delta
@@ -117,6 +129,9 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	# Only the player's turn (and the run-over screen) takes touches. Everything else is ignored.
 	if _state != State.PLAYER_TURN and _state != State.AIMING and _state != State.GAME_OVER:
+		return
+	# Taps on the power buttons are for the buttons, not for aiming.
+	if event is InputEventScreenTouch and event.pressed and ui.is_over_power_bar(event.position):
 		return
 	if event is InputEventScreenTouch:
 		var pos := _to_world(event.position)
@@ -138,7 +153,9 @@ func _to_world(screen_pos: Vector2) -> Vector2:
 func _on_press(index: int, pos: Vector2) -> void:
 	match _state:
 		State.PLAYER_TURN:
-			if _needs_reload:
+			if _power_slot >= 0:
+				_try_power_target(pos)
+			elif _needs_reload:
 				_try_reload(pos)
 			else:
 				_begin_aim(index, pos)
@@ -150,7 +167,15 @@ func _on_press(index: int, pos: Vector2) -> void:
 
 # --- Player turn: reload, aim, flick -----------------------------------------
 
-func _start_player_turn() -> void:
+## `new_round` is false for an Extra Turn flick: the round (and the powers that last a round)
+## doesn't advance.
+func _start_player_turn(new_round := true) -> void:
+	_cancel_power()
+	if new_round:
+		for figure in _all_figures():
+			if _is_alive(figure):
+				figure.tick_round()
+		arena.tick_round()
 	for figure in _players:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
@@ -245,6 +270,9 @@ func _release_aim(pos: Vector2) -> void:
 	aim_line.clear()
 	_bonus_figure = null
 	var flicked_figure := _aim_figure
+	_take_snapshot()
+	flick_boost = 1.0
+	_update_status()
 	_aim_figure.launch(impulse)
 	_aim_figure = null
 	_last_player_flicker = flicked_figure
@@ -302,7 +330,7 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	var pull := minf(drag.length(), max_pull)
 	if pull < min_pull_distance:
 		return Vector2.ZERO
-	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier
+	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
@@ -335,6 +363,11 @@ func _finish_player_turn() -> void:
 		return
 	if _has_flick_left(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
 		_offer_bonus_flick(_last_player_flicker)
+		return
+	if extra_turns > 0:
+		extra_turns -= 1
+		_update_status()
+		_start_player_turn(false)
 		return
 	await _run_enemy_turn()
 
@@ -397,7 +430,7 @@ func _run_enemy_turn() -> void:
 	# enemy turn, each by the same distance from wherever it is now.
 	var creepers: Array[Figure] = []
 	for enemy in _enemies:
-		if _is_alive(enemy) and enemy.data.creep_distance > 0.0:
+		if _is_alive(enemy) and enemy.data.creep_distance > 0.0 and not enemy.is_frozen():
 			creepers.append(enemy)
 	if not creepers.is_empty():
 		await get_tree().create_timer(enemy_think_time).timeout
@@ -419,7 +452,7 @@ func _run_enemy_turn() -> void:
 func _flick_candidates() -> Array:
 	var able: Array = []
 	for enemy in _enemies:
-		if _is_alive(enemy) and enemy.data.can_flick:
+		if _is_alive(enemy) and enemy.data.can_flick and not enemy.is_frozen():
 			able.append(enemy)
 	if no_repeat_enemy and able.size() > 1 and _is_alive(_last_flicker):
 		able.erase(_last_flicker)
@@ -596,8 +629,242 @@ func _knock_off_fallen_figures() -> void:
 	var table: Rect2 = board.get_table_rect()
 	for figure in _all_figures():
 		if not table.has_point(figure.global_position):
+			if figure.bubble_rounds > 0:
+				_stop_at_edge(figure, table)  # Bubble Shield
+				continue
 			if figure.ability.on_left_table(figure, table):
 				continue  # saved (e.g. Ghost wrapped around)
 			_players.erase(figure)
 			_enemies.erase(figure)
 			figure.knock_off(knock_off_fade_time)
+
+
+## Bubble Shield: the figure stops right at the table edge instead of falling off.
+func _stop_at_edge(figure: Figure, table: Rect2) -> void:
+	var inner := table.grow(-figure.radius)
+	var pos := figure.global_position
+	figure.global_position = Vector2(clampf(pos.x, inner.position.x, inner.end.x), clampf(pos.y, inner.position.y, inner.end.y))
+	figure.linear_velocity = Vector2.ZERO
+
+
+# --- Powers API --------------------------------------------------------------
+# Powers (PowerData + PowerEffect) are used on the player's turn and don't use up the flick.
+# Effects call these functions on the Main node.
+
+## Every figure still in the game.
+func get_all_figures() -> Array[Figure]:
+	var alive: Array[Figure] = []
+	for figure in _all_figures():
+		if _is_alive(figure):
+			alive.append(figure)
+	return alive
+
+
+## A short message in the turn label (until the next one replaces it).
+func notice(text: String) -> void:
+	ui.show_your_turn(text)
+
+
+## Explosion at a point (Bomb Drop).
+func explode_at(point: Vector2, radius: float, force: float) -> void:
+	var picture := BlastEffect.new()
+	picture.position = point
+	add_child(picture)
+	picture.start(radius)
+	Figure.blast(get_tree(), point, radius, force)
+
+
+## Swaps two figures' positions (Swap).
+func swap_figures(a: Figure, b: Figure) -> void:
+	var pos_a := a.global_position
+	a.global_position = b.global_position
+	b.global_position = pos_a
+	for figure in [a, b]:
+		figure.linear_velocity = Vector2.ZERO
+		if figure.team == Figure.Team.PLAYER:
+			figure.on_deck = board.deck_rect.has_point(figure.global_position)
+
+
+func can_rewind() -> bool:
+	return not _snapshot.is_empty()
+
+
+## Remembers every figure before the player's flick (called right before each flick).
+func _take_snapshot() -> void:
+	var list: Array[Dictionary] = []
+	for figure in get_all_figures():
+		list.append({
+			"data": figure.data, "team": figure.team, "position": figure.global_position,
+			"on_deck": figure.on_deck, "flickable": figure.flickable, "turn_flicks": figure.turn_flicks,
+			"deck_position": figure.deck_position, "radius": figure.radius, "mass": figure.mass,
+			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
+		})
+	_snapshot = {"figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
+
+
+## Rewind: replaces every figure with a fresh copy from before the last flick (so knocked-off
+## figures come back). Per-figure ability state starts over.
+func rewind() -> bool:
+	if _snapshot.is_empty():
+		return false
+	_deselect()
+	_selected = null
+	_aim_figure = null
+	for child in figures_root.get_children():
+		if child is Figure:
+			child.remove_from_group("figures")
+			child.knocked_off = true
+			child.collision_layer = 0
+			child.collision_mask = 0
+		child.hide()
+		child.queue_free()
+	_players.clear()
+	_enemies.clear()
+	for entry in _snapshot.figures:
+		var figure := _spawn_figure(entry.team, entry.data, entry.position)
+		figure.set_size(entry.radius, entry.mass)
+		figure.shrunk = entry.shrunk
+		figure.deck_position = entry.deck_position
+		figure.turn_flicks = entry.turn_flicks
+		if entry.team == Figure.Team.PLAYER:
+			figure.on_deck = entry.on_deck
+			figure.flickable = entry.flickable
+			_players.append(figure)
+		else:
+			_enemies.append(figure)
+		if entry.frozen > 0:
+			figure.freeze_for(entry.frozen)
+		if entry.bubble > 0:
+			figure.set_bubble(entry.bubble)
+	flick_boost = _snapshot.boost
+	extra_turns = _snapshot.extra
+	_enemy_flicks = _snapshot.enemy_flicks
+	_last_flicker = null
+	_last_player_flicker = null
+	_bonus_figure = null
+	for figure in _players:
+		if figure.turn_flicks > 0 and _has_flick_left(figure):
+			_bonus_figure = figure  # it was Speedo's extra flick: offer it again
+	_snapshot = {}
+	_update_status()
+	return true
+
+
+func _on_power_slot_pressed(slot: int) -> void:
+	if _state != State.PLAYER_TURN:
+		return
+	if slot == _power_slot:
+		_cancel_power()
+		_resume_player_turn()
+		return
+	var power: PowerData = RunManager.powers[slot] if slot < RunManager.powers.size() else null
+	if power == null or power.effect == null:
+		return
+	_cancel_power()
+	var reason := power.effect.can_use(self)
+	if reason != "":
+		notice(reason)
+		return
+	if power.effect.target_mode == PowerEffect.Target.NONE:
+		_activate_power(slot, [])
+		return
+	_power_slot = slot
+	ui.set_powers(RunManager.powers, slot)
+	notice(power.effect.prompt if power.effect.prompt != "" else "Tap a target")
+
+
+## Gives up choosing a target (the power is not used up).
+func _cancel_power() -> void:
+	for target in _power_targets:
+		if target is Figure and is_instance_valid(target):
+			target.selected = false
+	_power_targets.clear()
+	if _power_slot >= 0:
+		_power_slot = -1
+		ui.set_powers(RunManager.powers)
+
+
+## A tap while a power waits for its target.
+func _try_power_target(pos: Vector2) -> void:
+	var effect: PowerEffect = RunManager.powers[_power_slot].effect
+	match effect.target_mode:
+		PowerEffect.Target.ENEMY:
+			var enemy := _figure_at(pos, Figure.Team.ENEMY)
+			if enemy != null:
+				_activate_power(_power_slot, [enemy])
+		PowerEffect.Target.OWN_FIGURE:
+			var own := _figure_at(pos, Figure.Team.PLAYER)
+			if own != null:
+				_activate_power(_power_slot, [own])
+		PowerEffect.Target.TWO_FIGURES:
+			var figure := _figure_at(pos, -1)
+			if figure == null or _power_targets.has(figure):
+				return
+			_power_targets.append(figure)
+			figure.selected = true
+			if _power_targets.size() == 2:
+				_activate_power(_power_slot, _power_targets.duplicate())
+			else:
+				notice("Tap the second figure")
+		PowerEffect.Target.POINT:
+			if board.board_rect.has_point(pos):
+				_activate_power(_power_slot, [pos])
+
+
+## The figure nearest to a tap (of one team, or -1 for either), or null.
+func _figure_at(pos: Vector2, team: int) -> Figure:
+	var best: Figure = null
+	var best_distance := INF
+	for figure in get_all_figures():
+		if team != -1 and figure.team != team:
+			continue
+		var distance := figure.global_position.distance_to(pos)
+		if distance <= figure.radius + grab_padding and distance < best_distance:
+			best = figure
+			best_distance = distance
+	return best
+
+
+func _activate_power(slot: int, targets: Array) -> void:
+	var serial := _turn_serial
+	var power: PowerData = RunManager.powers[slot]
+	_cancel_power()
+	if not power.effect.apply(self, targets):
+		return  # it could not be done: the power is kept
+	RunManager.use_power(slot)
+	ui.set_powers(RunManager.powers)
+	_update_status()
+	if power.effect.settle_after:
+		_state = State.SETTLING
+		_busy_time = 0.0
+		await _wait_until_settled()
+		if serial != _turn_serial:
+			return
+		if _check_game_over():
+			return
+	_resume_player_turn()
+
+
+## Back to waiting for the player after a power (without starting a new turn).
+func _resume_player_turn() -> void:
+	_state = State.PLAYER_TURN
+	_busy_time = 0.0
+	if not _is_alive(_selected):
+		_selected = null
+	if _bonus_figure != null and _is_alive(_bonus_figure):
+		_select(_bonus_figure)
+		ui.show_your_turn("%s: flick again, or tap to skip" % _bonus_figure.data.display_name)
+	elif _needs_reload:
+		ui.show_your_turn("Your turn: tap a figure to reload")
+	else:
+		ui.show_your_turn()
+
+
+## The small line under the turn label: which combat, plus any power waiting to take effect.
+func _update_status() -> void:
+	var text := RunManager.progress_text()
+	if flick_boost > 1.0:
+		text += "  |  Super Flick ready"
+	if extra_turns > 0:
+		text += "  |  Extra flick x%d" % extra_turns
+	ui.show_progress(text)
