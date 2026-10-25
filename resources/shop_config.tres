@@ -1,9 +1,13 @@
-[gd_resource type="Resource" script_class="ShopConfig" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="ShopConfig" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/shop/shop_config.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/shop/shop_item_type.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/shop/figure_for_sale_type.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/shop/replace_service_type.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/shop/relics_for_sale_type.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/shop/powers_for_sale_type.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/shop/equipment_for_sale_type.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/shop/upgrades_for_sale_type.gd" id="8"]
 
 [sub_resource type="Resource" id="figures_for_sale"]
 script = ExtResource("3")
@@ -16,6 +20,32 @@ script = ExtResource("4")
 display_name = "Swap a figure"
 price = 3
 
+[sub_resource type="Resource" id="relics_for_sale"]
+script = ExtResource("5")
+display_name = "Relics for sale"
+count = 1
+price = 7
+
+[sub_resource type="Resource" id="powers_for_sale"]
+script = ExtResource("6")
+display_name = "Powers for sale"
+count = 1
+price = 4
+
+[sub_resource type="Resource" id="equipment_for_sale"]
+script = ExtResource("7")
+display_name = "Equipment for sale"
+count = 1
+price = 5
+
+[sub_resource type="Resource" id="upgrades_for_sale"]
+script = ExtResource("8")
+display_name = "Upgrades for sale"
+specific_count = 1
+finish_count = 1
+specific_price = 6
+finish_price = 4
+
 [resource]
 script = ExtResource("1")
-item_types = Array[ExtResource("2")]([SubResource("figures_for_sale"), SubResource("replace_service")])
+item_types = Array[ExtResource("2")]([SubResource("figures_for_sale"), SubResource("replace_service"), SubResource("relics_for_sale"), SubResource("powers_for_sale"), SubResource("equipment_for_sale"), SubResource("upgrades_for_sale")])

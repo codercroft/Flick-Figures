@@ -7,13 +7,12 @@ extends Resource
 ## The player's deck starts as `deck_size` copies of this.
 @export var starting_figure: FigureData
 @export var deck_size := 4
-## One entry per combat before the boss: how many of that combat's enemies are grunts.
-## The rest are random non-grunts (never economy figures). Default: 4 grunts, then 3+1, 2+2, 1+3, 0+4.
-@export var grunts_per_combat: Array[int] = [4, 3, 2, 1, 0]
-## One entry per combat before the boss: how many flicks the enemy side takes each turn.
-@export var enemy_flicks_per_combat: Array[int] = [1, 1, 1, 1, 1]
-## How many enemies each regular combat has.
-@export var enemies_per_combat := 4
+## How many acts a run has. Each act is its own map ending in its own boss.
+@export var acts := 3
+## How hard each act is (enemy counts and stat multipliers per act, elites).
+@export var difficulty: DifficultyConfig
+## How each act's branching map is built.
+@export var map: MapConfig
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []
 ## Money the run starts with.
@@ -22,8 +21,6 @@ extends Resource
 @export var income_per_figure := 1
 ## What the shop sells (see resources/shop_config.tres).
 @export var shop: ShopConfig
-## The shop sits on the map just before this combat (0 = the first combat): 3 = between combats 3 and 4.
-@export var shop_position := 3
 ## How many power slots the player has.
 @export var power_slots := 3
 ## For testing: start each run with some random powers.
@@ -47,5 +44,12 @@ extends Resource
 @export var starting_relic_count := 3
 ## Every relic that exists (add new RelicData resources here).
 @export var relic_pool: Array[RelicData] = []
+@export_group("Rewards")
 ## How many figures the reward screen offers.
 @export var reward_choices := 3
+## Elite fights: chance of a power as a reward.
+@export_range(0.0, 1.0) var elite_power_chance := 0.5
+## Treasure nodes: chance that the treasure is a relic (otherwise a piece of equipment).
+@export_range(0.0, 1.0) var treasure_relic_chance := 0.5
+## Boss rewards: how many relics to pick from.
+@export var boss_relic_choices := 3

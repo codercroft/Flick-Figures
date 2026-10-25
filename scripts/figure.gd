@@ -34,6 +34,10 @@ var ability: FigureAbility
 ## The toy finish (one general upgrade) and the figure-specific upgrade on this figure, or null.
 var finish: FinishData
 var upgrade: UpgradeData
+## Enemies: the act's stat multipliers it was built with ({accuracy, power, mass}) and whether it
+## is an elite (drawn with a gold ring). Kept so Slime pieces and Rewind can rebuild it.
+var scale_factors := {}
+var elite := false
 var _fx_time := 0.0
 ## The equipment item attached to this figure (player figures only), or null.
 var equipment: EquipmentData
@@ -101,22 +105,29 @@ var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 ## Call before adding the figure to the scene.
 func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float,
 		frames_to_settle := 5, item: EquipmentData = null, toy_finish: FinishData = null,
-		figure_upgrade: UpgradeData = null) -> void:
+		figure_upgrade: UpgradeData = null, stat_scale := {}, is_elite := false) -> void:
 	base_data = figure_data
 	data = figure_data
 	team = figure_team
 	equipment = item
 	finish = toy_finish
 	upgrade = figure_upgrade
+	elite = is_elite
+	scale_factors = stat_scale
 	# Stat changes go on a private copy so the shared FigureData resource is never touched.
 	if upgrade != null and not upgrade.data_overrides.is_empty() \
-			or finish != null and finish.knockback_taken_multiplier != 1.0:
+			or finish != null and finish.knockback_taken_multiplier != 1.0 or not stat_scale.is_empty():
 		data = figure_data.duplicate() as FigureData
 		if upgrade != null:
 			for key in upgrade.data_overrides:
 				data.set(key, upgrade.data_overrides[key])
 		if finish != null:
 			data.knockback_taken_multiplier *= finish.knockback_taken_multiplier
+		# Act difficulty (and elite strength) for enemies: accuracy, flick power and mass.
+		if not stat_scale.is_empty():
+			data.accuracy = minf(data.accuracy * stat_scale.get("accuracy", 1.0), 1.0)
+			data.flick_power_multiplier *= stat_scale.get("power", 1.0)
+			data.mass *= stat_scale.get("mass", 1.0)
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
@@ -258,6 +269,8 @@ func _draw() -> void:
 		var pip := Vector2(radius, -radius) * 0.66
 		draw_circle(pip, radius * 0.17, Color(1.0, 0.85, 0.2))
 		draw_arc(pip, radius * 0.17, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
+	if elite:
+		draw_arc(Vector2.ZERO, radius + 9.0, 0.0, TAU, 48, Color(1.0, 0.8, 0.2), 7.0, true)
 	if equipment != null:
 		# A small badge in the lower right shows that this figure carries equipment.
 		var badge_center := Vector2(radius, radius) * 0.62

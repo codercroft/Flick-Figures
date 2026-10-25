@@ -560,7 +560,7 @@ func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
 	if won:
 		var income := 0
-		if not RunManager.is_boss_combat():
+		if RunManager.node.type != MapNode.Type.BOSS:
 			var on_table: Array[FigureData] = []
 			var equipment_bonus := 0
 			for figure in _players:
@@ -604,14 +604,15 @@ func _spawn_enemies() -> void:
 		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
 		var stagger := 0.0 if RunManager.enemies_in_row else 120.0 * (i % 2)
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + stagger)
-		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
+		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, null, null, null,
+				RunManager.enemy_scale(i), RunManager.enemy_elite[i]))
 
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
-		finish: FinishData = null, upgrade: UpgradeData = null) -> Figure:
+		finish: FinishData = null, upgrade: UpgradeData = null, scale := {}, elite := false) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
 	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else 1.0)
-	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade)
+	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade, scale, elite)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
@@ -628,7 +629,7 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 	if not _is_alive(parent):
 		return
 	for piece in pieces:
-		var spawned := _spawn_figure(parent.team, piece.data, piece.position)
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, null, parent.scale_factors)
 		spawned.apply_central_impulse(piece.velocity * spawned.mass)
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)
@@ -731,6 +732,7 @@ func _take_snapshot() -> void:
 			"deck_position": figure.deck_position, "radius": figure.radius, "mass": figure.mass,
 			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
 			"equipment": figure.equipment, "finish": figure.finish, "upgrade": figure.upgrade,
+			"scale": figure.scale_factors, "elite": figure.elite,
 		})
 	_snapshot = {"player_flicks": player_flicks, "figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
 
@@ -754,7 +756,8 @@ func rewind() -> bool:
 	_players.clear()
 	_enemies.clear()
 	for entry in _snapshot.figures:
-		var figure := _spawn_figure(entry.team, entry.data, entry.position, entry.equipment, entry.finish, entry.upgrade)
+		var figure := _spawn_figure(entry.team, entry.data, entry.position, entry.equipment, entry.finish, entry.upgrade,
+				entry.scale, entry.elite)
 		figure.set_size(entry.radius, entry.mass)
 		figure.shrunk = entry.shrunk
 		figure.deck_position = entry.deck_position

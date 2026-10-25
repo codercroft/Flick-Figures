@@ -16,6 +16,12 @@ var sold := false
 ## Called as on_buy(slot) when bought (slot is -1 if needs_slot is false). It does the actual work
 ## and returns a short message to show afterwards.
 var on_buy: Callable
+## Optional: returns "" if the offer can be bought now, or a short reason why not (e.g. "No free power slot").
+var blocked: Callable
+
+
+func blocked_reason() -> String:
+	return blocked.call() if blocked.is_valid() else ""
 
 
 func buy(slot := -1) -> String:

@@ -13,11 +13,23 @@ var equipment_inventory: Array[EquipmentData] = []
 ## They belong to the figure: replacing the figure removes them.
 var deck_finish: Array[FinishData] = []
 var deck_upgrade: Array[UpgradeData] = []
-## 0 to combat_count() - 1 are the normal combats; combat_count() is the boss fight.
-var combat_index := 0
+## Which act the run is in (0 = act 1). A run is config.acts acts, each with its own map and boss.
+var act := 0
+## The boss of each act (different bosses, picked when the run starts).
+var act_bosses: Array[BossData] = []
+## This act's boss.
 var boss: BossData
-## The enemies for the current combat.
+## This act's branching map.
+var map: ActMap
+## The map node last finished (-1 = still at the start of the act).
+var current_node := -1
+## The map node being played right now (combat, shop...), or null while on the map.
+var node: MapNode
+## The enemies for the current combat, and which of them are "elite" (stronger).
 var enemies: Array[FigureData] = []
+var enemy_elite: Array[bool] = []
+## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
+var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
 var enemy_flicks_per_turn := 1
 ## True when the enemies start in one straight row (The Wall).
@@ -28,7 +40,6 @@ var money := 0
 ## What the last won combat paid: {figures, base, bonus, total}.
 var last_income := {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 var shop_offers: Array[ShopOffer] = []
-var shop_done := false  # visited (and left) the shop this run
 ## The relics held this run (passive effects; never the same relic twice).
 var relics: Array[RelicData] = []
 ## The Main node while a combat is running (null otherwise): relic effects read the board from it.
@@ -59,15 +70,15 @@ func start_new_run() -> void:
 		items.shuffle()
 		for i in mini(config.starting_equipment_count, items.size()):
 			equipment_inventory.append(items[i])
-	combat_index = 0
 	money = config.starting_money
 	last_income = {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 	shop_offers.clear()
-	shop_done = false
+	reward_steps.clear()
 	_reset_powers()
 	_reset_relics()
-	boss = config.registry.random_boss()
-	_build_lineup()
+	act = 0
+	act_bosses = config.registry.random_bosses(config.acts)
+	_start_act()
 
 
 func _reset_relics() -> void:
@@ -198,22 +209,134 @@ func use_power(slot: int) -> void:
 		powers[slot] = null
 
 
-func combat_count() -> int:
-	return config.grunts_per_combat.size()
+# --- Acts, the map and nodes ---------------------------------------------------
+
+func _start_act() -> void:
+	boss = act_bosses[act] if act < act_bosses.size() else config.registry.random_boss()
+	map = ActMap.generate(config.map)
+	current_node = -1
+	node = null
+	enemies.clear()
+	enemy_elite.clear()
+	arena = null
 
 
-func is_boss_combat() -> bool:
-	return combat_index >= combat_count()
+func is_last_act() -> bool:
+	return act >= config.acts - 1
 
 
-## Call when the player wins a combat. Returns true if that was the boss (the run is won),
-## otherwise moves on to the next combat.
+## The map nodes the player can go to now: the first column at the start of an act, otherwise
+## the next steps from the last finished node.
+func reachable_nodes() -> Array[int]:
+	if current_node == -1:
+		return map.column_ids(0)
+	return map.nodes[current_node].next.duplicate()
+
+
+func is_reachable(id: int) -> bool:
+	return reachable_nodes().has(id)
+
+
+## Goes to a map node. Returns false if it can't be reached from here. Combat, elite and boss
+## nodes build their enemy lineup; shops roll their stock. The caller changes the scene.
+func enter_node(id: int) -> bool:
+	if not is_reachable(id):
+		return false
+	node = map.nodes[id]
+	match node.type:
+		MapNode.Type.COMBAT, MapNode.Type.ELITE, MapNode.Type.BOSS:
+			_build_lineup()
+		MapNode.Type.SHOP:
+			shop_offers = config.shop.make_offers(config.registry)
+		MapNode.Type.TREASURE:
+			reward_steps = [{"kind": "treasure"}]
+	return true
+
+
+## The node has been dealt with (fought, shopped, looted): you are now standing on it.
+func finish_node() -> void:
+	if node != null:
+		node.visited = true
+		current_node = node.id
+		node = null
+
+
+## Call when the player wins a combat. Builds the reward steps. Returns true if that was the
+## last act's boss (the run is won); the caller then shows the end screen instead of rewards.
 func combat_won() -> bool:
-	if is_boss_combat():
+	if node.type == MapNode.Type.BOSS and is_last_act():
 		return true
-	combat_index += 1
-	_build_lineup()
+	build_rewards()
 	return false
+
+
+## What a won combat offers, by node type (see reward.gd for how each step is shown).
+func build_rewards() -> void:
+	reward_steps.clear()
+	match node.type:
+		MapNode.Type.ELITE:
+			reward_steps = [{"kind": "relic"}, {"kind": "power_chance"}, {"kind": "figures"}]
+		MapNode.Type.BOSS:
+			reward_steps = [{"kind": "relics"}, {"kind": "upgrade"}, {"kind": "figures"}]
+		_:
+			reward_steps = [{"kind": "figures"}]
+
+
+## Called when the reward screens are done. After a boss the run moves on to the next act.
+func finish_rewards() -> void:
+	reward_steps.clear()
+	if node != null and node.type == MapNode.Type.BOSS:
+		act += 1
+		_start_act()
+	else:
+		finish_node()
+
+
+## Enemy stat multipliers for the enemy at `index` of the current lineup: {accuracy, power, mass}.
+func enemy_scale(index := -1) -> Dictionary:
+	var is_boss := node != null and node.type == MapNode.Type.BOSS
+	var is_elite := index >= 0 and index < enemy_elite.size() and enemy_elite[index]
+	return config.difficulty.scale_for(act, is_boss, is_elite)
+
+
+# --- Reward helpers ----------------------------------------------------------
+
+## `count` different relics the run doesn't hold yet.
+func random_new_relics(count: int) -> Array[RelicData]:
+	var choices: Array[RelicData] = []
+	for relic in config.relic_pool:
+		if not relics.has(relic):
+			choices.append(relic)
+	choices.shuffle()
+	return choices.slice(0, count)
+
+
+func random_equipment() -> EquipmentData:
+	return config.equipment_pool.pick_random() if not config.equipment_pool.is_empty() else null
+
+
+func has_free_power_slot() -> bool:
+	return powers.has(null)
+
+
+## Gives a random upgrade (a figure-specific one or a toy finish, not one it already has) to the
+## figure in `slot`. Returns a short message.
+func grant_random_upgrade(slot: int) -> String:
+	var options: Array = []
+	for upgrade in upgrades_for(deck[slot]):
+		if deck_upgrade[slot] != upgrade:
+			options.append(upgrade)
+	for finish in config.finish_pool:
+		if deck_finish[slot] != finish:
+			options.append(finish)
+	if options.is_empty():
+		return "%s has nothing left to gain." % deck[slot].display_name
+	var pick = options.pick_random()
+	if pick is UpgradeData:
+		set_upgrade(slot, pick)
+	else:
+		set_finish(slot, pick)
+	return "%s got %s!" % [deck[slot].display_name, pick.display_name]
 
 
 ## The figures the reward screen offers: different from each other.
@@ -286,6 +409,8 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 	for relic in relics:
 		if relic.effect != null:
 			bonus += relic.effect.get_income_bonus()
+	if node != null and node.type == MapNode.Type.ELITE:
+		bonus += config.difficulty.elite_extra_money
 	relic_notes.clear()
 	last_income = {"figures": figures_on_table.size(), "base": base, "bonus": bonus, "total": base + bonus}
 	money += base + bonus
@@ -308,54 +433,59 @@ func spend(amount: int) -> bool:
 	return true
 
 
-## True while the optional shop is on offer: between the combats before and after config.shop_position.
-func shop_available() -> bool:
-	return config.shop != null and combat_index == config.shop_position and not shop_done and not is_boss_combat()
-
-
-## Opens the shop: its stock is rolled once and kept until the shop is left.
-func enter_shop() -> void:
-	if shop_offers.is_empty():
-		shop_offers = config.shop.make_offers(config.registry)
-
-
-func leave_shop() -> void:
-	shop_done = true
-
-
 func progress_text() -> String:
-	if is_boss_combat():
-		return "Boss fight: %s" % boss.display_name
-	return "Combat %d of %d" % [combat_index + 1, combat_count()]
+	var where := "Act %d of %d" % [act + 1, config.acts]
+	if node == null:
+		return where
+	if node.type == MapNode.Type.BOSS:
+		return "%s | Boss: %s" % [where, boss.display_name]
+	return "%s | %s" % [where, MapNode.type_name(node.type)]
 
 
 func run_over_text(won: bool) -> String:
 	var result := ""
 	if won:
-		result = "Run complete!\nYou beat %s" % boss.display_name
-	elif is_boss_combat():
-		result = "Run over\nYou reached the boss: %s" % boss.display_name
+		result = "Run complete!\nYou beat all %d acts" % config.acts
+	elif node != null and node.type == MapNode.Type.BOSS:
+		result = "Run over\nAct %d: beaten by %s" % [act + 1, boss.display_name]
 	else:
-		result = "Run over\nYou reached combat %d of %d" % [combat_index + 1, combat_count()]
+		result = "Run over\nAct %d: defeated at a %s" % [act + 1, MapNode.type_name(node.type).to_lower() if node != null else "combat"]
 	return result + "\nTap to start a new run"
 
 
+## Builds the enemies for the current node. Within an act the lineup ramps from all grunts at the
+## first column to all non-grunts at the last; elites have stronger figures and an extra flick.
 func _build_lineup() -> void:
 	enemies.clear()
+	enemy_elite.clear()
 	var registry := config.registry
-	if is_boss_combat():
+	var difficulty := config.difficulty
+	if node.type == MapNode.Type.BOSS:
 		enemies.append_array(boss.enemies)
+		for i in enemies.size():
+			enemy_elite.append(false)
 		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
 		enemies_in_row = boss.straight_row
 	else:
-		var grunt_count := config.grunts_per_combat[combat_index]
-		for i in grunt_count:
+		var count := difficulty.enemy_count(act)
+		var progress := float(node.column) / maxf(map.columns - 1, 1)
+		var non_grunts := clampi(roundi(count * progress), 0, count)
+		if node.type == MapNode.Type.ELITE:
+			non_grunts = maxi(non_grunts, difficulty.elite_figures_max)
+		for i in count - non_grunts:
 			enemies.append(registry.random_grunt())
-		enemies.append_array(registry.random_non_grunts(config.enemies_per_combat - grunt_count))
-		enemy_flicks_per_turn = 1
+		var specials := registry.random_non_grunts(non_grunts)
+		enemies.append_array(specials)
+		for i in enemies.size():
+			enemy_elite.append(false)
+		enemy_flicks_per_turn = difficulty.flicks_per_turn(act)
 		enemies_in_row = false
-		if combat_index < config.enemy_flicks_per_combat.size():
-			enemy_flicks_per_turn = config.enemy_flicks_per_combat[combat_index]
+		if node.type == MapNode.Type.ELITE:
+			# 1-2 of the non-grunts (the last entries) become elite.
+			var elite_count := mini(randi_range(difficulty.elite_figures_min, difficulty.elite_figures_max), specials.size())
+			for i in elite_count:
+				enemy_elite[enemies.size() - 1 - i] = true
+			enemy_flicks_per_turn += difficulty.elite_extra_flicks
 	_pick_arena()
 
 

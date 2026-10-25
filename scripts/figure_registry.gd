@@ -19,6 +19,20 @@ func random_grunt() -> FigureData:
 	return grunts.pick_random() if not grunts.is_empty() else null
 
 
+## `count` different bosses (repeats only if there are fewer bosses than that).
+func random_bosses(count: int) -> Array[BossData]:
+	var pool := bosses.duplicate()
+	pool.shuffle()
+	var picked: Array[BossData] = []
+	for i in count:
+		if pool.is_empty():
+			break
+		picked.append(pool.pop_back())
+	while picked.size() < count and not bosses.is_empty():
+		picked.append(bosses.pick_random())
+	return picked
+
+
 func random_boss() -> BossData:
 	return bosses.pick_random() if not bosses.is_empty() else null
 

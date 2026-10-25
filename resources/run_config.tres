@@ -1,10 +1,12 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=75 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=77 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="3"]
 [ext_resource type="Script" path="res://scripts/arena_data.gd" id="4"]
 [ext_resource type="Resource" path="res://resources/shop_config.tres" id="30"]
+[ext_resource type="Resource" path="res://resources/difficulty_config.tres" id="140"]
+[ext_resource type="Resource" path="res://resources/map_config.tres" id="141"]
 [ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/arenas/open_corners.tres" id="12"]
@@ -80,14 +82,10 @@ script = ExtResource("1")
 registry = ExtResource("2")
 starting_figure = ExtResource("3")
 deck_size = 4
-grunts_per_combat = Array[int]([4, 3, 2, 1, 0])
-enemy_flicks_per_combat = Array[int]([1, 1, 1, 1, 1])
-enemies_per_combat = 4
 arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20")])
 starting_money = 0
 income_per_figure = 1
 shop = ExtResource("30")
-shop_position = 3
 reward_choices = 3
 power_slots = 3
 start_with_powers = true
@@ -102,3 +100,6 @@ upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"),
 start_with_relics = true
 starting_relic_count = 3
 relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135")])
+acts = 3
+difficulty = ExtResource("140")
+map = ExtResource("141")
