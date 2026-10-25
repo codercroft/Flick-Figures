@@ -4,6 +4,10 @@ extends Resource
 ## duplicating a .tres in resources/figures/ and changing the values in the Inspector.
 
 @export var display_name := "Figure"
+## Short text drawn on the figure (e.g. "CM"). Empty = first letter of the name.
+@export var label := ""
+## Small picture drawn under the label that hints at what the figure does.
+@export var icon := FigureIcons.Icon.NONE
 @export var color := Color.WHITE
 @export var radius := 60.0
 @export var mass := 1.0

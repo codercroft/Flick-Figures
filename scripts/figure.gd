@@ -15,6 +15,8 @@ const LAYER_ON_DECK := 1 << 0  # layer 1: player figures waiting on deck
 const LAYER_FLICKED := 1 << 1  # layer 2: player figures out on the board
 const LAYER_ENEMY := 1 << 2  # layer 3: enemy figures
 const GREYED_OUT := Color(0.5, 0.5, 0.5)
+const PLAYER_RING := Color(1.0, 1.0, 1.0, 0.9)
+const ENEMY_RING := Color(0.95, 0.15, 0.15)
 ## Velocity changes smaller than this (px/s) are just damping, not a hit.
 const KNOCKBACK_MIN_CHANGE := 60.0
 const BLAST_RING_TIME := 0.35
@@ -117,12 +119,23 @@ func _draw() -> void:
 	var stretch := maxf(1.0 + _squash_amount, 0.2)
 	draw_set_transform(Vector2.ZERO, _squash_angle, Vector2(stretch, 1.0 / stretch) * (1.0 + _pop))
 	draw_circle(Vector2.ZERO, radius, fill)
-	draw_arc(Vector2.ZERO, radius - 3.0, 0.0, TAU, 48, fill.darkened(0.4), 6.0, true)
+	# The ring shows which side the figure is on (any figure can be on either side).
+	draw_arc(Vector2.ZERO, radius - 4.0, 0.0, TAU, 48, ENEMY_RING if team == Team.ENEMY else PLAYER_RING, 8.0, true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * (1.0 + _pop))
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
-	# First letter of the name, so you can tell figures apart.
-	draw_string(ThemeDB.fallback_font, Vector2(-radius, radius * 0.35), data.display_name.left(1),
-			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, int(radius), fill.darkened(0.5))
+	# A short label so you can tell figures apart (the first letter of the name by default).
+	var label := data.label if data.label != "" else data.display_name.left(1)
+	var font_size := int(radius * (1.0 if label.length() <= 1 else 0.75))
+	var ink := fill.darkened(0.5)
+	if data.icon == FigureIcons.Icon.NONE:
+		draw_string(ThemeDB.fallback_font, Vector2(-radius, font_size * 0.35), label,
+				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
+	else:
+		# Label above, little icon below.
+		font_size = int(font_size * 0.8)
+		draw_string(ThemeDB.fallback_font, Vector2(-radius, -radius * 0.08), label,
+				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
+		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _blast_progress < 1.0:
 		var ring_radius := lerpf(radius, _blast_radius, _blast_progress)
@@ -135,10 +148,12 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	# Knockback multiplier: scale how much a collision changed our velocity.
 	if _skip_knockback_frames > 0:
 		_skip_knockback_frames -= 1
-	elif data.knockback_taken_multiplier != 1.0 and state.get_contact_count() > 0:
+	elif state.get_contact_count() > 0:
+		var multiplier := data.knockback_taken_multiplier \
+				* ability.get_knockback_multiplier(self, _hardest_hitter(state))
 		var change := velocity - _last_velocity
-		if change.length() > KNOCKBACK_MIN_CHANGE:
-			velocity = _last_velocity + change * data.knockback_taken_multiplier
+		if not is_equal_approx(multiplier, 1.0) and change.length() > KNOCKBACK_MIN_CHANGE:
+			velocity = _last_velocity + change * multiplier
 
 	# Damping alone never quite reaches zero, so stop crawling figures.
 	if velocity.length() < stop_speed:
@@ -152,6 +167,26 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	state.linear_velocity = velocity
 	_prev_velocity = _last_velocity
 	_last_velocity = velocity
+
+
+## The touching figure we are moving fastest relative to: the one that hit us.
+func _hardest_hitter(state: PhysicsDirectBodyState2D) -> Figure:
+	var best: Figure = null
+	var best_speed := -1.0
+	for i in state.get_contact_count():
+		var other := state.get_contact_collider_object(i) as Figure
+		if other == null:
+			continue
+		var speed := (other.linear_velocity - state.linear_velocity).length()
+		if speed > best_speed:
+			best = other
+			best_speed = speed
+	return best
+
+
+func _physics_process(delta: float) -> void:
+	if not knocked_off:
+		ability.on_physics_process(self, delta)
 
 
 func _on_body_entered(body: Node) -> void:
@@ -180,10 +215,11 @@ func launch(impulse: Vector2) -> void:
 	flicked.emit(self, impulse)
 
 
-## Pushed by a hit-like effect (an explosion). Respects knockback_taken_multiplier.
-func take_knockback(impulse: Vector2) -> void:
+## Pushed by a hit-like effect (an explosion or bump). `source` is the figure that caused it.
+## Respects knockback_taken_multiplier and the ability's get_knockback_multiplier.
+func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 	_skip_knockback_frames = 2
-	apply_central_impulse(impulse * data.knockback_taken_multiplier)
+	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source))
 
 
 ## Pushes every other figure within blast_radius away. The push is `force` at the
@@ -199,7 +235,7 @@ func explode(blast_radius: float, force: float) -> void:
 		var distance := offset.length()
 		if distance >= blast_radius:
 			continue
-		other.take_knockback(offset.normalized() * force * (1.0 - distance / blast_radius))
+		other.take_knockback(offset.normalized() * force * (1.0 - distance / blast_radius), self)
 		other.ability.on_exploded.call_deferred(other, self)
 
 

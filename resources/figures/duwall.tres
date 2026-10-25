@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Duwall"
+icon = 2
 color = Color(0.3, 0.6, 0.4, 1)
 radius = 70.0
 mass = 2.5

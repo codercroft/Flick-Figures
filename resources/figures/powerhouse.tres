@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Powerhouse"
+icon = 3
 color = Color(0.95, 0.55, 0.15, 1)
 radius = 60.0
 mass = 1.0

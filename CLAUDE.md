@@ -47,6 +47,13 @@ Mobile game built in Godot 4 with GDScript.
 - `Figure.explode(radius, force)` pushes nearby figures (linear falloff) and fires `on_exploded` on them. `take_knockback()` and the collision handling in `_integrate_forces` apply `knockback_taken_multiplier`.
 - Bombo explodes on its first hit after each flick (resets on flick), and survives.
 
+### Figure roster, registry and icons
+
+- Every figure works on either side; a white ring means player, a red ring means enemy. Each figure shows a short `label` and a small `icon` (`FigureData.icon`, drawn by `scripts/figure_icons.gd`; add an enum entry + a `match` case to make a new one).
+- Figures: Roller (R), Duwall (D), Powerhouse (P), Bombo (B), Crazy Man (CM: bounce 1 + `bounce_boost`, since Godot sums bounce values and caps at 1), Mr Potential (MP: 2x knockback from own team while on board), Sneaky Bomber (SB: explodes at the end of a flick that touched nothing, pushes everyone), Magnet (MG: pulls moving figures of BOTH sides while on board), Bumper (BP: extra knockback on whatever bounces off it), Firecracker (FC: explodes when hit by an explosion; chain reactions, `rearm_ms` stops loops).
+- Extra ability hooks beyond the four events: `on_physics_process(figure, delta)` (continuous effects) and the modifier `get_knockback_multiplier(figure, source)` (applied to collisions and `take_knockback`).
+- `resources/figure_registry.tres` (`FigureRegistry`): `grunts` (enemy fodder) and `draftable` (player draft pool) lists, plus `random_grunt()` and `random_draftable(count, exclude)` for the run system. A figure can be in both lists.
+
 ## Game feel
 
 - `scripts/game_feel.gd` (GameFeel node, with a Camera2D child used for screen shake) holds all the "juice": squash/stretch, impact particles, screen shake, knock-off pop, and haptics (`Input.vibrate_handheld`, mobile only). Each effect has an `@export` bool switch on that node; all other numbers are exports too.
