@@ -11,7 +11,7 @@ builds/
 *.exe
 *.pck
 *.zip
-export_presets.cfg
+build/
 *.translation
 
 # Mono / C# (in case it's ever used)

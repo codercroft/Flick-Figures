@@ -17,3 +17,4 @@
 *.glb binary
 *.res binary
 *.scn binary
+*.keystore binary

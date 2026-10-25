@@ -70,7 +70,12 @@ Mobile game built in Godot 4 with GDScript.
 
 - `scripts/game_feel.gd` (GameFeel node, with a Camera2D child used for screen shake) holds all the "juice": squash/stretch, impact particles, screen shake, knock-off pop, and haptics (`Input.vibrate_handheld`, mobile only). Each effect has an `@export` bool switch on that node; all other numbers are exports too.
 - Figures only emit signals (`flicked`, `impacted`, `fell_off`); `main.gd` connects them to GameFeel when spawning. Impact speed is the relative speed just before the collision. Squash/pop are drawn in `Figure._draw` (the RigidBody is never scaled).
-- Android export preset needs the Vibrate permission ticked (`export_presets.cfg` is git-ignored, so set it locally).
+- Haptics need the Android Vibrate permission, which is already ticked in the committed `export_presets.cfg`.
+
+## Builds
+
+- `.github/workflows/build.yml` runs on every push to `main`: it exports an Android APK (debug-signed with the committed, public `signing/debug.keystore`, so new builds install over old ones) and a web build, then republishes them on the GitHub release tagged `latest` ("Latest build"). `export_presets.cfg` is committed (Android + Web presets, no secrets). See `BUILDING.md` for how to install and share. The renderer is GL Compatibility (needed for web, and the safest on phones).
+- A real release keystore (for Google Play) must go in GitHub secrets, never in the repo.
 
 ## Project settings
 
