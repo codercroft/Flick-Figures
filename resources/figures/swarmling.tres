@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Swarmling"
+description = "Small, weak and light. They come in swarms."
+rarity = 0
+label = "sw"
+color = Color(0.9, 0.4, 0.35, 1)
+radius = 30.0
+mass = 0.35
+bounce = 0.7
+damping_multiplier = 1.0
+flick_power_multiplier = 0.6
+knockback_taken_multiplier = 1.2
+accuracy = 0.6

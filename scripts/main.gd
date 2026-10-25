@@ -105,8 +105,13 @@ func _ready() -> void:
 	ui.set_powers(RunManager.powers)
 	_update_status()
 	arena.build(RunManager.arena, board.board_rect)
+	var banner: Array[String] = []
+	if RunManager.encounter_name != "":
+		banner.append(RunManager.encounter_name)
 	if RunManager.arena != null:
-		ui.show_arena_name(RunManager.arena.display_name)
+		banner.append(RunManager.arena.display_name)
+	if not banner.is_empty():
+		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
 	_spawn_players()
 	_spawn_enemies()
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)

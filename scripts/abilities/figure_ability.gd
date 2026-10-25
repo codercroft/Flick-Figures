@@ -93,3 +93,9 @@ func extra_hit_knockback(figure: Figure, other: Figure, bonus: float) -> void:
 ## This figure touched a wall, pin or other non-figure body (called deferred).
 func on_hit_wall(_figure: Figure, _body: Node) -> void:
 	pass
+
+
+## How many times this figure would wrap around the table edge on a free flight (Ghost, Wings).
+## The enemy AI uses it so a wrap isn't treated as falling off.
+func get_wrap_count(_figure: Figure) -> int:
+	return 0

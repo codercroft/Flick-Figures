@@ -25,3 +25,7 @@ func on_left_table(figure: Figure, table: Rect2) -> bool:
 	figure.global_position = pos
 	figure.show_popup("Flap!", Color(1.0, 1.0, 0.8))
 	return true
+
+
+func get_wrap_count(_figure: Figure) -> int:
+	return 0 if _used else 1

@@ -128,6 +128,7 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 			data.accuracy = minf(data.accuracy * stat_scale.get("accuracy", 1.0), 1.0)
 			data.flick_power_multiplier *= stat_scale.get("power", 1.0)
 			data.mass *= stat_scale.get("mass", 1.0)
+			data.bounce = clampf(data.bounce + stat_scale.get("bounce", 0.0), 0.0, 1.0)
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
@@ -144,10 +145,11 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 		for key in upgrade.ability_overrides:
 			if key in ability:
 				ability.set(key, upgrade.ability_overrides[key])
-	if finish != null and finish.ability_strength != 1.0:
+	var strength: float = (finish.ability_strength if finish != null else 1.0) * stat_scale.get("ability", 1.0)
+	if strength != 1.0:
 		for key in STRENGTH_PROPERTIES:
 			if key in ability:
-				ability.set(key, ability.get(key) * finish.ability_strength)
+				ability.set(key, ability.get(key) * strength)
 	# Equipment, upgrades and finishes with an effect run next to the figure's own ability.
 	for extra in [equipment.effect if equipment != null else null,
 			upgrade.extra_effect if upgrade != null else null, finish.effect if finish != null else null]:

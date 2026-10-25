@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="3"]
+[ext_resource type="Resource" path="res://resources/figures/duwall.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/figures/magnet.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/figures/powerhouse.tres" id="12"]
+
+[sub_resource type="Resource" id="enemy_0"]
+script = ExtResource("1")
+figure = ExtResource("12")
+count = 1
+mass_multiplier = 1.25
+flick_power_multiplier = 1.15
+accuracy_multiplier = 1.1
+
+[sub_resource type="Resource" id="enemy_1"]
+script = ExtResource("1")
+figure = ExtResource("10")
+count = 1
+mass_multiplier = 1.25
+flick_power_multiplier = 1.15
+accuracy_multiplier = 1.1
+
+[sub_resource type="Resource" id="enemy_2"]
+script = ExtResource("1")
+figure = ExtResource("11")
+count = 1
+mass_multiplier = 1.25
+flick_power_multiplier = 1.15
+accuracy_multiplier = 1.1
+
+[resource]
+script = ExtResource("2")
+display_name = "Well-Rounded Squad"
+enemies = Array[ExtResource("1")]([SubResource("enemy_0"), SubResource("enemy_1"), SubResource("enemy_2")])
+enemy_flicks_per_turn = 1
+acts = Array[int]([1, 2, 3])

@@ -28,6 +28,10 @@ var node: MapNode
 ## The enemies for the current combat, and which of them are "elite" (stronger).
 var enemies: Array[FigureData] = []
 var enemy_elite: Array[bool] = []
+## Named encounter (elite fights): its name, shown at the start of combat, and each enemy's own
+## stat boosts (parallel to `enemies`; {} = none).
+var encounter_name := ""
+var enemy_boosts: Array[Dictionary] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
@@ -296,7 +300,16 @@ func finish_rewards() -> void:
 func enemy_scale(index := -1) -> Dictionary:
 	var is_boss := node != null and node.type == MapNode.Type.BOSS
 	var is_elite := index >= 0 and index < enemy_elite.size() and enemy_elite[index]
-	return config.difficulty.scale_for(act, is_boss, is_elite)
+	var scale := config.difficulty.scale_for(act, is_boss, is_elite)
+	# An encounter's own boosts for this enemy stack on top of the act's multipliers.
+	if index >= 0 and index < enemy_boosts.size() and not enemy_boosts[index].is_empty():
+		var boost := enemy_boosts[index]
+		scale.accuracy *= boost.accuracy
+		scale.power *= boost.power
+		scale.mass *= boost.mass
+		scale["bounce"] = boost.bounce
+		scale["ability"] = boost.ability
+	return scale
 
 
 # --- Reward helpers ----------------------------------------------------------
@@ -458,9 +471,14 @@ func run_over_text(won: bool) -> String:
 func _build_lineup() -> void:
 	enemies.clear()
 	enemy_elite.clear()
+	enemy_boosts.clear()
+	encounter_name = ""
 	var registry := config.registry
 	var difficulty := config.difficulty
-	if node.type == MapNode.Type.BOSS:
+	var encounter := _pick_encounter() if node.type == MapNode.Type.ELITE else null
+	if encounter != null:
+		_build_encounter(encounter)
+	elif node.type == MapNode.Type.BOSS:
 		enemies.append_array(boss.enemies)
 		for i in enemies.size():
 			enemy_elite.append(false)
@@ -486,7 +504,29 @@ func _build_lineup() -> void:
 			for i in elite_count:
 				enemy_elite[enemies.size() - 1 - i] = true
 			enemy_flicks_per_turn += difficulty.elite_extra_flicks
+	while enemy_boosts.size() < enemies.size():
+		enemy_boosts.append({})
 	_pick_arena()
+
+
+## A named elite encounter that can appear in this act (random), or null if there is none.
+func _pick_encounter() -> EncounterData:
+	var choices: Array[EncounterData] = []
+	for encounter in config.elite_encounters:
+		if encounter.available_in(act):
+			choices.append(encounter)
+	return choices.pick_random() if not choices.is_empty() else null
+
+
+func _build_encounter(encounter: EncounterData) -> void:
+	encounter_name = encounter.display_name
+	for entry in encounter.enemies:
+		for i in entry.count:
+			enemies.append(entry.figure)
+			enemy_elite.append(false)
+			enemy_boosts.append(entry.boost())
+	enemy_flicks_per_turn = encounter.enemy_flicks_per_turn
+	enemies_in_row = false
 
 
 ## Random layout from the pool, not the same as last time, and only ones a creeping boss can use

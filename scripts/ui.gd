@@ -29,14 +29,27 @@ func show_enemy_turn() -> void:
 
 ## Shows the arena's name big in the middle of the lower half, then fades it out.
 func show_arena_name(text: String) -> void:
-	arena_label.text = text
-	arena_label.modulate.a = 0.0
+	show_banner([text])
+
+
+## Shows each line in turn, big in the middle of the lower half, fading in and out. The first line
+## can have its own color (an encounter's name is gold).
+func show_banner(lines: Array[String], first_color := Color.WHITE) -> void:
+	if _banner_tween != null:
+		_banner_tween.kill()
+	arena_label.modulate = Color(1, 1, 1, 0)
 	arena_label.show()
-	var tween := create_tween()
-	tween.tween_property(arena_label, "modulate:a", 1.0, 0.3)
-	tween.tween_interval(1.4)
-	tween.tween_property(arena_label, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(arena_label.hide)
+	_banner_tween = create_tween()
+	for i in lines.size():
+		var line := lines[i]
+		var color := first_color if i == 0 else Color.WHITE
+		_banner_tween.tween_callback(func():
+			arena_label.text = line
+			arena_label.add_theme_color_override("font_color", color))
+		_banner_tween.tween_property(arena_label, "modulate:a", 1.0, 0.3)
+		_banner_tween.tween_interval(1.2)
+		_banner_tween.tween_property(arena_label, "modulate:a", 0.0, 0.4)
+	_banner_tween.tween_callback(arena_label.hide)
 
 
 ## Small orange readout (empty text hides it). Used to show what the turn is waiting for.
@@ -61,6 +74,7 @@ func show_result(text: String) -> void:
 # --- Power bar (bottom of the screen) ---------------------------------------
 
 var _power_buttons: Array[Button] = []
+var _banner_tween: Tween
 
 
 ## Shows the player's power slots. `active_slot` is highlighted (the power waiting for a target).

@@ -78,3 +78,7 @@ func get_incoming_aim_error_degrees(figure: Figure) -> float:
 func on_hit_wall(figure: Figure, body: Node) -> void:
 	first.on_hit_wall(figure, body)
 	second.on_hit_wall(figure, body)
+
+
+func get_wrap_count(figure: Figure) -> int:
+	return first.get_wrap_count(figure) + second.get_wrap_count(figure)

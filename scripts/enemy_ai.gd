@@ -180,7 +180,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	var miss_chance := 1.0 - _hit_chance(direction.angle_to(to_other), _aim_error(enemy),
 			asin(clampf((enemy.radius + other.radius) / to_other.length(), 0.0, 1.0)))
 	if miss_chance > 0.0:
-		score -= self_knock_off_penalty * miss_chance * _leave_chance(enemy, enemy.global_position, direction * speed, table)
+		score -= self_knock_off_penalty * miss_chance * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
 	# Prefer the lowest power that gets the job done.
 	score -= overpower_penalty * speed / max_speed
 
@@ -240,6 +240,44 @@ func _leave_chance(figure: Figure, from: Vector2, velocity: Vector2, table: Rect
 	return clampf((_slide_ratio(figure, from, velocity, table) - 0.7) / 0.5, 0.0, 1.0)
 
 
+## Like _leave_chance, for a FREE flight (nothing is hit on the way). A figure that wraps around the
+## table edge (Ghost, Wings) doesn't fall off the first time it crosses: it comes back in on the
+## opposite side and keeps sliding, so only the last leg can knock it off.
+func _flight_leave_chance(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> float:
+	var flight := _simulate_wraps(figure, from, velocity, table)
+	return _leave_chance(figure, flight.position, flight.velocity, table)
+
+
+## Where a free flight ends up, counting wraps (the straight line if the figure can't wrap).
+func _flight_end(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> Vector2:
+	var flight := _simulate_wraps(figure, from, velocity, table)
+	var speed: float = flight.velocity.length()
+	if speed <= figure.stop_speed:
+		return flight.position
+	return flight.position + flight.velocity / speed * ((speed - figure.stop_speed) / figure.linear_damp)
+
+
+## Follows a straight free flight; each time it would cross the table edge and the figure has a wrap
+## left, it re-enters on the opposite side. Returns the start of the last leg: {position, velocity}.
+func _simulate_wraps(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> Dictionary:
+	var pos := from
+	var vel := velocity
+	for i in figure.ability.get_wrap_count(figure):
+		var speed := vel.length()
+		if speed <= figure.stop_speed:
+			break
+		var direction := vel / speed
+		var slide := (speed - figure.stop_speed) / figure.linear_damp
+		var edge := _distance_to_edge(pos, direction, table)
+		if slide < edge:
+			break  # stops before the edge: nothing to wrap
+		var exit_point := pos + direction * (edge + 1.0)  # just past the edge
+		pos = Vector2(table.position.x + fposmod(exit_point.x - table.position.x, table.size.x),
+				table.position.y + fposmod(exit_point.y - table.position.y, table.size.y))
+		vel = direction * maxf(speed - figure.linear_damp * edge, 0.0)
+	return {"position": pos, "velocity": vel}
+
+
 ## 0 to 1: how far toward the edge the figure ends up.
 func _push_progress(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> float:
 	return clampf(_slide_ratio(figure, from, velocity, table), 0.0, 1.0)
@@ -268,7 +306,7 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 	var safe_area := table.grow(-reposition_edge_margin)
 	for i in 8:
 		var direction := Vector2.from_angle(TAU * i / 8.0)
-		var end := enemy.global_position + direction * reposition_distance
+		var end := _flight_end(enemy, enemy.global_position, direction * (reposition_distance * enemy.linear_damp + enemy.stop_speed), table)
 		if not safe_area.has_point(end):
 			continue
 		# A little extra length so we don't end up nearly touching something.

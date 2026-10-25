@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=77 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=83 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -76,6 +76,12 @@
 [ext_resource type="Resource" path="res://resources/relics/trophy_case.tres" id="133"]
 [ext_resource type="Resource" path="res://resources/relics/gravity_well.tres" id="134"]
 [ext_resource type="Resource" path="res://resources/relics/clean_sheet.tres" id="135"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="149"]
+[ext_resource type="Resource" path="res://resources/encounters/banshee.tres" id="150"]
+[ext_resource type="Resource" path="res://resources/encounters/swarm.tres" id="151"]
+[ext_resource type="Resource" path="res://resources/encounters/bumper_duo.tres" id="152"]
+[ext_resource type="Resource" path="res://resources/encounters/fireworks.tres" id="153"]
+[ext_resource type="Resource" path="res://resources/encounters/well_rounded_squad.tres" id="154"]
 
 [resource]
 script = ExtResource("1")
@@ -103,3 +109,4 @@ relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), 
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
+elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])

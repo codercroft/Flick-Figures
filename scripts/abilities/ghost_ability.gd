@@ -31,3 +31,7 @@ func on_left_table(figure: Figure, table: Rect2) -> bool:
 	figure.global_position = position
 	figure.show_popup("Boo!", Color(0.85, 0.9, 1.0))
 	return true
+
+
+func get_wrap_count(_figure: Figure) -> int:
+	return max_wraps_per_flick

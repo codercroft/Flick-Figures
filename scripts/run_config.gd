@@ -11,6 +11,8 @@ extends Resource
 @export var acts := 3
 ## How hard each act is (enemy counts and stat multipliers per act, elites).
 @export var difficulty: DifficultyConfig
+## The named encounters elite nodes pick from (instead of a random lineup).
+@export var elite_encounters: Array[EncounterData] = []
 ## How each act's branching map is built.
 @export var map: MapConfig
 ## The arena layouts a combat can use (one is picked at random for each combat).
