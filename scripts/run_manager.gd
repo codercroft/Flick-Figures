@@ -5,6 +5,10 @@ extends Node
 var config: RunConfig = preload("res://resources/run_config.tres")
 
 var deck: Array[FigureData] = []
+## The equipment item on each deck figure (same slots as `deck`; null = none).
+var deck_equipment: Array[EquipmentData] = []
+## Equipment the player holds but has not attached to a figure yet.
+var equipment_inventory: Array[EquipmentData] = []
 ## 0 to combat_count() - 1 are the normal combats; combat_count() is the boss fight.
 var combat_index := 0
 var boss: BossData
@@ -31,8 +35,16 @@ func _ready() -> void:
 
 func start_new_run() -> void:
 	deck.clear()
+	deck_equipment.clear()
+	equipment_inventory.clear()
 	for i in config.deck_size:
 		deck.append(config.starting_figure)
+		deck_equipment.append(null)
+	if config.start_with_equipment:
+		var items := config.equipment_pool.duplicate()
+		items.shuffle()
+		for i in mini(config.starting_equipment_count, items.size()):
+			equipment_inventory.append(items[i])
 	combat_index = 0
 	money = config.starting_money
 	last_income = {"figures": 0, "base": 0, "bonus": 0, "total": 0}
@@ -92,15 +104,37 @@ func offer_rewards() -> Array[FigureData]:
 	return config.registry.random_draftable(config.reward_choices)
 
 
+## Puts a new figure in a deck slot. Equipment the old figure held goes back to the inventory.
 func replace_figure(slot: int, new_figure: FigureData) -> void:
+	if deck_equipment[slot] != null:
+		equipment_inventory.append(deck_equipment[slot])
+		deck_equipment[slot] = null
 	deck[slot] = new_figure
 
 
+## Attaches an inventory item to the figure in `slot`. If that figure already holds one, the old
+## item goes back to the inventory. Returns false if the item is not in the inventory.
+func equip(item: EquipmentData, slot: int) -> bool:
+	var index := equipment_inventory.find(item)
+	if index == -1 or slot < 0 or slot >= deck.size():
+		return false
+	equipment_inventory.remove_at(index)
+	if deck_equipment[slot] != null:
+		equipment_inventory.append(deck_equipment[slot])
+	deck_equipment[slot] = item
+	return true
+
+
+## Adds an item to the inventory (rewards and shops can call this).
+func add_equipment(item: EquipmentData) -> void:
+	equipment_inventory.append(item)
+
+
 ## Pays for a won combat: income_per_figure for each figure still on the table, plus each figure's
-## own income_bonus (Cha-ching). Call it before combat_won().
-func award_income(figures_on_table: Array[FigureData]) -> void:
+## own income_bonus (Cha-ching), plus `equipment_bonus` (Coin Purse). Call it before combat_won().
+func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> void:
 	var base := figures_on_table.size() * config.income_per_figure
-	var bonus := 0
+	var bonus := equipment_bonus
 	for figure in figures_on_table:
 		bonus += figure.income_bonus
 	last_income = {"figures": figures_on_table.size(), "base": base, "bonus": bonus, "total": base + bonus}

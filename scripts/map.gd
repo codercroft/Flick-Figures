@@ -5,6 +5,7 @@ extends Control
 
 const COMBAT_SCENE := "res://scenes/main.tscn"
 const SHOP_SCENE := "res://scenes/shop.tscn"
+const EQUIP_SCENE := "res://scenes/equip.tscn"
 const SHOP_RADIUS := 48.0
 const COMBAT_RADIUS := 60.0
 const BOSS_RADIUS := 80.0
@@ -18,6 +19,26 @@ const BOSS_RADIUS := 80.0
 @export var money_color := Color(1.0, 0.82, 0.25)
 
 var _time := 0.0
+
+
+func _ready() -> void:
+	# The equip screen button sits at the bottom right, in thumb reach.
+	var button := Button.new()
+	var held := RunManager.equipment_inventory.size()
+	button.text = "Equipment (%d)" % held
+	button.add_theme_font_size_override("font_size", 34)
+	if held > 0:
+		button.add_theme_color_override("font_color", money_color)
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.offset_left = -300.0
+	button.offset_right = -24.0
+	button.offset_top = -210.0
+	button.offset_bottom = -120.0
+	button.pressed.connect(func(): get_tree().change_scene_to_file(EQUIP_SCENE))
+	add_child(button)
 
 
 func _process(delta: float) -> void:

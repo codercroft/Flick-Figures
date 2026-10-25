@@ -57,3 +57,34 @@ func get_flicks_per_turn(_figure: Figure) -> int:
 ## return false and it is knocked off.
 func on_left_table(_figure: Figure, _table: Rect2) -> bool:
 	return false
+
+
+## The figure was knocked off the table (not when it is retired, e.g. a Splitter splitting).
+func on_knocked_off(_figure: Figure) -> void:
+	pass
+
+
+## Modifier: multiplies this figure's flick force (Jet Pack's extra flick is half power).
+func get_flick_power_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
+## Modifier: extra aim error (degrees) for enemy shots aimed at this figure (Lucky Charm).
+func get_incoming_aim_error_degrees(_figure: Figure) -> float:
+	return 0.0
+
+
+## Modifier for collisions only (not explosions): how much of a hit from `other` this figure
+## takes, given the relative `impact_speed`. 0 = ignores it (Anchor).
+func get_hit_multiplier(_figure: Figure, _other: Figure, _impact_speed: float) -> float:
+	return 1.0
+
+
+## Helper: call from on_impact. Gives the figure `other` that `figure` just hit extra speed equal to
+## `bonus` times the speed it gained from the hit (0.4 = +40% knockback). Only when `figure` is
+## the one doing the hitting.
+func extra_hit_knockback(figure: Figure, other: Figure, bonus: float) -> void:
+	var direction := (other.global_position - figure.global_position).normalized()
+	if figure._prev_velocity.dot(direction) + other._prev_velocity.dot(direction) <= 0.0:
+		return
+	other.nudge((other.linear_velocity - other._prev_velocity) * bonus)

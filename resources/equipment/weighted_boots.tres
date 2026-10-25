@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Weighted Boots"
+label = "WB"
+description = "+50% mass: harder to push around."
+color = Color(0.45, 0.4, 0.5, 1)
+mass_multiplier = 1.5

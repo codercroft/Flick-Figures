@@ -31,5 +31,10 @@ extends Resource
 @export var starting_power_count := 2
 ## Every power that exists (add new PowerData resources here).
 @export var power_pool: Array[PowerData] = []
+## For testing: start each run holding some random equipment (in the inventory).
+@export var start_with_equipment := true
+@export var starting_equipment_count := 2
+## Every equipment item that exists (add new EquipmentData resources here).
+@export var equipment_pool: Array[EquipmentData] = []
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

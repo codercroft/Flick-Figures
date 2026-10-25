@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/equipment/magnet_charm_effect.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Magnet Charm"
+label = "MC"
+description = "A weak pull on nearby moving figures."
+color = Color(0.7, 0.4, 0.9, 1)
+effect = SubResource("Resource_1")

@@ -93,6 +93,9 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 		return {}
 	# Small random aim error: worse accuracy = bigger error.
 	var error := _aim_error(best_enemy)
+	var target = best.get("target")
+	if is_instance_valid(target):
+		error += deg_to_rad(target.ability.get_incoming_aim_error_degrees(target))
 	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
 	_record_debug(best_enemy, best, best_enemy.global_position + direction * best.distance)
 	return {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
@@ -122,6 +125,7 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 			for level in power_levels:
 				var shot := _score_attack(enemy, shape, direction, level * top_speed, top_speed, players, table)
 				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
+					shot["target"] = target  # who it is aimed at (Lucky Charm adds aim error)
 					best = shot
 
 	if best.is_empty() or best.score < min_attack_score:

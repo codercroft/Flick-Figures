@@ -330,7 +330,8 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	var pull := minf(drag.length(), max_pull)
 	if pull < min_pull_distance:
 		return Vector2.ZERO
-	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost
+	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost \
+			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure)
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
@@ -542,10 +543,13 @@ func _end_game(won: bool) -> void:
 		var income := 0
 		if not RunManager.is_boss_combat():
 			var on_table: Array[FigureData] = []
+			var equipment_bonus := 0
 			for figure in _players:
 				if figure.data.pays_income:
 					on_table.append(figure.data)
-			RunManager.award_income(on_table)
+				if figure.equipment != null:
+					equipment_bonus += figure.equipment.income_bonus
+			RunManager.award_income(on_table, equipment_bonus)
 			income = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
 		if not run_complete:
@@ -565,7 +569,7 @@ func _spawn_players() -> void:
 	var slot_width := deck.size.x / RunManager.deck.size()
 	for i in RunManager.deck.size():
 		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
-		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos)
+		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos, RunManager.deck_equipment[i])
 		figure.deck_position = pos
 		_players.append(figure)
 
@@ -582,9 +586,9 @@ func _spawn_enemies() -> void:
 		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
 
 
-func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2) -> Figure:
+func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	figure.setup(data, team, figure_damping, stop_speed, settle_frames)
+	figure.setup(data, team, figure_damping, stop_speed, settle_frames, item)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
@@ -615,7 +619,7 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 		_enemy_flicks = mini(_enemy_flicks + flicks_per_split, maxi(max_enemy_flicks, _enemy_flicks))
 	_players.erase(parent)
 	_enemies.erase(parent)
-	parent.knock_off(knock_off_fade_time)
+	parent.knock_off(knock_off_fade_time, true)
 
 
 func _all_figures() -> Array[Figure]:
@@ -698,6 +702,7 @@ func _take_snapshot() -> void:
 			"on_deck": figure.on_deck, "flickable": figure.flickable, "turn_flicks": figure.turn_flicks,
 			"deck_position": figure.deck_position, "radius": figure.radius, "mass": figure.mass,
 			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
+			"equipment": figure.equipment,
 		})
 	_snapshot = {"figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}
 
@@ -721,7 +726,7 @@ func rewind() -> bool:
 	_players.clear()
 	_enemies.clear()
 	for entry in _snapshot.figures:
-		var figure := _spawn_figure(entry.team, entry.data, entry.position)
+		var figure := _spawn_figure(entry.team, entry.data, entry.position, entry.equipment)
 		figure.set_size(entry.radius, entry.mass)
 		figure.shrunk = entry.shrunk
 		figure.deck_position = entry.deck_position

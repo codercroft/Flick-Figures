@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Coin Purse"
+label = "CP"
+description = "+$1 if it is on the table when you win a combat."
+color = Color(1.0, 0.8, 0.2, 1)
+income_bonus = 1
+economy = true

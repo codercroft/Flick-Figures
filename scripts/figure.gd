@@ -28,6 +28,8 @@ const BLAST_RING_TIME := 0.35
 var team := Team.PLAYER
 var data: FigureData
 var ability: FigureAbility
+## The equipment item attached to this figure (player figures only), or null.
+var equipment: EquipmentData
 var radius := 60.0
 var stop_speed := 15.0  # below this speed (px/s) the figure counts as slow
 var settle_frames := 5  # ...and after this many slow frames in a row it stops dead
@@ -91,16 +93,23 @@ var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 
 ## Call before adding the figure to the scene.
 func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float,
-		frames_to_settle := 5) -> void:
+		frames_to_settle := 5, item: EquipmentData = null) -> void:
 	data = figure_data
 	team = figure_team
+	equipment = item
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
+	if equipment != null:
+		mass *= equipment.mass_multiplier
+		linear_damp *= equipment.damping_multiplier
 	stop_speed = speed_to_stop
 	settle_frames = frames_to_settle
 	# Each figure gets its own copy so abilities can keep per-figure state.
 	ability = data.ability.duplicate() as FigureAbility if data.ability else FigureAbility.new()
+	# Equipment with an effect runs next to the figure's own ability.
+	if equipment != null and equipment.effect != null:
+		ability = CombinedAbility.new(ability, equipment.effect.duplicate() as FigureAbility)
 
 
 func _ready() -> void:
@@ -116,7 +125,7 @@ func _ready() -> void:
 	add_to_group("figures")
 
 	var material := PhysicsMaterial.new()
-	material.bounce = data.bounce
+	material.bounce = clampf(data.bounce + (equipment.bounce_bonus if equipment != null else 0.0), 0.0, 1.0)
 	material.friction = 0.0
 	physics_material_override = material
 
@@ -173,6 +182,15 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
 		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if equipment != null:
+		# A small badge in the lower right shows that this figure carries equipment.
+		var badge_center := Vector2(radius, radius) * 0.62
+		var badge_radius := radius * 0.34
+		draw_circle(badge_center, badge_radius, equipment.color)
+		draw_arc(badge_center, badge_radius, 0.0, TAU, 20, Color(0.1, 0.1, 0.12), 4.0, true)
+		var badge_size := int(badge_radius * (1.05 if equipment.label.length() <= 1 else 0.85))
+		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-badge_radius, badge_size * 0.33), equipment.label,
+				HORIZONTAL_ALIGNMENT_CENTER, badge_radius * 2.0, badge_size, Color(0.1, 0.1, 0.12))
 	if frozen_rounds > 0:
 		draw_circle(Vector2.ZERO, radius, Color(0.6, 0.9, 1.0, 0.55))
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(0.85, 1.0, 1.0), 6.0, true)
@@ -191,8 +209,12 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	if _skip_knockback_frames > 0:
 		_skip_knockback_frames -= 1
 	elif state.get_contact_count() > 0:
-		var multiplier := data.knockback_taken_multiplier \
-				* ability.get_knockback_multiplier(self, _hardest_hitter(state))
+		var hitter := _hardest_hitter(state)
+		var multiplier := data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, hitter)
+		if hitter != null:
+			var impact := maxf((_last_velocity - hitter._last_velocity).length(),
+					(_prev_velocity - hitter._prev_velocity).length())
+			multiplier *= ability.get_hit_multiplier(self, hitter, impact)
 		var change := velocity - _last_velocity
 		if not is_equal_approx(multiplier, 1.0) and change.length() > KNOCKBACK_MIN_CHANGE:
 			velocity = _last_velocity + change * multiplier
@@ -466,12 +488,15 @@ func play_pop(swell: float, duration: float) -> void:
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
-func knock_off(fade_time: float) -> void:
+## `retired` = removed for another reason than falling off (a Splitter splitting): no on_knocked_off.
+func knock_off(fade_time: float, retired := false) -> void:
 	unglue()
 	knocked_off = true
 	fell_off.emit(self)
 	collision_layer = 0
 	collision_mask = 0
+	if not retired:
+		ability.on_knocked_off(self)
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, fade_time)
 	tween.tween_callback(queue_free)

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=30 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=43 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -29,6 +29,19 @@
 [ext_resource type="Resource" path="res://resources/powers/magnet_throw.tres" id="50"]
 [ext_resource type="Resource" path="res://resources/powers/glue_puddle.tres" id="51"]
 [ext_resource type="Resource" path="res://resources/powers/shrink_ray.tres" id="52"]
+[ext_resource type="Script" path="res://scripts/equipment_data.gd" id="60"]
+[ext_resource type="Resource" path="res://resources/equipment/weighted_boots.tres" id="61"]
+[ext_resource type="Resource" path="res://resources/equipment/rubber_ring.tres" id="62"]
+[ext_resource type="Resource" path="res://resources/equipment/spiked_helmet.tres" id="63"]
+[ext_resource type="Resource" path="res://resources/equipment/banana_peel.tres" id="64"]
+[ext_resource type="Resource" path="res://resources/equipment/parachute.tres" id="65"]
+[ext_resource type="Resource" path="res://resources/equipment/short_fuse.tres" id="66"]
+[ext_resource type="Resource" path="res://resources/equipment/magnet_charm.tres" id="67"]
+[ext_resource type="Resource" path="res://resources/equipment/anchor.tres" id="68"]
+[ext_resource type="Resource" path="res://resources/equipment/coin_purse.tres" id="69"]
+[ext_resource type="Resource" path="res://resources/equipment/jet_pack.tres" id="70"]
+[ext_resource type="Resource" path="res://resources/equipment/wings.tres" id="71"]
+[ext_resource type="Resource" path="res://resources/equipment/lucky_charm.tres" id="72"]
 
 [resource]
 script = ExtResource("1")
@@ -48,3 +61,6 @@ power_slots = 3
 start_with_powers = true
 starting_power_count = 2
 power_pool = Array[ExtResource("40")]([ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52")])
+start_with_equipment = true
+starting_equipment_count = 2
+equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72")])

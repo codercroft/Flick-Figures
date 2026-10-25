@@ -1,0 +1,75 @@
+class_name CombinedAbility
+extends FigureAbility
+## Runs two abilities as one: a figure's own ability plus its equipment's effect. Events go to
+## both, multipliers are multiplied, and the first ability that saves a figure from falling off wins.
+
+var first: FigureAbility
+var second: FigureAbility
+
+
+func _init(a: FigureAbility = null, b: FigureAbility = null) -> void:
+	first = a
+	second = b
+
+
+func on_flicked(figure: Figure, impulse: Vector2) -> void:
+	first.on_flicked(figure, impulse)
+	second.on_flicked(figure, impulse)
+
+
+func on_hit(figure: Figure, other: Figure) -> void:
+	first.on_hit(figure, other)
+	second.on_hit(figure, other)
+
+
+func on_impact(figure: Figure, other: Figure, speed: float, point: Vector2) -> void:
+	first.on_impact(figure, other, speed, point)
+	second.on_impact(figure, other, speed, point)
+
+
+func on_stopped(figure: Figure) -> void:
+	first.on_stopped(figure)
+	second.on_stopped(figure)
+
+
+func on_exploded(figure: Figure, source: Figure) -> void:
+	first.on_exploded(figure, source)
+	second.on_exploded(figure, source)
+
+
+func on_physics_process(figure: Figure, delta: float) -> void:
+	first.on_physics_process(figure, delta)
+	second.on_physics_process(figure, delta)
+
+
+func on_knocked_off(figure: Figure) -> void:
+	first.on_knocked_off(figure)
+	second.on_knocked_off(figure)
+
+
+func on_left_table(figure: Figure, table: Rect2) -> bool:
+	return first.on_left_table(figure, table) or second.on_left_table(figure, table)
+
+
+func get_knockback_multiplier(figure: Figure, source: Figure) -> float:
+	return first.get_knockback_multiplier(figure, source) * second.get_knockback_multiplier(figure, source)
+
+
+func get_explosion_multiplier(figure: Figure, source: Figure) -> float:
+	return first.get_explosion_multiplier(figure, source) * second.get_explosion_multiplier(figure, source)
+
+
+func get_hit_multiplier(figure: Figure, other: Figure, impact_speed: float) -> float:
+	return first.get_hit_multiplier(figure, other, impact_speed) * second.get_hit_multiplier(figure, other, impact_speed)
+
+
+func get_flick_power_multiplier(figure: Figure) -> float:
+	return first.get_flick_power_multiplier(figure) * second.get_flick_power_multiplier(figure)
+
+
+func get_flicks_per_turn(figure: Figure) -> int:
+	return maxi(first.get_flicks_per_turn(figure), second.get_flicks_per_turn(figure))
+
+
+func get_incoming_aim_error_degrees(figure: Figure) -> float:
+	return first.get_incoming_aim_error_degrees(figure) + second.get_incoming_aim_error_degrees(figure)
