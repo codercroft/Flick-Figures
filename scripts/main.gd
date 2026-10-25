@@ -396,9 +396,16 @@ func _check_game_over() -> bool:
 func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
 	if won:
+		var income := 0
+		if not RunManager.is_boss_combat():
+			var on_table: Array[FigureData] = []
+			for figure in _players:
+				on_table.append(figure.data)
+			RunManager.award_income(on_table)
+			income = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
 		if not run_complete:
-			ui.show_your_turn("Combat cleared!")
+			ui.show_your_turn("Combat cleared! +$%d" % income)
 			await get_tree().create_timer(reward_delay).timeout
 			get_tree().change_scene_to_file(REWARD_SCENE)
 			return

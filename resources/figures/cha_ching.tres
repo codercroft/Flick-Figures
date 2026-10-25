@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Cha-ching"
+description = "No tricks, but earns an extra $2 if it is still on the table when you win."
+label = "CC"
+icon = 12
+color = Color(1, 0.76, 0.1, 1)
+radius = 55.0
+mass = 1.0
+bounce = 0.7
+damping_multiplier = 1.0
+flick_power_multiplier = 1.0
+knockback_taken_multiplier = 1.0
+accuracy = 0.8
+rarity = 1
+income_bonus = 2

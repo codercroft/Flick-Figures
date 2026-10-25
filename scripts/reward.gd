@@ -11,10 +11,12 @@ var _chosen: FigureData
 
 @onready var column: VBoxContainer = $Column
 @onready var title: Label = $Column/Title
+@onready var earned_label: Label = $Column/EarnedLabel
 
 
 func _ready() -> void:
 	_offers = RunManager.offer_rewards()
+	earned_label.text = RunManager.income_text()
 	_show_offers()
 
 
@@ -67,6 +69,6 @@ func _add_card(data: FigureData, card_height: float) -> FigureCard:
 
 func _clear_cards() -> void:
 	for child in column.get_children():
-		if child != title:
+		if child != title and child != earned_label:
 			column.remove_child(child)
 			child.queue_free()

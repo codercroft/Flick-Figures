@@ -4,6 +4,8 @@ extends Control
 ## Placeholder shapes and text for now. All of it sits in the bottom half of the screen.
 
 const COMBAT_SCENE := "res://scenes/main.tscn"
+const SHOP_SCENE := "res://scenes/shop.tscn"
+const SHOP_RADIUS := 48.0
 const COMBAT_RADIUS := 60.0
 const BOSS_RADIUS := 80.0
 
@@ -13,6 +15,7 @@ const BOSS_RADIUS := 80.0
 @export var line_color := Color(0.4, 0.43, 0.52)
 @export var text_color := Color(0.9, 0.92, 0.97)
 @export var dim_text_color := Color(0.6, 0.63, 0.72)
+@export var money_color := Color(1.0, 0.82, 0.25)
 
 var _time := 0.0
 
@@ -24,6 +27,9 @@ func _process(delta: float) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if RunManager.shop_available() and event.position.distance_to(_shop_center()) <= SHOP_RADIUS + 30.0:
+			get_tree().change_scene_to_file(SHOP_SCENE)
+			return
 		var current := RunManager.combat_index
 		if event.position.distance_to(_node_center(current)) <= _node_radius(current) + 30.0:
 			get_tree().change_scene_to_file(COMBAT_SCENE)
@@ -48,14 +54,47 @@ func _node_center(index: int) -> Vector2:
 	return Vector2(size.x * 0.28, lerpf(bottom, top, float(index) / (_node_count() - 1)))
 
 
+## The shop sits beside the path, halfway between the combats before and after it.
+func _shop_center() -> Vector2:
+	var before := _node_center(RunManager.config.shop_position - 1)
+	var after := _node_center(RunManager.config.shop_position)
+	return Vector2(size.x * 0.76, (before.y + after.y) / 2.0)
+
+
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(0.0, size.y * 0.5 + 50.0), "Run map", HORIZONTAL_ALIGNMENT_CENTER, size.x, 44, dim_text_color)
+	draw_string(font, Vector2(0.0, size.y * 0.5 + 50.0), "$%d" % RunManager.money, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 40.0, 52, money_color)
 	for i in _node_count() - 1:
 		draw_line(_node_center(i), _node_center(i + 1), line_color, 8.0, true)
+	if RunManager.config.shop != null:
+		_draw_shop(font)
 	for i in _node_count():
 		_draw_node(font, i)
-	draw_string(font, Vector2(0.0, size.y - 40.0), "Tap the glowing node to fight", HORIZONTAL_ALIGNMENT_CENTER, size.x, 36, dim_text_color)
+	var hint := "Tap the glowing node to fight"
+	if RunManager.shop_available():
+		hint = "Visit the shop, or skip it and fight"
+	draw_string(font, Vector2(0.0, size.y - 40.0), hint, HORIZONTAL_ALIGNMENT_CENTER, size.x, 36, dim_text_color)
+
+
+func _draw_shop(font: Font) -> void:
+	var center := _shop_center()
+	var path_x := _node_center(0).x
+	var available := RunManager.shop_available()
+	var visited := RunManager.shop_done
+	draw_line(Vector2(path_x, center.y), center, line_color, 6.0, true)
+	var fill := future_color
+	if visited:
+		fill = done_color
+	elif available:
+		fill = current_color.darkened(0.45)
+	draw_circle(center, SHOP_RADIUS, fill)
+	if available:
+		var pulse := 5.0 + 3.0 * sin(_time * 4.0 + 1.0)
+		draw_arc(center, SHOP_RADIUS + pulse, 0.0, TAU, 40, current_color, 6.0, true)
+	draw_string(font, center + Vector2(-SHOP_RADIUS, 16.0), "$", HORIZONTAL_ALIGNMENT_CENTER, SHOP_RADIUS * 2.0, 52, text_color)
+	var label := "Shop (visited)" if visited else "Shop (optional)"
+	draw_string(font, center + Vector2(-120.0, -SHOP_RADIUS - 28.0), label, HORIZONTAL_ALIGNMENT_CENTER, 240.0, 30, dim_text_color if not available else text_color)
 
 
 func _draw_node(font: Font, index: int) -> void:

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ShopConfig" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/shop/shop_config.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/shop/shop_item_type.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/shop/figure_for_sale_type.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/shop/replace_service_type.gd" id="4"]
+
+[sub_resource type="Resource" id="figures_for_sale"]
+script = ExtResource("3")
+display_name = "Figures for sale"
+count = 3
+price_by_rarity = Array[int]([3, 5, 8])
+
+[sub_resource type="Resource" id="replace_service"]
+script = ExtResource("4")
+display_name = "Swap a figure"
+price = 3
+
+[resource]
+script = ExtResource("1")
+item_types = Array[ExtResource("2")]([SubResource("figures_for_sale"), SubResource("replace_service")])

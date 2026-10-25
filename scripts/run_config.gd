@@ -13,5 +13,13 @@ extends Resource
 @export var enemies_per_combat := 3
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []
+## Money the run starts with.
+@export var starting_money := 0
+## Money earned at the end of a won combat for each of your figures still on the table.
+@export var income_per_figure := 1
+## What the shop sells (see resources/shop_config.tres).
+@export var shop: ShopConfig
+## The shop sits on the map just before this combat (0 = the first combat): 2 = between combats 2 and 3.
+@export var shop_position := 2
 ## How many figures the reward screen offers.
 @export var reward_choices := 3

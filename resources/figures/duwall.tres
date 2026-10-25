@@ -6,6 +6,7 @@
 script = ExtResource("1")
 display_name = "Duwall"
 description = "Heavy. Takes half knockback."
+rarity = 0
 icon = 2
 color = Color(0.3, 0.6, 0.4, 1)
 radius = 70.0

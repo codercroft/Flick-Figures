@@ -11,6 +11,7 @@ script = ExtResource("2")
 script = ExtResource("1")
 display_name = "Powerhouse"
 description = "Flicks with double power, but takes double knockback from enemies."
+rarity = 1
 icon = 3
 color = Color(0.95, 0.55, 0.15, 1)
 radius = 60.0

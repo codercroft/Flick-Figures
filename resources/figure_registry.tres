@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="FigureRegistry" load_steps=18 format=3]
+[gd_resource type="Resource" script_class="FigureRegistry" load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_registry.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
@@ -17,9 +17,10 @@
 [ext_resource type="Resource" path="res://resources/figures/boss_big_bad.tres" id="15"]
 [ext_resource type="Resource" path="res://resources/figures/boss_sniper_squad.tres" id="16"]
 [ext_resource type="Resource" path="res://resources/figures/boss_slime.tres" id="17"]
+[ext_resource type="Resource" path="res://resources/figures/cha_ching.tres" id="18"]
 
 [resource]
 script = ExtResource("1")
 grunts = Array[ExtResource("2")]([ExtResource("3")])
-draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6")])
+draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18")])
 bosses = Array[ExtResource("14")]([ExtResource("15"), ExtResource("16"), ExtResource("17")])

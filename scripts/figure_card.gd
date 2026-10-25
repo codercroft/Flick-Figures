@@ -5,25 +5,32 @@ extends Button
 var data: FigureData
 
 
-func setup(figure_data: FigureData, card_height: float) -> void:
+## `text_override` replaces the default "name + description" text (the shop adds prices).
+## `figure_data` may be null for a card with no picture.
+func setup(figure_data: FigureData, card_height: float, text_override := "") -> void:
 	data = figure_data
 	custom_minimum_size = Vector2(0.0, card_height)
-	text = "%s\n%s" % [data.display_name, data.description]
+	if text_override != "":
+		text = text_override
+	else:
+		text = "%s\n%s" % [data.display_name, data.description]
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_theme_font_size_override("font_size", 40)
+	add_theme_font_size_override("font_size", 40 if text_override == "" else 32)
 	# Leave room on the left for the figure's picture.
 	add_theme_stylebox_override("normal", _box(Color(0.2, 0.22, 0.28), card_height))
 	add_theme_stylebox_override("hover", _box(Color(0.26, 0.28, 0.36), card_height))
 	add_theme_stylebox_override("pressed", _box(Color(0.34, 0.37, 0.48), card_height))
 	add_theme_stylebox_override("focus", _box(Color(0.26, 0.28, 0.36), card_height))
+	add_theme_stylebox_override("disabled", _box(Color(0.14, 0.15, 0.19), card_height))
+	add_theme_color_override("font_disabled_color", Color(0.5, 0.52, 0.58))
 
 
 func _box(background: Color, card_height: float) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = background
 	box.set_corner_radius_all(24)
-	box.content_margin_left = card_height * 1.15
+	box.content_margin_left = card_height * 1.15 if data != null else 28.0
 	box.content_margin_right = 24.0
 	box.content_margin_top = 8.0
 	box.content_margin_bottom = 8.0

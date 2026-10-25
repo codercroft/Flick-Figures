@@ -33,3 +33,10 @@ theme_override_font_sizes/font_size = 48
 text = "Pick a reward"
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="EarnedLabel" type="Label" parent="Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.25, 1)
+theme_override_font_sizes/font_size = 36
+horizontal_alignment = 1
+autowrap_mode = 3

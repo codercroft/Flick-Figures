@@ -27,5 +27,9 @@ extends Resource
 ## After every enemy turn this figure slides this far (px) toward the player's deck. 0 = it never does.
 ## If it reaches the deck line, the player loses.
 @export var creep_distance := 0.0
+## How rare it is (shop prices depend on it): 0 common, 1 uncommon, 2 rare.
+@export_enum("Common", "Uncommon", "Rare") var rarity := 0
+## Extra money earned at the end of a won combat if this figure is still on the table.
+@export var income_bonus := 0
 ## Optional special behavior. Pick a FigureAbility subclass (e.g. BomboAbility) in the Inspector.
 @export var ability: FigureAbility
