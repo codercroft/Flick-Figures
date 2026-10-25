@@ -1,14 +1,15 @@
 extends Node2D
-## Game controller: spawns figures, reads touch input, runs the turn, knocks figures off.
+## Game controller: spawns figures, reads touch input, runs the player/enemy turn loop.
 
-enum State { IDLE, AIMING, MOVING }
+enum State { PLAYER_TURN, AIMING, SETTLING, ENEMY_TURN, GAME_OVER }
 
-const FIGURE_COLORS := [
-	Color(0.9, 0.25, 0.25),
+const PLAYER_COLORS := [
 	Color(0.25, 0.5, 0.9),
 	Color(0.3, 0.75, 0.35),
 	Color(0.95, 0.75, 0.2),
+	Color(0.7, 0.4, 0.9),
 ]
+const ENEMY_COLOR := Color(0.85, 0.15, 0.15)
 
 @export var figure_scene: PackedScene
 
@@ -32,33 +33,45 @@ const FIGURE_COLORS := [
 ## Figures slower than this (px/s) stop dead.
 @export var stop_speed := 15.0
 
-@export_group("Turn")
-## Don't check for "everything stopped" until this long after a flick (seconds).
-@export var min_move_time := 0.3
-@export var knock_off_fade_time := 0.4
+@export_group("Enemy")
+@export var enemy_count := 3
+## Each enemy aims at the nearest player figure, off by up to this many degrees either way.
+@export var enemy_angle_error := 8.0
+## Enemies flick hard enough to travel this far (px) past their target.
+@export var enemy_overshoot := 40.0
+## Pause (seconds) before each enemy flicks.
+@export var enemy_think_time := 0.6
 
-var _state := State.IDLE
-var _figures: Array[Figure] = []
+@export_group("Turn")
+## Wait this long (seconds) after a flick before checking that everything has stopped.
+@export var settle_delay := 0.3
+@export var knock_off_fade_time := 0.4
+## Ignore taps this long (seconds) after the win/lose screen appears.
+@export var restart_tap_delay := 0.5
+
+var _state := State.PLAYER_TURN
+var _players: Array[Figure] = []
+var _enemies: Array[Figure] = []
 var _aim_figure: Figure
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
-var _move_time := 0.0
+var _needs_reload := false  # player has nothing on deck: tap a board figure to reload it
+var _can_restart := false
 
 @onready var board := $Board
 @onready var figures_root := $Figures
 @onready var aim_line := $AimLine
+@onready var ui := $UI
 
 
 func _ready() -> void:
-	_spawn_figures()
+	_spawn_players()
+	_spawn_enemies()
+	_start_player_turn()
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	_knock_off_fallen_figures()
-	if _state == State.MOVING:
-		_move_time += delta
-		if _move_time >= min_move_time and _all_figures_resting():
-			_end_turn()
 
 
 # --- Input -------------------------------------------------------------------
@@ -68,7 +81,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var pos := _to_world(event.position)
 		if event.pressed:
-			_begin_aim(event.index, pos)
+			_on_press(event.index, pos)
 		elif event.index == _touch_index:
 			if event.canceled:
 				_cancel_aim()
@@ -82,10 +95,40 @@ func _to_world(screen_pos: Vector2) -> Vector2:
 	return get_canvas_transform().affine_inverse() * screen_pos
 
 
-func _begin_aim(index: int, pos: Vector2) -> void:
-	if _state != State.IDLE:
+func _on_press(index: int, pos: Vector2) -> void:
+	match _state:
+		State.PLAYER_TURN:
+			if _needs_reload:
+				_try_reload(pos)
+			else:
+				_begin_aim(index, pos)
+		State.GAME_OVER:
+			if _can_restart:
+				get_tree().reload_current_scene()
+
+
+# --- Player turn: reload, aim, flick -----------------------------------------
+
+func _start_player_turn() -> void:
+	_state = State.PLAYER_TURN
+	_needs_reload = not _has_figure_on_deck()
+	if _needs_reload:
+		ui.show_your_turn("Your turn: tap a figure to reload")
+	else:
+		ui.show_your_turn()
+
+
+func _try_reload(pos: Vector2) -> void:
+	var figure := _player_figure_at(pos, false)
+	if figure == null:
 		return
-	var figure := _figure_at(pos)
+	figure.return_to_deck()
+	_needs_reload = false
+	ui.show_your_turn()
+
+
+func _begin_aim(index: int, pos: Vector2) -> void:
+	var figure := _player_figure_at(pos, true)
 	if figure == null:
 		return
 	_state = State.AIMING
@@ -96,6 +139,8 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 
 
 func _update_aim(pos: Vector2) -> void:
+	if _state != State.AIMING:
+		return
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
 		aim_line.clear()
@@ -108,6 +153,8 @@ func _update_aim(pos: Vector2) -> void:
 
 
 func _release_aim(pos: Vector2) -> void:
+	if _state != State.AIMING:
+		return
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
 		_cancel_aim()
@@ -116,15 +163,15 @@ func _release_aim(pos: Vector2) -> void:
 	_aim_figure.launch(impulse)
 	_aim_figure = null
 	_touch_index = -1
-	_state = State.MOVING
-	_move_time = 0.0
+	_state = State.SETTLING
+	_finish_player_turn()
 
 
 func _cancel_aim() -> void:
 	aim_line.clear()
 	_aim_figure = null
 	_touch_index = -1
-	_state = State.IDLE
+	_state = State.PLAYER_TURN
 
 
 ## The flick is opposite the drag. Drag down = flick up. Zero means "no flick".
@@ -136,72 +183,148 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	return -drag.normalized() * (pull / max_pull_distance) * max_flick_force
 
 
-func _figure_at(pos: Vector2) -> Figure:
+func _player_figure_at(pos: Vector2, on_deck: bool) -> Figure:
 	var best: Figure = null
 	var best_distance := INF
-	for figure in _figures:
+	for figure in _players:
 		var distance := figure.global_position.distance_to(pos)
-		if figure.can_flick and distance <= figure.radius + grab_padding and distance < best_distance:
+		if figure.on_deck == on_deck and distance <= figure.radius + grab_padding and distance < best_distance:
 			best = figure
 			best_distance = distance
 	return best
 
 
-# --- Figures and turns -------------------------------------------------------
+func _has_figure_on_deck() -> bool:
+	for figure in _players:
+		if figure.on_deck:
+			return true
+	return false
 
-func _spawn_figures() -> void:
-	var deck: Rect2 = board.deck_rect
-	var slot_width := deck.size.x / figure_count
-	for i in figure_count:
-		var figure: Figure = figure_scene.instantiate()
-		figure.radius = figure_radius
-		figure.mass = figure_mass
-		figure.linear_damp = figure_damping
-		figure.bounciness = figure_bounciness
-		figure.stop_speed = stop_speed
-		figure.color = FIGURE_COLORS[i % FIGURE_COLORS.size()]
-		figure.position = Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
-		figures_root.add_child(figure)
-		_figures.append(figure)
+
+# --- Turn loop ---------------------------------------------------------------
+
+func _finish_player_turn() -> void:
+	await _wait_until_settled()
+	if _check_game_over():
+		return
+	await _run_enemy_turn()
+
+
+func _run_enemy_turn() -> void:
+	_state = State.ENEMY_TURN
+	ui.show_enemy_turn()
+	for enemy in _enemies.duplicate():
+		await get_tree().create_timer(enemy_think_time).timeout
+		if enemy.knocked_off:
+			continue
+		var target := _nearest_player_figure(enemy)
+		if target == null:
+			break
+		enemy.launch(_enemy_impulse(enemy, target))
+		await _wait_until_settled()
+		if _check_game_over():
+			return
+	_start_player_turn()
+
+
+## Enemy AI: flick at the nearest player figure (on deck or not), with some angle error.
+func _enemy_impulse(enemy: Figure, target: Figure) -> Vector2:
+	var to_target := target.global_position - enemy.global_position
+	var error := deg_to_rad(randf_range(-enemy_angle_error, enemy_angle_error))
+	var direction := to_target.normalized().rotated(error)
+	# Same maths as the aim line: slide distance = (speed - stop_speed) / damping.
+	var speed := (to_target.length() + enemy_overshoot) * figure_damping + stop_speed
+	return direction * minf(speed * figure_mass, max_flick_force)
+
+
+func _nearest_player_figure(from: Figure) -> Figure:
+	var best: Figure = null
+	var best_distance := INF
+	for figure in _players:
+		var distance := from.global_position.distance_to(figure.global_position)
+		if distance < best_distance:
+			best = figure
+			best_distance = distance
+	return best
+
+
+func _wait_until_settled() -> void:
+	await get_tree().create_timer(settle_delay).timeout
+	while not _all_figures_resting():
+		await get_tree().physics_frame
 
 
 func _all_figures_resting() -> bool:
-	for figure in _figures:
-		if not figure.on_deck and not figure.is_resting():
+	for figure in _all_figures():
+		if not figure.is_resting():
 			return false
 	return true
 
 
+func _check_game_over() -> bool:
+	if _enemies.is_empty():
+		_end_game(true)
+		return true
+	if _players.is_empty():
+		_end_game(false)
+		return true
+	return false
+
+
+func _end_game(won: bool) -> void:
+	_state = State.GAME_OVER
+	ui.show_result(won)
+	await get_tree().create_timer(restart_tap_delay).timeout
+	_can_restart = true
+
+
+# --- Figures -----------------------------------------------------------------
+
+func _spawn_players() -> void:
+	var deck: Rect2 = board.deck_rect
+	var slot_width := deck.size.x / figure_count
+	for i in figure_count:
+		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
+		var figure := _spawn_figure(Figure.Team.PLAYER, PLAYER_COLORS[i % PLAYER_COLORS.size()], pos)
+		figure.deck_position = pos
+		_players.append(figure)
+
+
+func _spawn_enemies() -> void:
+	var rect: Rect2 = board.board_rect
+	var slot_width := rect.size.x / enemy_count
+	for i in enemy_count:
+		# Stagger every other enemy so they are not in a straight line.
+		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + 160.0 + 120.0 * (i % 2))
+		_enemies.append(_spawn_figure(Figure.Team.ENEMY, ENEMY_COLOR, pos))
+
+
+func _spawn_figure(team: Figure.Team, color: Color, pos: Vector2) -> Figure:
+	var figure: Figure = figure_scene.instantiate()
+	figure.team = team
+	figure.on_deck = team == Figure.Team.PLAYER
+	figure.radius = figure_radius
+	figure.mass = figure_mass
+	figure.linear_damp = figure_damping
+	figure.bounciness = figure_bounciness
+	figure.stop_speed = stop_speed
+	figure.color = color
+	figure.position = pos
+	figures_root.add_child(figure)
+	return figure
+
+
+func _all_figures() -> Array[Figure]:
+	var all: Array[Figure] = []
+	all.append_array(_players)
+	all.append_array(_enemies)
+	return all
+
+
 func _knock_off_fallen_figures() -> void:
-	var board_rect: Rect2 = board.board_rect
-	for figure in _figures.duplicate():
-		if figure.on_deck:
-			continue
-		if board_rect.has_point(figure.global_position):
-			figure.entered_board = true
-		elif figure.entered_board:
-			_knock_off(figure)
-
-
-func _knock_off(figure: Figure) -> void:
-	_figures.erase(figure)
-	figure.knock_off(knock_off_fade_time)
-
-
-func _end_turn() -> void:
-	_state = State.IDLE
-	# A weak flick can stop short of the board; it never made it onto the table.
-	var board_rect: Rect2 = board.board_rect
-	for figure in _figures.duplicate():
-		if not figure.on_deck and not board_rect.has_point(figure.global_position):
-			_knock_off(figure)
-
-	if _figures.is_empty():
-		_spawn_figures()
-		return
-	# Everyone has been flicked: everyone may be flicked again.
-	for figure in _figures:
-		if figure.can_flick:
-			return
-	for figure in _figures:
-		figure.set_can_flick(true)
+	var table: Rect2 = board.get_table_rect()
+	for figure in _all_figures():
+		if not table.has_point(figure.global_position):
+			_players.erase(figure)
+			_enemies.erase(figure)
+			figure.knock_off(knock_off_fade_time)

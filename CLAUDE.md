@@ -26,11 +26,12 @@ Mobile game built in Godot 4 with GDScript.
 
 ## Project structure
 
-- `scenes/main.tscn` (main scene): Main (`main.gd`) > Board (`board.gd`), Figures (container), AimLine (`aim_line.gd`).
-- `scenes/figure.tscn`: a bare RigidBody2D with `figure.gd`; collision shape and physics are set up in code.
-- `scripts/main.gd`: spawns figures, handles touch input, runs the turn (IDLE > AIMING > MOVING), knocks figures off. All feel tunables are `@export`s on the Main node.
-- Collision layers: 1 `on_deck`, 2 `flicked`. On-deck figures are frozen on layer 1 with mask 0. Flicked figures use layer 2 and mask 2, so they ignore on-deck figures and hit each other. Enemies will need mask 1 to hit on-deck figures.
-- Board and deck rectangles are `@export`s on the Board node; a figure whose center leaves `board_rect` (after entering it) is knocked off.
+- `scenes/main.tscn` (main scene): Main (`main.gd`) > Board (`board.gd`), Figures (container), AimLine (`aim_line.gd`), UI (`ui.gd`, a CanvasLayer with the turn label and win/lose panel, both anchored to the bottom half).
+- `scenes/figure.tscn`: a bare RigidBody2D with `figure.gd`; collision shape and physics are set up in code. `figure.team` is PLAYER or ENEMY.
+- `scripts/main.gd`: spawns figures, handles touch input, runs the turn loop with `await` (`State`: PLAYER_TURN > AIMING > SETTLING > ENEMY_TURN, then back; GAME_OVER on win/lose, tap to restart). All feel tunables are `@export`s on the Main node.
+- Turn flow: player flicks one figure, everything settles, then each enemy flicks in turn (at the nearest player figure, with random angle error), settling after each. If the player has no figure on deck at the start of their turn, they tap a figure on the board to reload it to deck first.
+- Collision layers: 1 `on_deck`, 2 `flicked`, 3 `enemy`. On-deck figures are NOT frozen (enemies can shove them): layer 1, mask 3. Flicked player figures: layer 2, mask 2+3. Enemies: layer 3, mask 1+2+3. So player flicks ignore on-deck figures, but enemies hit them.
+- The "table" is `board_rect` merged with `deck_rect` (Board node exports). Any figure (either team, on deck or not) whose center leaves the table is knocked off.
 
 ## Project settings
 
