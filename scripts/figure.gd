@@ -14,6 +14,7 @@ enum Team { PLAYER, ENEMY }
 const LAYER_ON_DECK := 1 << 0  # layer 1: player figures waiting on deck
 const LAYER_FLICKED := 1 << 1  # layer 2: player figures out on the board
 const LAYER_ENEMY := 1 << 2  # layer 3: enemy figures
+const LAYER_ARENA := 1 << 3  # layer 4: arena walls and pins
 const GREYED_OUT := Color(0.5, 0.5, 0.5)
 const PLAYER_RING := Color(1.0, 1.0, 1.0, 0.9)
 const ENEMY_RING := Color(0.95, 0.15, 0.15)
@@ -113,13 +114,13 @@ func _ready() -> void:
 func _update_collision() -> void:
 	if team == Team.ENEMY:
 		collision_layer = LAYER_ENEMY
-		collision_mask = LAYER_ENEMY | LAYER_FLICKED | LAYER_ON_DECK
+		collision_mask = LAYER_ENEMY | LAYER_FLICKED | LAYER_ON_DECK | LAYER_ARENA
 	elif on_deck:
 		collision_layer = LAYER_ON_DECK
-		collision_mask = LAYER_ENEMY
+		collision_mask = LAYER_ENEMY | LAYER_ARENA
 	else:
 		collision_layer = LAYER_FLICKED
-		collision_mask = LAYER_FLICKED | LAYER_ENEMY
+		collision_mask = LAYER_FLICKED | LAYER_ENEMY | LAYER_ARENA
 
 
 func _draw() -> void:

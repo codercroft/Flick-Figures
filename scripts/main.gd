@@ -61,6 +61,7 @@ var _needs_reload := false  # player has nothing on deck: tap a board figure to 
 var _can_restart := false
 
 @onready var board := $Board
+@onready var arena: Arena = $Arena
 @onready var figures_root := $Figures
 @onready var aim_line := $AimLine
 @onready var ui := $UI
@@ -70,6 +71,9 @@ var _can_restart := false
 
 func _ready() -> void:
 	ui.show_progress(RunManager.progress_text())
+	arena.build(RunManager.arena, board.board_rect)
+	if RunManager.arena != null:
+		ui.show_arena_name(RunManager.arena.display_name)
 	_spawn_players()
 	_spawn_enemies()
 	board.show_deck_line = _has_creeper()
@@ -420,7 +424,9 @@ func _spawn_enemies() -> void:
 	var slot_width := rect.size.x / RunManager.enemies.size()
 	for i in RunManager.enemies.size():
 		# Stagger every other enemy so they are not in a straight line.
-		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + 160.0 + 120.0 * (i % 2))
+		# Big figures start a bit lower so they don't overlap the arena's top wall.
+		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
+		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + 120.0 * (i % 2))
 		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos))
 
 

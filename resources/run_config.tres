@@ -1,8 +1,20 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="4"]
+[ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/arenas/open_corners.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/arenas/side_rails.tres" id="13"]
+[ext_resource type="Resource" path="res://resources/arenas/divider_gaps.tres" id="14"]
+[ext_resource type="Resource" path="res://resources/arenas/funnel.tres" id="15"]
+[ext_resource type="Resource" path="res://resources/arenas/pinball.tres" id="16"]
+[ext_resource type="Resource" path="res://resources/arenas/mud_flats.tres" id="17"]
+[ext_resource type="Resource" path="res://resources/arenas/speedway.tres" id="18"]
+[ext_resource type="Resource" path="res://resources/arenas/whirlpool.tres" id="19"]
+[ext_resource type="Resource" path="res://resources/arenas/crosswinds.tres" id="20"]
 
 [resource]
 script = ExtResource("1")
@@ -11,4 +23,5 @@ starting_figure = ExtResource("3")
 deck_size = 4
 grunts_per_combat = Array[int]([3, 2, 1, 0])
 enemies_per_combat = 3
+arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20")])
 reward_choices = 3

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Open Field"
+creeper_safe = true
+walls = Array[ExtResource("2")]([])
+pins = Array[ExtResource("3")]([])
+patches = Array[ExtResource("4")]([])

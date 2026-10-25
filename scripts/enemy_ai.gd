@@ -115,8 +115,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if travel < 1.0:
 		return {}
 	var hit := _first_hit(enemy, shape, direction, travel)
-	if hit.is_empty():
-		return {}  # would not reach anything
+	if hit.is_empty() or hit.collider == null:
+		return {}  # would not reach anything (or a wall or pin is in the way)
 	var other: Figure = hit.collider
 	var hit_distance: float = hit.distance
 	# Speed falls linearly with distance traveled under linear damping: v = v0 - damp * x.
@@ -196,7 +196,12 @@ func _slide_ratio(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2
 		return -1.0
 	var slide := (speed - figure.stop_speed) / figure.linear_damp
 	var edge := _distance_to_edge(from, velocity / speed, table)
-	return INF if edge <= 0.0 else slide / edge
+	if edge <= 0.0:
+		return INF
+	# A wall or pin in the way stops it going off the table (at least in this simple guess).
+	if _blocked_by_arena(figure, from, velocity / speed, minf(slide, edge)):
+		return minf(slide / edge, 0.5)
+	return slide / edge
 
 
 ## 0 to 1: how likely the figure is to leave the table. Ramps up from sliding 70% of the way to
@@ -295,9 +300,23 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 		if distance < best_distance:
 			best = figure
 			best_distance = distance
-	if best == null:
-		return {}
+	# Nothing but a wall or pin there: report an obstacle (collider null) so callers can avoid it.
 	return {"collider": best, "distance": length * fractions[0]}
+
+
+## True if a wall or pin is in the way when `figure` slides `distance` px from `from`.
+func _blocked_by_arena(figure: Figure, from: Vector2, direction: Vector2, distance: float) -> bool:
+	if distance <= 0.0:
+		return false
+	var circle := CircleShape2D.new()
+	circle.radius = figure.radius
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = circle
+	query.transform = Transform2D(0.0, from)
+	query.motion = direction * distance
+	query.collision_mask = Figure.LAYER_ARENA
+	var fractions := figure.get_world_2d().direct_space_state.cast_motion(query)
+	return fractions.size() >= 2 and fractions[1] < 1.0
 
 
 ## Distance from `pos` to the table edge along `direction`.

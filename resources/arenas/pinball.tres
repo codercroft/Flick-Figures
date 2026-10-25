@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[sub_resource type="Resource" id="pin_1"]
+script = ExtResource("3")
+position = Vector2(180, 450)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_2"]
+script = ExtResource("3")
+position = Vector2(450, 450)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_3"]
+script = ExtResource("3")
+position = Vector2(720, 450)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_4"]
+script = ExtResource("3")
+position = Vector2(315, 600)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_5"]
+script = ExtResource("3")
+position = Vector2(585, 600)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_6"]
+script = ExtResource("3")
+position = Vector2(180, 750)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_7"]
+script = ExtResource("3")
+position = Vector2(450, 750)
+radius = 28.0
+
+[sub_resource type="Resource" id="pin_8"]
+script = ExtResource("3")
+position = Vector2(720, 750)
+radius = 28.0
+
+[resource]
+script = ExtResource("1")
+display_name = "Pinball"
+creeper_safe = false
+walls = Array[ExtResource("2")]([])
+pins = Array[ExtResource("3")]([SubResource("pin_1"), SubResource("pin_2"), SubResource("pin_3"), SubResource("pin_4"), SubResource("pin_5"), SubResource("pin_6"), SubResource("pin_7"), SubResource("pin_8")])
+patches = Array[ExtResource("4")]([])

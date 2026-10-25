@@ -10,6 +10,8 @@ var combat_index := 0
 var boss: BossData
 ## The enemies for the current combat.
 var enemies: Array[FigureData] = []
+## The arena layout for the current combat.
+var arena: ArenaData
 
 
 func _ready() -> void:
@@ -74,8 +76,25 @@ func _build_lineup() -> void:
 	var registry := config.registry
 	if is_boss_combat():
 		enemies.append_array(boss.enemies)
-		return
-	var grunt_count := config.grunts_per_combat[combat_index]
-	for i in grunt_count:
-		enemies.append(registry.random_grunt())
-	enemies.append_array(registry.random_non_grunts(config.enemies_per_combat - grunt_count))
+	else:
+		var grunt_count := config.grunts_per_combat[combat_index]
+		for i in grunt_count:
+			enemies.append(registry.random_grunt())
+		enemies.append_array(registry.random_non_grunts(config.enemies_per_combat - grunt_count))
+	_pick_arena()
+
+
+## Random layout from the pool, not the same as last time, and only ones a creeping boss can use
+## when there is one.
+func _pick_arena() -> void:
+	var has_creeper := false
+	for enemy in enemies:
+		if enemy.creep_distance > 0.0:
+			has_creeper = true
+	var candidates: Array[ArenaData] = []
+	for candidate in config.arenas:
+		if candidate != arena and (candidate.creeper_safe or not has_creeper):
+			candidates.append(candidate)
+	if candidates.is_empty():
+		candidates = config.arenas
+	arena = candidates.pick_random() if not candidates.is_empty() else null

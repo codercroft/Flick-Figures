@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/board.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/ui.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/game_feel.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/enemy_ai.gd" id="13"]
+[ext_resource type="Script" path="res://scripts/arena.gd" id="14"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -14,6 +15,9 @@ figure_scene = ExtResource("4")
 
 [node name="Board" type="Node2D" parent="."]
 script = ExtResource("2")
+
+[node name="Arena" type="Node2D" parent="."]
+script = ExtResource("14")
 
 [node name="Figures" type="Node2D" parent="."]
 
@@ -59,6 +63,21 @@ grow_vertical = 0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.7, 0.72, 0.8, 1)
 theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ArenaLabel" type="Label" parent="UI"]
+visible = false
+anchors_preset = -1
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = 130.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 76
 horizontal_alignment = 1
 vertical_alignment = 1
 

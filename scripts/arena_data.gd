@@ -1,0 +1,29 @@
+class_name ArenaData
+extends Resource
+## One arena layout. To make a new one, duplicate a file in resources/arenas/ and edit it in the
+## Inspector, then add it to the `arenas` list in resources/run_config.tres.
+## Everything goes inside the board: keep the deck strip below it clear.
+
+@export var display_name := "Arena"
+## Whether a creeping boss (Big Bad) can use this arena. Turn this off for layouts with walls, pins
+## or patches in its path, since they would block or bend its creep.
+@export var creeper_safe := true
+@export var walls: Array[ArenaWall] = []
+@export var pins: Array[ArenaPin] = []
+@export var patches: Array[ArenaPatch] = []
+
+
+## Problems with this layout (empty if it looks fine) for a board of the given size.
+func get_warnings(board_size: Vector2) -> PackedStringArray:
+	var warnings: PackedStringArray = []
+	for wall in walls:
+		var half := (wall.size.rotated(deg_to_rad(wall.rotation_degrees)).abs()) / 2.0
+		if wall.position.y + half.y > board_size.y + 1.0:
+			warnings.append("wall at %s reaches into the deck strip" % wall.position)
+	for pin in pins:
+		if pin.position.y + pin.radius > board_size.y + 1.0:
+			warnings.append("pin at %s reaches into the deck strip" % pin.position)
+	for patch in patches:
+		if patch.position.y + patch.size.y / 2.0 > board_size.y + 1.0:
+			warnings.append("patch at %s reaches into the deck strip" % patch.position)
+	return warnings
