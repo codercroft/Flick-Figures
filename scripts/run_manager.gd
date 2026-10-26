@@ -2,7 +2,11 @@ extends Node
 ## Autoload: holds the state of the current run (deck, which combat, which boss) and builds
 ## each combat's enemy lineup. Scenes read from it and call its functions; it never touches scenes.
 
-var config: RunConfig = preload("res://resources/run_config.tres")
+## The run rules. Loaded in _ready(), NOT preloaded: a preload here makes RunManager's script wait for
+## run_config.tres, which loads the shop/relic/power scripts, which read RunManager.config. In an exported
+## build that cycle fails ("Could not resolve external class member config"), the shop's item types
+## don't load and the shop comes up empty.
+var config: RunConfig
 
 var deck: Array[FigureData] = []
 ## The equipment item on each deck figure (same slots as `deck`; null = none).
@@ -57,6 +61,7 @@ var powers: Array[PowerData] = []
 
 
 func _ready() -> void:
+	config = load("res://resources/run_config.tres")
 	start_new_run()
 
 
@@ -253,7 +258,7 @@ func enter_node(id: int) -> bool:
 		MapNode.Type.COMBAT, MapNode.Type.ELITE, MapNode.Type.BOSS:
 			_build_lineup()
 		MapNode.Type.SHOP:
-			shop_offers = config.shop.make_offers(config.registry)
+			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
 		MapNode.Type.TREASURE:
 			reward_steps = [{"kind": "treasure"}]
 	return true

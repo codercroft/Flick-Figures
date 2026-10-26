@@ -25,6 +25,9 @@ func _show_offers(message := "") -> void:
 	title.text = message if message != "" else "Shop"
 	money_label.text = "You have $%d" % RunManager.money
 	leave_button.show()
+	if RunManager.shop_offers.is_empty():
+		title.text = "The shop is empty today"
+		push_warning("[shop] shop screen opened with no offers")
 	for offer in RunManager.shop_offers:
 		var reason := offer.blocked_reason()
 		var label := "%s - $%d\n%s" % [offer.title, offer.price, offer.description]

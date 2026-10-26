@@ -52,6 +52,13 @@ jobs:
       - name: Import project
         run: godot --headless --import || true
 
+      - name: Smoke test the exported game (catches export-only failures, like an empty shop)
+        run: |
+          godot --headless --export-pack "Web" build/smoke.pck
+          # Run from the build folder: next to project.godot Godot would use the project files, not the pack.
+          cd build
+          godot --headless --main-pack smoke.pck -s ../tools/smoke_test.gd
+
       - name: Export APK
         run: godot --headless --verbose --export-debug "Android" build/FlickFigures.apk
 
