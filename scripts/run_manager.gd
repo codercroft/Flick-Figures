@@ -32,6 +32,8 @@ var enemy_elite: Array[bool] = []
 ## stat boosts (parallel to `enemies`; {} = none).
 var encounter_name := ""
 var enemy_boosts: Array[Dictionary] = []
+## Finishes, equipment and upgrades each enemy carries (parallel to `enemies`): {finish, equipment, upgrade}.
+var enemy_gear: Array[Dictionary] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
@@ -496,6 +498,7 @@ func _build_lineup() -> void:
 	enemies.clear()
 	enemy_elite.clear()
 	enemy_boosts.clear()
+	enemy_gear.clear()
 	encounter_name = ""
 	var registry := config.registry
 	var difficulty := config.difficulty
@@ -530,7 +533,33 @@ func _build_lineup() -> void:
 			enemy_flicks_per_turn += difficulty.elite_extra_flicks
 	while enemy_boosts.size() < enemies.size():
 		enemy_boosts.append({})
+	# Later acts: enemies may carry finishes, equipment and upgrades (elites and bosses roll a step higher).
+	var tougher := node.type == MapNode.Type.ELITE or node.type == MapNode.Type.BOSS
+	for figure in enemies:
+		enemy_gear.append(_roll_enemy_gear(figure, tougher))
 	_pick_arena()
+
+
+## Rolls what one enemy carries. Never economy or player-only equipment.
+func _roll_enemy_gear(figure: FigureData, tougher: bool) -> Dictionary:
+	var gear := {"finish": null, "equipment": null, "upgrade": null}
+	if config.enemy_gear == null:
+		return gear
+	var rates := config.enemy_gear.rates(act, tougher)
+	if randf() < rates.finish and not config.finish_pool.is_empty():
+		gear.finish = config.finish_pool.pick_random()
+	if randf() < rates.equipment:
+		var items: Array[EquipmentData] = []
+		for item in config.equipment_pool:
+			if not item.economy and not item.player_only:
+				items.append(item)
+		if not items.is_empty():
+			gear.equipment = items.pick_random()
+	if randf() < rates.upgrade:
+		var upgrades := upgrades_for(figure)
+		if not upgrades.is_empty():
+			gear.upgrade = upgrades.pick_random()
+	return gear
 
 
 ## A named elite encounter that can appear in this act (random), or null if there is none.
@@ -556,6 +585,10 @@ func _build_encounter(encounter: EncounterData) -> void:
 ## Random layout from the pool, not the same as last time, and only ones a creeping boss can use
 ## when there is one.
 func _pick_arena() -> void:
+	# Boss fights are always on the fully open layout (no walls, pins or patches).
+	if node != null and node.type == MapNode.Type.BOSS and config.boss_arena != null:
+		arena = config.boss_arena
+		return
 	var has_creeper := false
 	for enemy in enemies:
 		if enemy.creep_distance > 0.0:

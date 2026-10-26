@@ -18,6 +18,6 @@ extends Resource
 @export var shop_columns: Array[int] = [3, 4]
 ## Extra shops elsewhere (not next to the shop column).
 @export_range(0.0, 1.0) var extra_shop_chance := 0.08
-## Treasure nodes appear in these columns...
-@export var treasure_columns: Array[int] = [2, 3]
-@export_range(0.0, 1.0) var treasure_chance := 0.25
+## Each act has exactly ONE treasure chest (it always gives a relic). It is placed in one of these
+## columns, on the node that the most routes pass through and that every starting node can reach.
+@export var treasure_columns: Array[int] = [2, 3, 4]

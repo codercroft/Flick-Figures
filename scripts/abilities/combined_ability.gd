@@ -82,3 +82,7 @@ func on_hit_wall(figure: Figure, body: Node) -> void:
 
 func get_wrap_count(figure: Figure) -> int:
 	return first.get_wrap_count(figure) + second.get_wrap_count(figure)
+
+
+func is_plowing(figure: Figure) -> bool:
+	return first.is_plowing(figure) or second.is_plowing(figure)

@@ -608,8 +608,9 @@ func _spawn_enemies() -> void:
 		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
 		var stagger := 0.0 if RunManager.enemies_in_row else 120.0 * (i % 2)
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + stagger)
-		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, null, null, null,
-				RunManager.enemy_scale(i), RunManager.enemy_elite[i]))
+		var gear: Dictionary = RunManager.enemy_gear[i]
+		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, gear.equipment, gear.finish,
+				gear.upgrade, RunManager.enemy_scale(i), RunManager.enemy_elite[i]))
 
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,

@@ -10,3 +10,4 @@ description = "+$1 if it is on the table when you win a combat."
 color = Color(1.0, 0.8, 0.2, 1)
 income_bonus = 1
 economy = true
+player_only = true

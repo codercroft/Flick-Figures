@@ -99,3 +99,9 @@ func on_hit_wall(_figure: Figure, _body: Node) -> void:
 ## The enemy AI uses it so a wrap isn't treated as falling off.
 func get_wrap_count(_figure: Figure) -> int:
 	return 0
+
+
+## True while this figure plows through what it hits (Roller during its own flick): it does not
+## rebound, so other abilities (Bumper's extra launch) leave it alone.
+func is_plowing(_figure: Figure) -> bool:
+	return false

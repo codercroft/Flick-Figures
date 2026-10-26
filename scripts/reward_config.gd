@@ -25,10 +25,6 @@ extends Resource
 ## Chance of a general finish (the player picks which figure gets it).
 @export_range(0.0, 1.0) var elite_finish_chance := 0.2
 
-@export_group("Treasure")
-## A treasure node is one random relic or one random equipment item: this is the relic chance.
-@export_range(0.0, 1.0) var treasure_relic_chance := 0.5
-
 @export_group("Boss")
 @export var boss_bonus_money := 10
 ## Pick 1 of this many relics.

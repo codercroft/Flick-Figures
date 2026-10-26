@@ -13,3 +13,4 @@ label = "JP"
 description = "One extra half-power flick per combat."
 color = Color(0.95, 0.6, 0.3, 1)
 effect = SubResource("Resource_1")
+player_only = true

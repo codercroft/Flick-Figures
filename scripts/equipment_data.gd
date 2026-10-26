@@ -12,6 +12,9 @@ extends Resource
 @export var color := Color(0.8, 0.8, 0.85)
 ## Economy items pay money; they are never handed to enemies (enemies carry no equipment).
 @export var economy := false
+## True for items that only make sense on the player's figures (Coin Purse pays the player, Lucky
+## Charm bends ENEMY aim, Jet Pack's half-power flick isn't modelled by the AI). Enemies never get them.
+@export var player_only := false
 
 @export_group("Stat changes")
 ## The figure's mass is multiplied by this.

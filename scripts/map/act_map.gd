@@ -144,14 +144,11 @@ func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
 			node.type = MapNode.Type.SHOP
 		elif absi(node.column - shop_column) > 1 and rng.randf() < config.extra_shop_chance:
 			node.type = MapNode.Type.SHOP
-		elif config.treasure_columns.has(node.column) and rng.randf() < config.treasure_chance:
-			node.type = MapNode.Type.TREASURE
 		elif node.column >= config.elite_from_column and rng.randf() < config.elite_chance:
 			node.type = MapNode.Type.ELITE
 	_make_elites_optional()
-	# At least one treasure and one elite per act.
-	if not _has_type(MapNode.Type.TREASURE):
-		_convert_random(MapNode.Type.TREASURE, config.treasure_columns, rng)
+	# Exactly one treasure chest per act, and at least one elite.
+	_place_chest(config, rng)
 	if not _has_type(MapNode.Type.ELITE):
 		var later: Array[int] = []
 		for column in range(config.elite_from_column, config.columns):
@@ -159,6 +156,79 @@ func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
 				later.append(column)
 		_convert_random(MapNode.Type.ELITE, later, rng)
 		_make_elites_optional()
+
+
+## The single treasure chest: a plain combat node in one of the treasure columns that every
+## starting node can reach, picking the one with the most routes through it (so it is hard to miss).
+func _place_chest(config: MapConfig, rng: RandomNumberGenerator) -> void:
+	var starts := column_ids(0)
+	var forward := {}  # routes from any start to the node
+	for id in starts:
+		forward[id] = 1
+	for column in columns:
+		for id in column_ids(column):
+			for next_id in nodes[id].next:
+				forward[next_id] = forward.get(next_id, 0) + forward.get(id, 0)
+	var backward := {boss_id: 1}  # routes from the node to the boss
+	for column in range(columns - 1, -1, -1):
+		for id in column_ids(column):
+			var total := 0
+			for next_id in nodes[id].next:
+				total += backward.get(next_id, 0)
+			backward[id] = total
+	var reached_by := {}  # node id -> how many starting nodes can reach it
+	for start in starts:
+		var seen := {start: true}
+		var frontier: Array[int] = [start]
+		while not frontier.is_empty():
+			var id: int = frontier.pop_back()
+			for next_id in nodes[id].next:
+				if not seen.has(next_id):
+					seen[next_id] = true
+					frontier.append(next_id)
+		for id in seen:
+			reached_by[id] = reached_by.get(id, 0) + 1
+	var best: MapNode = null
+	var best_score := -1.0
+	for node in nodes:
+		if node.type != MapNode.Type.COMBAT or not config.treasure_columns.has(node.column):
+			continue
+		var score: float = reached_by.get(node.id, 0) * 1000000.0 + forward.get(node.id, 0) * backward.get(node.id, 0) + rng.randf()
+		if score > best_score:
+			best_score = score
+			best = node
+	if best == null:  # fall back to any plain combat node in the middle of the act
+		var middle: Array[int] = []
+		for column in range(1, columns - 1):
+			middle.append(column)
+		_convert_random(MapNode.Type.TREASURE, middle, rng)
+	else:
+		best.type = MapNode.Type.TREASURE
+		_connect_starts_to(best)
+
+
+## Makes sure every starting node has a route to `target` (rare: the best chest spot is out of reach
+## of one start): adds a path from that start into a first-column-after node that can reach it.
+func _connect_starts_to(target: MapNode) -> void:
+	var can_reach := {target.id: true}  # nodes with a route to the target
+	for column in range(target.column - 1, -1, -1):
+		for id in column_ids(column):
+			for next_id in nodes[id].next:
+				if can_reach.has(next_id):
+					can_reach[id] = true
+	for start_id in column_ids(0):
+		if can_reach.has(start_id):
+			continue
+		var linked: Array[int] = []
+		for id in column_ids(1):
+			if can_reach.has(id):
+				linked.append(id)
+		if linked.is_empty():
+			continue
+		linked.sort_custom(func(a: int, b: int) -> bool:
+			return absi(nodes[a].lane - nodes[start_id].lane) < absi(nodes[b].lane - nodes[start_id].lane))
+		nodes[start_id].next.append(linked[0])
+		can_reach[start_id] = true
 
 
 func _has_type(node_type: MapNode.Type) -> bool:

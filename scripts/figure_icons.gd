@@ -4,7 +4,7 @@ extends RefCounted
 ## entry to the enum and a new case in draw() to make another icon.
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
-		DOUBLE, GHOST, GLUE, SPLIT, RALLY, POPCORN, BUNKER, PIGGY, PINATA }
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -93,13 +93,6 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_line(center + Vector2(s * 0.5, -s * 0.4), center + Vector2(0, -s), color, w)
 			canvas.draw_line(center + Vector2(-s * 0.9, s * 0.3), center + Vector2(-s * 0.9, -s * 0.4), color, w)
 			canvas.draw_line(center + Vector2(s * 0.9, s * 0.3), center + Vector2(s * 0.9, -s * 0.4), color, w)
-		Icon.POPCORN:  # kernels
-			canvas.draw_circle(center + Vector2(-s * 0.55, s * 0.3), s * 0.38, color)
-			canvas.draw_circle(center + Vector2(s * 0.55, s * 0.3), s * 0.38, color)
-			canvas.draw_circle(center + Vector2(0, -s * 0.35), s * 0.45, color)
-		Icon.BUNKER:  # a block with a slit
-			canvas.draw_rect(Rect2(center + Vector2(-s, -s * 0.7), Vector2(s * 2.0, s * 1.4)), color, false, w)
-			canvas.draw_line(center + Vector2(-s * 0.5, -s * 0.1), center + Vector2(s * 0.5, -s * 0.1), color, w)
 		Icon.PIGGY:  # a round body with a coin slot
 			canvas.draw_arc(center + Vector2(0, s * 0.15), s * 0.85, 0.0, TAU, 20, color, w)
 			canvas.draw_line(center + Vector2(-s * 0.35, -s * 0.3), center + Vector2(s * 0.35, -s * 0.3), color, w)

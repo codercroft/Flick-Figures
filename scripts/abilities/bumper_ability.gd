@@ -10,6 +10,8 @@ extends FigureAbility
 
 
 func on_hit(figure: Figure, other: Figure) -> void:
+	if other.ability.is_plowing(other):
+		return  # a Roller plowing from its own flick doesn't rebound, so there is nothing to launch
 	var speed := other.linear_velocity.length()
 	if speed < min_bump_speed:
 		return

@@ -3,7 +3,7 @@ extends Control
 ## is on offer; each drop is shown ONE AT A TIME, and every step has a skip option. Chance drops get a
 ## little "Lucky!" flourish. Kinds: "figures" (pick 1 of N, then which figure it replaces), "relic"
 ## (a random relic), "relics" (pick 1 of N), "power", "equipment", "finish" (pick which figure gets
-## it), "upgrade_item" (a finish or figure-specific upgrade for a figure you choose) and "treasure".
+## it), "upgrade_item" (a finish or figure-specific upgrade for a figure you choose) and "treasure" (the chest: always a relic).
 ## All chances and amounts are in RewardConfig. Everything the player taps is in the bottom half.
 
 const MAP_SCENE := "res://scenes/map.tscn"
@@ -235,14 +235,12 @@ func _apply_to_figure(item: Resource, slot: int) -> void:
 	_show_message("%s got %s!" % [RunManager.deck[slot].display_name, item.display_name])
 
 
-## Treasure node: one random relic or one random equipment item.
+## Treasure chest: always a relic (if every relic is already held, equipment instead).
 func _show_treasure() -> void:
-	var relic := RunManager.random_new_relics(1)
-	var want_relic := randf() < RunManager.config.rewards.treasure_relic_chance
-	if not relic.is_empty() and (want_relic or RunManager.random_equipment() == null):
-		_show_found_relic("Treasure: a relic!")
+	if not RunManager.random_new_relics(1).is_empty():
+		_show_found_relic("Treasure chest: a relic!")
 	elif RunManager.random_equipment() != null:
-		_show_equipment("Treasure: equipment!")
+		_show_equipment("Treasure chest: equipment!")
 	else:
 		_next_step()
 

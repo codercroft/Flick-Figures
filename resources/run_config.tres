@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=84 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=85 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" path="res://resources/difficulty_config.tres" id="140"]
 [ext_resource type="Resource" path="res://resources/map_config.tres" id="141"]
 [ext_resource type="Resource" path="res://resources/reward_config.tres" id="142"]
+[ext_resource type="Resource" path="res://resources/enemy_gear_config.tres" id="143"]
 [ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/arenas/open_corners.tres" id="12"]
@@ -111,3 +112,5 @@ difficulty = ExtResource("140")
 map = ExtResource("141")
 elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])
 rewards = ExtResource("142")
+enemy_gear = ExtResource("143")
+boss_arena = ExtResource("10")
