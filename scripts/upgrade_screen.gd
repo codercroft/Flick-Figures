@@ -1,7 +1,7 @@
 extends Control
 ## Test screen for figure upgrades (free, until rewards or the shop hand them out): pick a figure,
 ## then give it a toy finish (one per figure) and/or its figure-specific upgrade (if it has one).
-## Everything is in the bottom half. Turn it off with RunConfig.show_upgrade_screen.
+## The choices scroll in the middle of the screen; Done/Back are pinned at the bottom. Turn it off with RunConfig.show_upgrade_screen.
 
 const MAP_SCENE := "res://scenes/map.tscn"
 const FIGURE_CARD_HEIGHT := 125.0
@@ -9,11 +9,15 @@ const OPTION_CARD_HEIGHT := 105.0
 
 var _slot := -1
 
-@onready var column: VBoxContainer = $Column
-@onready var title: Label = $Column/Title
+var frame := ScreenFrame.new()
+var column: VBoxContainer
+var title: Label
 
 
 func _ready() -> void:
+	add_child(frame)
+	column = frame.content
+	title = frame.title
 	_show_figures()
 
 
@@ -49,11 +53,8 @@ func _show_options(slot: int) -> void:
 		var mark := " (on)" if RunManager.deck_finish[slot] == finish else ""
 		var card := _add_card(null, "%s%s\n%s" % [finish.display_name, mark, finish.description], OPTION_CARD_HEIGHT)
 		card.pressed.connect(_on_finish.bind(finish))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	column.add_child(row)
-	_add_button("Clear", _on_clear, row)
-	_add_button("Back", _show_figures, row)
+	_add_button("Clear", _on_clear)
+	_add_button("Back", _show_figures)
 
 
 func _on_upgrade(upgrade: UpgradeData) -> void:
@@ -83,18 +84,9 @@ func _add_card(data: FigureData, text: String, card_height: float) -> FigureCard
 	return card
 
 
-func _add_button(text: String, action: Callable, parent: Control = null) -> void:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = Vector2(0.0, 80.0)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.add_theme_font_size_override("font_size", 38)
-	button.pressed.connect(action)
-	(parent if parent != null else column).add_child(button)
+func _add_button(text: String, action: Callable) -> void:
+	frame.add_action(text, action)
 
 
 func _clear_cards() -> void:
-	for child in column.get_children():
-		if child != title:
-			column.remove_child(child)
-			child.queue_free()
+	frame.clear()

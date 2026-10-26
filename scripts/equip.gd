@@ -1,6 +1,6 @@
 extends Control
 ## The equip screen: pick an item you hold, then pick which figure gets it. If that figure already
-## holds an item, the old one goes back to the inventory. Everything is in the bottom half.
+## holds an item, the old one goes back to the inventory. The choices scroll in the middle of the screen; Done/Back are pinned at the bottom.
 
 const MAP_SCENE := "res://scenes/map.tscn"
 const ITEM_CARD_HEIGHT := 120.0
@@ -8,11 +8,15 @@ const FIGURE_CARD_HEIGHT := 135.0
 
 var _chosen: EquipmentData
 
-@onready var column: VBoxContainer = $Column
-@onready var title: Label = $Column/Title
+var frame := ScreenFrame.new()
+var column: VBoxContainer
+var title: Label
 
 
 func _ready() -> void:
+	add_child(frame)
+	column = frame.content
+	title = frame.title
 	_show_items()
 
 
@@ -58,16 +62,8 @@ func _add_card(data: FigureData, text: String, card_height: float) -> FigureCard
 
 
 func _add_button(text: String, action: Callable) -> void:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = Vector2(0.0, 90.0)
-	button.add_theme_font_size_override("font_size", 40)
-	button.pressed.connect(action)
-	column.add_child(button)
+	frame.add_action(text, action)
 
 
 func _clear_cards() -> void:
-	for child in column.get_children():
-		if child != title:
-			column.remove_child(child)
-			child.queue_free()
+	frame.clear()

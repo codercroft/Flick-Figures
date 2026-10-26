@@ -1,30 +1,32 @@
 extends Control
 ## A shop node on the map. It sells whatever the ShopConfig's item types offer (figures, a swap
-## service, relics, powers, equipment and upgrades); the list scrolls. Everything the player taps is
-## in the bottom half of the screen.
+## service, relics, powers, equipment and upgrades). The offers scroll in the middle of the screen;
+## Leave / Back are pinned at the bottom. (See ScreenFrame.)
 
 const MAP_SCENE := "res://scenes/map.tscn"
-const CARD_HEIGHT := 130.0
+const CARD_HEIGHT := 140.0
+
+var frame := ScreenFrame.new()
+var column: VBoxContainer  # the offer cards (frame.content)
+var title: Label
+var money_label: Label
 
 var _pending: ShopOffer  # the offer waiting for the player to pick a figure
 
-@onready var column: VBoxContainer = $Column/Scroll/Cards
-@onready var title: Label = $Column/Title
-@onready var money_label: Label = $Column/MoneyLabel
-@onready var leave_button: Button = $Column/LeaveButton
-
 
 func _ready() -> void:
-	leave_button.pressed.connect(_on_leave_pressed)
+	add_child(frame)
+	column = frame.content
+	title = frame.title
+	money_label = frame.subtitle
 	_show_offers()
 
 
 func _show_offers(message := "") -> void:
-	_clear_cards()
+	frame.clear()
 	_pending = null
 	title.text = message if message != "" else "Shop"
 	money_label.text = "You have $%d" % RunManager.money
-	leave_button.show()
 	if RunManager.shop_offers.is_empty():
 		title.text = "The shop is empty today"
 		push_warning("[shop] shop screen opened with no offers")
@@ -40,6 +42,7 @@ func _show_offers(message := "") -> void:
 		card.disabled = offer.sold or offer.price > RunManager.money or reason != ""
 		card.pressed.connect(_on_offer_pressed.bind(offer))
 		column.add_child(card)
+	frame.add_action("Leave the shop", _on_leave_pressed)
 
 
 func _on_offer_pressed(offer: ShopOffer) -> void:
@@ -52,8 +55,7 @@ func _on_offer_pressed(offer: ShopOffer) -> void:
 
 ## Pick which of your figures the offer applies to (grunts first, the usual sacrifice).
 func _show_slots() -> void:
-	_clear_cards()
-	leave_button.hide()
+	frame.clear()
 	title.text = _pending.slot_prompt
 	var slots: Array[int] = []
 	for i in RunManager.deck.size():
@@ -67,12 +69,7 @@ func _show_slots() -> void:
 		card.setup(RunManager.deck[slot], 120.0)
 		card.pressed.connect(_buy.bind(_pending, slot))
 		column.add_child(card)
-	var back := Button.new()
-	back.text = "Back"
-	back.custom_minimum_size = Vector2(0.0, 90.0)
-	back.add_theme_font_size_override("font_size", 40)
-	back.pressed.connect(_show_offers)
-	column.add_child(back)
+	frame.add_action("Back", _show_offers)
 
 
 func _buy(offer: ShopOffer, slot: int) -> void:
@@ -85,9 +82,3 @@ func _buy(offer: ShopOffer, slot: int) -> void:
 func _on_leave_pressed() -> void:
 	RunManager.finish_node()
 	get_tree().change_scene_to_file(MAP_SCENE)
-
-
-func _clear_cards() -> void:
-	for child in column.get_children():
-		column.remove_child(child)
-		child.queue_free()

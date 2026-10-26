@@ -4,10 +4,10 @@ extends Control
 ## little "Lucky!" flourish. Kinds: "figures" (pick 1 of N, then which figure it replaces), "relic"
 ## (a random relic), "relics" (pick 1 of N), "power", "equipment", "finish" (pick which figure gets
 ## it), "upgrade_item" (a finish or figure-specific upgrade for a figure you choose) and "treasure" (the chest: always a relic).
-## All chances and amounts are in RewardConfig. Everything the player taps is in the bottom half.
+## All chances and amounts are in RewardConfig. The choices are in the middle of the screen; Take/Skip/Back are pinned at the bottom (see ScreenFrame).
 
 const MAP_SCENE := "res://scenes/map.tscn"
-const OFFER_CARD_HEIGHT := 220.0
+const OFFER_CARD_HEIGHT := 240.0
 const REPLACE_CARD_HEIGHT := 150.0
 const ITEM_CARD_HEIGHT := 190.0
 
@@ -16,12 +16,17 @@ var _offers: Array[FigureData] = []
 var _chosen: FigureData
 var _lucky := false  # the current step was a chance drop
 
-@onready var column: VBoxContainer = $Column
-@onready var title: Label = $Column/Title
-@onready var earned_label: Label = $Column/EarnedLabel
+var frame := ScreenFrame.new()
+var column: VBoxContainer  # the cards (frame.content); the buttons go to frame.actions at the bottom
+var title: Label
+var earned_label: Label
 
 
 func _ready() -> void:
+	add_child(frame)
+	column = frame.content
+	title = frame.title
+	earned_label = frame.subtitle
 	_steps = RunManager.reward_steps.duplicate()
 	earned_label.text = _earned_text()
 	_next_step()
@@ -73,7 +78,7 @@ func _show_offers() -> void:
 	_clear_cards()
 	title.text = "Pick a figure"
 	# With more than 3 choices (Trophy Case) the cards shrink so they all fit.
-	var card_height := minf(OFFER_CARD_HEIGHT, 560.0 / maxi(_offers.size(), 1))
+	var card_height := minf(OFFER_CARD_HEIGHT, 900.0 / maxi(_offers.size(), 1))
 	for offer in _offers:
 		var card := _add_card(offer, card_height)
 		card.pressed.connect(_on_offer_chosen.bind(offer))
@@ -96,7 +101,7 @@ func _show_replacements() -> void:
 	for i in RunManager.deck.size():
 		if not slots.has(i):
 			slots.append(i)
-	var card_height := minf(REPLACE_CARD_HEIGHT, 600.0 / maxi(slots.size(), 1))
+	var card_height := minf(REPLACE_CARD_HEIGHT, 900.0 / maxi(slots.size(), 1))
 	for slot in slots:
 		var card := _add_card(RunManager.deck[slot], card_height)
 		card.pressed.connect(_on_replace_chosen.bind(slot))
@@ -213,7 +218,7 @@ func _pick_figure_for(item: Resource) -> void:
 	_clear_cards()
 	title.text = "Give %s to which figure?" % item.display_name
 	var shown := 0
-	var card_height := minf(REPLACE_CARD_HEIGHT, 560.0 / maxi(RunManager.deck.size(), 1))
+	var card_height := minf(REPLACE_CARD_HEIGHT, 900.0 / maxi(RunManager.deck.size(), 1))
 	for slot in RunManager.deck.size():
 		if item is UpgradeData and RunManager.deck[slot] != item.figure:
 			continue
@@ -297,16 +302,8 @@ func _add_card(data: FigureData, card_height: float, text := "") -> FigureCard:
 
 
 func _add_button(text: String, action: Callable) -> void:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = Vector2(0.0, 90.0)
-	button.add_theme_font_size_override("font_size", 40)
-	button.pressed.connect(action)
-	column.add_child(button)
+	frame.add_action(text, action)
 
 
 func _clear_cards() -> void:
-	for child in column.get_children():
-		if child != title and child != earned_label:
-			column.remove_child(child)
-			child.queue_free()
+	frame.clear()

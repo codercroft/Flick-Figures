@@ -14,6 +14,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 RunManager="*res://scripts/run_manager.gd"
+RunInfo="*res://scripts/run_info.gd"
 
 [display]
 

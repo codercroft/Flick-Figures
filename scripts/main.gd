@@ -74,6 +74,8 @@ var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
 
+var _top_bar := TopBar.new()
+
 # Relics read these.
 ## Flicks the player has taken this combat (Opening Act: the first one is boosted).
 var player_flicks := 0
@@ -99,8 +101,15 @@ var _snapshot := {}  # every figure as it was before the player's last flick (fo
 @onready var ai: EnemyAI = $EnemyAI
 
 
+## Height (px) reserved at the bottom for the turn label, status line and power buttons.
+const BOTTOM_UI_HEIGHT := 250.0
+
+
 func _ready() -> void:
 	RunManager.combat = self
+	add_child(_top_bar)
+	var insets := SafeArea.insets()
+	ui.apply_bottom_inset(insets.bottom)
 	ui.power_pressed.connect(_on_power_slot_pressed)
 	ui.set_powers(RunManager.powers)
 	_update_status()
@@ -112,6 +121,7 @@ func _ready() -> void:
 		banner.append(RunManager.arena.display_name)
 	if not banner.is_empty():
 		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
+	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom)
 	_spawn_players()
 	_spawn_enemies()
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
@@ -148,8 +158,11 @@ func _input(event: InputEvent) -> void:
 	# Only the player's turn (and the run-over screen) takes touches. Everything else is ignored.
 	if _state != State.PLAYER_TURN and _state != State.AIMING and _state != State.GAME_OVER:
 		return
-	# Taps on the power buttons are for the buttons, not for aiming.
-	if event is InputEventScreenTouch and event.pressed and ui.is_over_power_bar(event.position):
+	# The run info overlay is open: the game behind it ignores touches.
+	if RunInfo.is_open:
+		return
+	# Taps on the power buttons and the status bar are for them, not for aiming.
+	if event is InputEventScreenTouch and event.pressed and (ui.is_over_power_bar(event.position) or _top_bar.is_over(event.position)):
 		return
 	if event is InputEventScreenTouch:
 		var pos := _to_world(event.position)
@@ -162,6 +175,21 @@ func _input(event: InputEvent) -> void:
 				_release_aim(pos)
 	elif event is InputEventScreenDrag and event.index == _touch_index:
 		_update_aim(_to_world(event.position))
+
+
+## Places the board and deck between the status bar and the bottom controls, centered, and shrinks
+## them if the screen is short. Done with the camera, so every position in the game stays the same.
+func _fit_world(top_px: float, bottom_px: float) -> void:
+	var view := get_viewport_rect().size
+	var margin := 24.0
+	var board_rect: Rect2 = board.board_rect
+	var block := Rect2(board_rect.position.x - margin, board_rect.position.y - margin,
+			board_rect.size.x + margin * 2.0, board.deck_rect.end.y - board_rect.position.y + margin * 2.0)
+	var available := view.y - top_px - bottom_px
+	var zoom := minf(1.0, minf(available / block.size.y, view.x / block.size.x))
+	var screen_center := Vector2(view.x / 2.0, top_px + available / 2.0)
+	game_feel.camera.zoom = Vector2(zoom, zoom)
+	game_feel.camera.position = block.get_center() - screen_center / zoom
 
 
 func _to_world(screen_pos: Vector2) -> Vector2:

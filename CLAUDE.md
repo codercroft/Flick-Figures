@@ -18,7 +18,13 @@ Mobile game built in Godot 4 with GDScript.
 
 ## UI
 
-- Keep ALL UI in the bottom half of the screen (thumb reach). The top half is the board/enemy area.
+- Layout rule: STATUS info (act/node, money, relic icons, the "i" run-info button) lives in a clean bar at the TOP (`TopBar`, a CanvasLayer, on every screen). Readable content and choices (map, shop, reward, equip, upgrade cards) may use the MIDDLE of the screen. FREQUENT combat actions (power buttons, skip/confirm/leave/back) stay in the BOTTOM half for one-handed reach.
+- Everything is built with anchors and containers so it fills any aspect ratio (viewport is always 1080 wide, height varies; tall phones like the Pixel 10 are about 1080x2400). Use `set_anchors_and_offsets_preset(PRESET_FULL_RECT)` (plain `set_anchors_preset` leaves a zero-size box for controls created in code). Respect safe areas: `SafeArea.insets()` (`scripts/safe_area.gd`) gives top/bottom/left/right insets in viewport units (zero on desktop; cutout and gesture bar on Android/iOS); `TopBar.height()` includes the top inset.
+- `ScreenFrame` (`scripts/screen_frame.gd`): shared layout of reward/shop/equip/upgrade: `title`, `subtitle`, scrolling `content` (cards, middle), `actions` (`add_action(text, cb)` buttons, bottom), `clear()`.
+- `TopBar` (`scripts/top_bar.gd`): info button, act label, `RelicBar` (round icons, tap one to open it in the run info), money. In combat, `main._fit_world()` uses GameFeel's Camera2D (zoom and position, world coordinates unchanged) to centre the board between the top bar and the bottom power bar; the old bottom RelicBar is gone.
+- Map (`scripts/map.gd`, `map_view.gd`, `map_icons.gd`): `MapView` is a tall Control inside a ScrollContainer (full-height, `MIN_ROW_SPACING` 150, scrolls if needed, starts scrolled to your position); only reachable nodes tap (tap-slop so scrolling does not select).
+- Run info overlay: `RunInfo` autoload (`scripts/run_info.gd`, CanvasLayer 100). `RunInfo.open(tab, selected)` / `close_overlay()`, `is_open`; tap outside or Close returns. It is READ ONLY (never changes game state). Tabs: Map (`MapMini`), Roster (finish, upgrade, equipment per figure), Relics, Powers, Inventory; tap an entry for the full description. `main._input` ignores touches while `RunInfo.is_open` and over the top bar.
+- Export lesson: do not `preload` resources in the `RunManager` autoload that reference RunManager (parse cycle in exports broke the shop on Android). `RunManager.config` is loaded in `_ready()`. The shop logs `[shop]` lines and falls back to a basic stock if empty. `tools/smoke_test.gd` checks pools, scenes and shop offers in an exported pack; CI runs it. Locally: `godot --headless --export-pack "Web" /tmp/x.pck`, then from a directory WITHOUT project.godot: `godot --headless --main-pack /tmp/x.pck -s <repo>/tools/smoke_test.gd`.
 
 ## Workflow
 
