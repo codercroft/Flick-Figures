@@ -4,7 +4,7 @@ extends RefCounted
 ## entry to the enum and a new case in draw() to make another icon.
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
-		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA }
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -102,3 +102,10 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 				center + Vector2(0, -s * 0.5), center + Vector2(s * 0.8, s * 0.1),
 				center + Vector2(0, s * 0.9), center + Vector2(-s * 0.8, s * 0.1),
 				center + Vector2(0, -s * 0.5)]), color, w)
+		Icon.PIN:  # a map pin: a round head on a needle
+			canvas.draw_circle(center + Vector2(0, -s * 0.35), s * 0.5, color)
+			canvas.draw_line(center + Vector2(0, s * 0.1), center + Vector2(0, s), color, w)
+		Icon.DROPLET:  # a juice drop with a trail dash
+			canvas.draw_arc(center + Vector2(s * 0.2, s * 0.2), s * 0.6, 0.0, TAU, 20, color, w)
+			canvas.draw_line(center + Vector2(s * 0.2, -s * 0.4), center + Vector2(s * 0.2, -s * 0.95), color, w)
+			canvas.draw_line(center + Vector2(-s, s * 0.2), center + Vector2(-s * 0.6, s * 0.2), color, w)

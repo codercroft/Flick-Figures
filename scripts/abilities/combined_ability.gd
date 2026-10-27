@@ -103,3 +103,7 @@ func get_aura_knockback_multiplier(figure: Figure) -> float:
 func on_opponent_knocked_off(figure: Figure, victim: Figure) -> void:
 	first.on_opponent_knocked_off(figure, victim)
 	second.on_opponent_knocked_off(figure, victim)
+
+
+func get_pin_radius(figure: Figure) -> float:
+	return maxf(first.get_pin_radius(figure), second.get_pin_radius(figure))

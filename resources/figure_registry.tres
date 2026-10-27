@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="FigureRegistry" load_steps=26 format=3]
+[gd_resource type="Resource" script_class="FigureRegistry" load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_registry.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
@@ -25,10 +25,12 @@
 [ext_resource type="Resource" path="res://resources/figures/rally.tres" id="24"]
 [ext_resource type="Resource" path="res://resources/figures/piggy_bank.tres" id="27"]
 [ext_resource type="Resource" path="res://resources/figures/pinata.tres" id="28"]
+[ext_resource type="Resource" path="res://resources/figures/pinhead.tres" id="29"]
+[ext_resource type="Resource" path="res://resources/figures/juicer.tres" id="30"]
 
 [resource]
 script = ExtResource("1")
 grunts = Array[ExtResource("2")]([ExtResource("3")])
-draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("27"), ExtResource("28")])
+draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30")])
 economy = Array[ExtResource("2")]([ExtResource("18"), ExtResource("27"), ExtResource("28")])
 bosses = Array[ExtResource("14")]([ExtResource("15"), ExtResource("16"), ExtResource("17")])

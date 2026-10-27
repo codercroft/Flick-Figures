@@ -69,6 +69,7 @@ var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
 var _busy_time := 0.0  # seconds spent settling or in the enemy turn
+var _press_was_empty := false  # the current touch started on empty board (a tap there can place a pin)
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
@@ -226,6 +227,7 @@ func _start_player_turn(new_round := true) -> void:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
 	_bonus_figure = null
+	arena.remove_temp_pins()
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
@@ -269,6 +271,7 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 		_select(figure)
 	elif _selected == null:
 		return  # nothing selected yet: tap a figure first
+	_press_was_empty = figure == null
 	_state = State.AIMING
 	_touch_index = index
 	_aim_figure = _selected
@@ -277,6 +280,8 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 
 
 func _select(figure: Figure) -> void:
+	if figure == _selected:
+		return  # pressing the selected figure again keeps everything (e.g. its Pinhead pin)
 	_deselect()
 	_selected = figure
 	_selected.selected = true
@@ -286,6 +291,8 @@ func _select(figure: Figure) -> void:
 func _deselect() -> void:
 	if is_instance_valid(_selected):
 		_selected.selected = false
+		if _selected.flickable:
+			arena.remove_temp_pins(_selected)  # a Pinhead that was not flicked takes its pin back
 	_selected = null
 
 
@@ -316,6 +323,8 @@ func _release_aim(pos: Vector2) -> void:
 			_skip_bonus_flick()  # a tap: no extra flick
 		else:
 			_cancel_aim()
+			if _press_was_empty:
+				_tap_empty_board(pos)
 		return
 	aim_line.clear()
 	_bonus_figure = null
@@ -365,6 +374,22 @@ func _has_flick_left(figure) -> bool:
 
 
 ## Gives up this drag. The figure stays selected, so you can drag again.
+## A tap on empty board with a figure selected: Pinhead places (or takes back) its temporary pin.
+func _tap_empty_board(pos: Vector2) -> void:
+	if not _is_alive(_selected) or not _selected.flickable:
+		return
+	var radius := _selected.ability.get_pin_radius(_selected)
+	if radius <= 0.0:
+		return
+	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect):
+		"placed":
+			ui.show_your_turn("Pin placed. Drag anywhere to flick")
+		"removed":
+			ui.show_your_turn("Pin removed. Drag anywhere to flick")
+		_:
+			ui.show_your_turn("Can't place a pin there")
+
+
 func _cancel_aim() -> void:
 	aim_line.clear()
 	_aim_figure = null
@@ -412,6 +437,7 @@ func _finish_player_turn() -> void:
 	await _wait_until_settled()
 	if serial != _turn_serial:
 		return
+	arena.remove_temp_pins()  # Pinhead's pin goes once its flick has settled
 	if _check_game_over():
 		return
 	if _has_flick_left(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
@@ -453,10 +479,13 @@ func _run_enemy_turn() -> void:
 		if choice.is_empty() or not _is_alive(choice.enemy):
 			break  # nothing good and nothing safe: the enemy side passes
 		_last_flicker = choice.enemy
+		if choice.has("pin"):  # an enemy Pinhead sets up a bank shot
+			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
 		choice.enemy.launch(choice.impulse)
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
+		arena.remove_temp_pins()
 		if _check_game_over():
 			return
 		# Speedo-style extra flicks: only taken when the shot scores well.

@@ -21,11 +21,16 @@ extends Node2D
 ## Turn patch: how fast a moving figure's direction curves, in degrees per second.
 @export var turn_rate_degrees := 110.0
 
+@export_group("Temporary pins")
+@export var temp_pin_color := Color(0.75, 0.85, 0.95)
+
 var _data: ArenaData
 var _origin := Vector2.ZERO
 # Things placed by powers: bricks (temporary walls) and zones (magnet fields, glue puddles).
 var _bricks: Array[Dictionary] = []  # {body, rounds}
 var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
+var _temp_pins: Array[TempPin] = []  # Pinhead's pins
+var _trail: Array[Dictionary] = []  # Juicer's boost pieces: {owner, ability, center, direction, rounds, node}
 
 
 ## Builds the layout. `board_rect` is the board in world space; layout positions are relative to it.
@@ -59,23 +64,28 @@ func _add_wall(wall: ArenaWall) -> void:
 func _add_pin(pin: ArenaPin) -> void:
 	var body := _make_static_body(pin_bounce)
 	body.position = _origin + pin.position
+	_add_pin_shapes(body, pin.radius)
+	add_child(body)
+
+
+## The solid circle of a pin plus a slightly bigger sensor ring so the pin can kick figures as they
+## bounce off.
+func _add_pin_shapes(body: StaticBody2D, radius: float) -> void:
 	var circle := CircleShape2D.new()
-	circle.radius = pin.radius
+	circle.radius = radius
 	var shape := CollisionShape2D.new()
 	shape.shape = circle
 	body.add_child(shape)
-	# A slightly bigger sensor ring so the pin can kick figures as they bounce off.
 	var sensor := Area2D.new()
 	sensor.collision_layer = 0
 	sensor.collision_mask = Figure.LAYER_ON_DECK | Figure.LAYER_FLICKED | Figure.LAYER_ENEMY
 	var ring := CircleShape2D.new()
-	ring.radius = pin.radius + 8.0
+	ring.radius = radius + 8.0
 	var ring_shape := CollisionShape2D.new()
 	ring_shape.shape = ring
 	sensor.add_child(ring_shape)
 	sensor.body_entered.connect(_on_pin_touched)
 	body.add_child(sensor)
-	add_child(body)
 
 
 func _make_static_body(bounce: float) -> StaticBody2D:
@@ -114,6 +124,120 @@ func _physics_process(delta: float) -> void:
 					_apply_patch(patch, figure, delta)
 	for zone in _zones:
 		_apply_zone(zone, figures)
+	for piece in _trail:
+		_apply_trail_piece(piece, figures)
+
+
+# --- Pinhead's temporary pins ------------------------------------------------------
+
+## True if a pin of `radius` fits at `pos`: inside the board and not touching a figure, wall, pin or brick.
+static func is_spot_free(space: PhysicsDirectSpaceState2D, board: Rect2, pos: Vector2, radius: float) -> bool:
+	if not board.grow(-radius).has_point(pos):
+		return false
+	var circle := CircleShape2D.new()
+	circle.radius = radius + 6.0
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = circle
+	query.transform = Transform2D(0.0, pos)
+	query.collision_mask = Figure.LAYER_ON_DECK | Figure.LAYER_FLICKED | Figure.LAYER_ENEMY | Figure.LAYER_ARENA
+	return space.intersect_shape(query, 1).is_empty()
+
+
+## Tap with Pinhead selected: places its pin at `pos` (a second pin of the same Pinhead is moved),
+## or takes the pin back if `pos` is on it. Returns "placed", "removed" or "blocked".
+func toggle_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2) -> String:
+	for pin in _temp_pins:
+		if pin.owner_figure == owner_figure and pin.position.distance_to(pos) <= pin.radius + 10.0:
+			remove_temp_pins(owner_figure)
+			return "removed"
+	var old_spot := Vector2.INF
+	for pin in _temp_pins:
+		if pin.owner_figure == owner_figure:
+			old_spot = pin.position
+	remove_temp_pins(owner_figure)
+	if not place_temp_pin(owner_figure, pos, radius, board):
+		if old_spot != Vector2.INF:  # blocked: the old pin stays where it was
+			place_temp_pin(owner_figure, old_spot, radius, board)
+		return "blocked"
+	return "placed"
+
+
+## Places a temporary pin if the spot is free. Returns whether it was placed.
+func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2) -> bool:
+	if not is_spot_free(get_world_2d().direct_space_state, board, pos, radius):
+		return false
+	var pin := TempPin.new()
+	pin.radius = radius
+	pin.color = temp_pin_color
+	pin.owner_figure = owner_figure
+	pin.collision_layer = Figure.LAYER_ARENA
+	pin.collision_mask = 0
+	var material := PhysicsMaterial.new()
+	material.bounce = pin_bounce
+	material.friction = 0.0
+	pin.physics_material_override = material
+	pin.position = pos
+	_add_pin_shapes(pin, radius)
+	add_child(pin)
+	_temp_pins.append(pin)
+	return true
+
+
+## Removes the temporary pins of one Pinhead (or all of them if `owner_figure` is null).
+func remove_temp_pins(owner_figure: Figure = null) -> void:
+	for i in range(_temp_pins.size() - 1, -1, -1):
+		var pin := _temp_pins[i]
+		if owner_figure == null or pin.owner_figure == owner_figure or not is_instance_valid(pin.owner_figure):
+			remove_child(pin)  # out of the physics space right away (queue_free alone waits a frame)
+			pin.queue_free()
+			_temp_pins.remove_at(i)
+
+
+func has_temp_pin(owner_figure: Figure) -> bool:
+	for pin in _temp_pins:
+		if pin.owner_figure == owner_figure:
+			return true
+	return false
+
+
+# --- Juicer's trail ----------------------------------------------------------
+
+## One piece of boost trail left by `ability`'s Juicer, pushing figures along `direction`.
+func add_trail_segment(owner_figure: Figure, center: Vector2, direction: Vector2, ability: JuicerAbility) -> void:
+	var node := TrailSegment.new()
+	node.radius = ability.segment_radius
+	node.direction = direction
+	node.position = center
+	node.z_index = 0  # (the Board is drawn first, so these show up on top of it)
+	add_child(node)
+	_trail.append({"owner": owner_figure, "ability": ability, "center": center, "direction": direction,
+			"rounds": ability.trail_rounds, "total": ability.trail_rounds, "node": node})
+	# Too many pieces from one Juicer: its oldest one goes.
+	var mine := 0
+	for piece in _trail:
+		if piece.owner == owner_figure:
+			mine += 1
+	var i := 0
+	while mine > ability.max_segments and i < _trail.size():
+		if _trail[i].owner == owner_figure:
+			_trail[i].node.queue_free()
+			_trail.remove_at(i)
+			mine -= 1
+		else:
+			i += 1
+
+
+func _apply_trail_piece(piece: Dictionary, figures: Array) -> void:
+	var ability: JuicerAbility = piece.ability
+	for node in figures:
+		var figure := node as Figure
+		# Like patches: only moving figures are pushed, so a resting one is never nudged.
+		if figure.on_deck or figure.knocked_off or figure.is_slow():
+			continue
+		if figure.global_position.distance_to(piece.center) > ability.segment_radius:
+			continue
+		if figure.linear_velocity.dot(piece.direction) < ability.boost_max_speed:
+			figure.apply_central_force(piece.direction * ability.boost_acceleration * figure.mass)
 
 
 # --- Power-placed things -----------------------------------------------------
@@ -163,7 +287,7 @@ func _add_zone(kind: int, center: Vector2, radius: float, rounds: int, extra: Di
 	node.kind = kind
 	node.radius = radius
 	node.position = center
-	node.z_index = -1
+	node.z_index = 0  # (the Board is drawn first, so these show up on top of it)
 	add_child(node)
 	var zone := {"kind": kind, "center": center, "radius": radius, "rounds": rounds, "node": node, "inside": {}}
 	zone.merge(extra)
@@ -172,6 +296,13 @@ func _add_zone(kind: int, center: Vector2, radius: float, rounds: int, extra: Di
 
 ## One round has passed: bricks and zones with a limited life count down and vanish.
 func tick_round() -> void:
+	for i in range(_trail.size() - 1, -1, -1):
+		_trail[i].rounds -= 1
+		if _trail[i].rounds <= 0:
+			_trail[i].node.queue_free()
+			_trail.remove_at(i)
+		else:
+			_trail[i].node.life = float(_trail[i].rounds) / _trail[i].total
 	for i in range(_bricks.size() - 1, -1, -1):
 		_bricks[i].rounds -= 1
 		if _bricks[i].rounds <= 0:

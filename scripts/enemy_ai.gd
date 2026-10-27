@@ -52,6 +52,17 @@ const TOUCH_MARGIN := 4.0
 ## Repositioning flicks must end at least this far (px) inside the table edge.
 @export var reposition_edge_margin := 150.0
 
+@export_group("Pinhead bank shots")
+## An enemy Pinhead may place a temporary pin and bounce its flick off it into a player figure.
+## Spacing (px) of the grid of pin spots it tries.
+@export var bank_grid_spacing := 110.0
+## How much harder a bank shot is than a direct one (it can miss more): subtracted from its score.
+@export var bank_shot_penalty := 30.0
+## The speed multiplier the AI expects from a pin's kick (the Arena's pin_kick).
+@export var bank_pin_kick := 1.3
+## The shot must still arrive at the target at least this fast (px/s).
+@export var bank_min_hit_speed := 400.0
+
 @export_group("Accuracy")
 ## Aim error (degrees, either way) for an enemy whose FigureData accuracy is 0. At 1 it is perfect.
 @export var max_aim_error_degrees := 20.0
@@ -98,7 +109,11 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 		error += deg_to_rad(target.ability.get_incoming_aim_error_degrees(target))
 	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
 	_record_debug(best_enemy, best, best_enemy.global_position + direction * best.distance)
-	return {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
+	var result := {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
+	if best.has("pin"):  # a bank shot: the caller places this pin before the flick
+		result["pin"] = best.pin
+		result["pin_radius"] = best.pin_radius
+	return result
 
 
 ## Attacks (and ally shots) always outrank repositioning; the score breaks ties inside a kind.
@@ -128,6 +143,12 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 					shot["target"] = target  # who it is aimed at (Lucky Charm adds aim error)
 					best = shot
+
+	# Pinhead: a pin that sets up a bank shot may beat every direct shot (or there may be none).
+	if enemy.ability.get_pin_radius(enemy) > 0.0:
+		var bank := _best_bank_shot(enemy, shape, players, table, top_speed)
+		if not bank.is_empty() and bank.score >= min_attack_score and (best.is_empty() or bank.score > best.score):
+			best = bank
 
 	if best.is_empty() or best.score < min_attack_score:
 		var move := _choose_reposition(enemy, shape, players, table)
@@ -301,6 +322,110 @@ func _player_behind_ally(shooter: Figure, ally: Figure, direction: Vector2, play
 	return null
 
 
+# --- Pinhead bank shots -------------------------------------------------------
+
+## The best "place a pin, then bounce off it into a player figure" shot for a Pinhead, or {}. For every
+## pin spot on a grid and every player figure it works out where the flick must hit the pin so that
+## it bounces (like light off a mirror) toward the figure, checks both legs are clear, and scores the
+## hit like a normal attack minus bank_shot_penalty.
+func _best_bank_shot(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2,
+		top_speed: float) -> Dictionary:
+	var pin_radius := enemy.ability.get_pin_radius(enemy)
+	var start := enemy.global_position
+	var bounce_radius := pin_radius + enemy.radius  # the shooter's center bounces at this distance
+	var area := table.grow(-(pin_radius + 40.0))
+	var space := enemy.get_world_2d().direct_space_state
+	var everyone := enemy.get_tree().get_nodes_in_group("figures")
+	var best := {}
+	var x := area.position.x
+	while x <= area.end.x:
+		var y := area.position.y
+		while y <= area.end.y:
+			var pin := Vector2(x, y)
+			y += bank_grid_spacing
+			if not _pin_spot_clear(pin, pin_radius, everyone):
+				continue
+			for target in players:
+				var shot := _bank_shot_via(enemy, shape, pin, pin_radius, bounce_radius, target, table, top_speed)
+				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
+					best = shot
+		x += bank_grid_spacing
+	# The spot must really be free of walls and other pins too (checked once, for the winner).
+	if not best.is_empty() and not Arena.is_spot_free(space, table, best.pin, pin_radius):
+		return {}
+	return best
+
+
+func _pin_spot_clear(pin: Vector2, pin_radius: float, everyone: Array) -> bool:
+	for node in everyone:
+		var figure := node as Figure
+		if not figure.knocked_off and figure.global_position.distance_to(pin) < figure.radius + pin_radius + 12.0:
+			return false
+	return true
+
+
+func _bank_shot_via(enemy: Figure, shape: CircleShape2D, pin: Vector2, pin_radius: float, bounce_radius: float,
+		target: Figure, table: Rect2, top_speed: float) -> Dictionary:
+	var start := enemy.global_position
+	var goal := target.global_position
+	# Contact normal n (from the pin toward the shooter at the bounce): it bisects "back to the
+	# shooter" and "on to the target". A few rounds of refinement since the contact point depends on n.
+	var normal := ((start - pin).normalized() + (goal - pin).normalized())
+	if normal.length() < 0.2:
+		return {}
+	normal = normal.normalized()
+	for i in 4:
+		var contact_center := pin + normal * bounce_radius
+		var bisector := (start - contact_center).normalized() + (goal - contact_center).normalized()
+		if bisector.length() < 0.2:
+			return {}
+		normal = bisector.normalized()
+	var bounce_at := pin + normal * bounce_radius
+	var leg1 := start.distance_to(bounce_at)
+	if leg1 < enemy.radius + 20.0:
+		return {}
+	var direction := (bounce_at - start) / leg1
+	if direction.dot(normal) > -0.1:
+		return {}  # would not arrive at the pin from outside
+	var rebound := direction - 2.0 * direction.dot(normal) * normal  # mirror bounce
+	var leg2 := bounce_at.distance_to(goal)
+	if rebound.dot((goal - bounce_at) / leg2) < cos(deg_to_rad(4.0)):
+		return {}
+	# The lowest power that still arrives at the target with enough speed.
+	var speed := 0.0
+	var speed_after_pin := 0.0
+	for level in power_levels:
+		var v0 := level * top_speed
+		var v1 := v0 - enemy.linear_damp * leg1
+		if v1 <= enemy.stop_speed:
+			continue
+		var v2 := v1 * bank_pin_kick
+		if v2 - enemy.linear_damp * leg2 >= bank_min_hit_speed:
+			speed = v0
+			speed_after_pin = v2
+			break
+	if speed == 0.0:
+		return {}
+	if not _first_hit(enemy, shape, direction, leg1).is_empty():
+		return {}  # something is in the way of the first leg
+	var reach := minf((speed_after_pin - enemy.stop_speed) / enemy.linear_damp, leg2 + target.radius * 2.0)
+	var hit := _first_hit(enemy, shape, rebound, reach, bounce_at)
+	if hit.is_empty() or hit.collider == null or hit.collider.team != Figure.Team.PLAYER:
+		return {}
+	var other: Figure = hit.collider
+	var hit_distance: float = hit.distance
+	var hit_speed := maxf(speed_after_pin - enemy.linear_damp * hit_distance, 0.0)
+	var contact := bounce_at + rebound * hit_distance
+	var outcome := _predict_collision(enemy, other, rebound * hit_speed, contact)
+	var knocked_off := _leave_chance(other, other.global_position, outcome.target, table)
+	var pushed := _push_progress(other, other.global_position, outcome.target, table)
+	var score := hit_player_bonus + kill_bonus * knocked_off + edge_bonus * pushed
+	score -= self_knock_off_penalty * _leave_chance(enemy, contact, outcome.shooter, table)
+	score -= bank_shot_penalty + overpower_penalty * speed / top_speed
+	return {"kind": "attack", "score": score, "direction": direction, "speed": speed, "distance": leg1,
+			"pin": pin, "pin_radius": pin_radius, "target": other}
+
+
 # --- Repositioning -----------------------------------------------------------
 
 func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2) -> Dictionary:
@@ -356,11 +481,14 @@ func _travel_distance(figure: Figure, speed: float) -> float:
 
 ## Sweeps the shooter's circle along `direction` for `length` px. Returns the first figure it
 ## would touch and how far the shooter travels to do so, or {} if the path is clear.
-func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, length: float) -> Dictionary:
+func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, length: float,
+		from := Vector2.INF) -> Dictionary:
+	if from == Vector2.INF:
+		from = shooter.global_position  # (a bank shot's second leg starts at the pin)
 	var space := shooter.get_world_2d().direct_space_state
 	var query := PhysicsShapeQueryParameters2D.new()
 	query.shape = shape
-	query.transform = Transform2D(0.0, shooter.global_position)
+	query.transform = Transform2D(0.0, from)
 	query.motion = direction * length
 	query.collision_mask = shooter.collision_mask
 	query.exclude = [shooter.get_rid()]
@@ -375,13 +503,13 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 	touch_query.exclude = query.exclude
 	for result in space.intersect_shape(touch_query, 8):
 		var touching := result.collider as Figure
-		if touching != null and direction.dot((touching.global_position - shooter.global_position).normalized()) > 0.05:
+		if touching != null and direction.dot((touching.global_position - from).normalized()) > 0.05:
 			return {"collider": touching, "distance": 0.0}
 	var fractions := space.cast_motion(query)  # [safe, unsafe]; unsafe = 1 means nothing hit
 	if fractions.size() < 2 or fractions[1] >= 1.0:
 		return {}
 	# Ask what is overlapping the shape where it first touches something.
-	query.transform = Transform2D(0.0, shooter.global_position + direction * length * fractions[1])
+	query.transform = Transform2D(0.0, from + direction * length * fractions[1])
 	query.motion = Vector2.ZERO
 	var best: Figure = null
 	var best_distance := INF
@@ -389,7 +517,7 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 		var figure := result.collider as Figure
 		if figure == null:
 			continue
-		var distance := shooter.global_position.distance_to(figure.global_position)
+		var distance := from.distance_to(figure.global_position)
 		if distance < best_distance:
 			best = figure
 			best_distance = distance

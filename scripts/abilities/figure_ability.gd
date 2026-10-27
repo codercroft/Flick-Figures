@@ -126,3 +126,8 @@ func get_aura_knockback_multiplier(_figure: Figure) -> float:
 ## Called on the player's figures when an ENEMY figure is knocked off the table (Cha-ching pays).
 func on_opponent_knocked_off(_figure: Figure, _victim: Figure) -> void:
 	pass
+
+
+## Pinhead: the radius of the temporary pin this figure may place before it is flicked (0 = none).
+func get_pin_radius(_figure: Figure) -> float:
+	return 0.0
