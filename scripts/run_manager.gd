@@ -155,6 +155,11 @@ func relic_player_damping() -> float:
 	return _relic_product(&"get_player_damping_multiplier")
 
 
+## Shared strength of every explosion's push (RunConfig.explosion_force_multiplier).
+func explosion_force_multiplier() -> float:
+	return config.explosion_force_multiplier if config != null else 1.0
+
+
 func relic_knockback_taken(figure: Figure, source: Figure) -> float:
 	return _relic_product(&"get_knockback_taken_multiplier", [figure, source])
 

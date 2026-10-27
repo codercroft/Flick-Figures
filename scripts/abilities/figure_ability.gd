@@ -101,7 +101,28 @@ func get_wrap_count(_figure: Figure) -> int:
 	return 0
 
 
-## True while this figure plows through what it hits (Roller during its own flick): it does not
+## True while this figure pushes through what it hits (Pusher during its own flick): it does not
 ## rebound, so other abilities (Bumper's extra launch) leave it alone.
 func is_plowing(_figure: Figure) -> bool:
 	return false
+
+
+## AURA (Crazy Man): a radius (px) around this figure inside which its TEAMMATES get the two
+## multipliers below. 0 = no aura. The figure itself is not inside its own aura.
+func get_aura_radius(_figure: Figure) -> float:
+	return 0.0
+
+
+## Aura: flick power multiplier for teammates inside the radius.
+func get_aura_flick_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
+## Aura: multiplier on the knockback teammates inside the radius take (below 1 = tougher).
+func get_aura_knockback_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
+## Called on the player's figures when an ENEMY figure is knocked off the table (Cha-ching pays).
+func on_opponent_knocked_off(_figure: Figure, _victim: Figure) -> void:
+	pass

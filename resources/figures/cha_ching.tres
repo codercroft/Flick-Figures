@@ -1,11 +1,16 @@
-[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[ext_resource type="Script" path="res://scripts/abilities/cha_ching_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
 
 [resource]
 script = ExtResource("1")
 display_name = "Cha-ching"
-description = "No tricks, but earns an extra $2 if it is still on the table when you win."
+description = "Earns an extra $2 if it is still on the table when you win, and $1 for every enemy knocked off while it is."
 label = "CC"
 icon = 12
 color = Color(1, 0.76, 0.1, 1)
@@ -18,3 +23,4 @@ knockback_taken_multiplier = 1.0
 accuracy = 0.8
 rarity = 1
 income_bonus = 2
+ability = SubResource("Resource_1")

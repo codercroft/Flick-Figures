@@ -382,7 +382,7 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	if pull < min_pull_distance:
 		return Vector2.ZERO
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost \
-			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure) \
+			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure) * _aim_figure.aura_flick_multiplier() \
 			* RunManager.relic_flick_multiplier(self, _aim_figure)
 	return -drag.normalized() * (pull / max_pull) * full_force
 
@@ -563,7 +563,7 @@ func _force_settle() -> void:
 		figure.force_settle()
 
 
-## "Magnet 12px/s, Roller 40px/s" for the figures that have not settled.
+## "Magnet 12px/s, Pusher 40px/s" for the figures that have not settled.
 func _moving_report() -> String:
 	var parts: PackedStringArray = []
 	for figure in _all_figures():
@@ -688,6 +688,7 @@ func _all_figures() -> Array[Figure]:
 
 func _knock_off_fallen_figures() -> void:
 	var table: Rect2 = board.get_table_rect()
+	var fallen_enemies: Array[Figure] = []
 	for figure in _all_figures():
 		if not table.has_point(figure.global_position):
 			if figure.bubble_rounds > 0:
@@ -702,6 +703,13 @@ func _knock_off_fallen_figures() -> void:
 			_players.erase(figure)
 			_enemies.erase(figure)
 			figure.knock_off(knock_off_fade_time)
+			if figure.team == Figure.Team.ENEMY:
+				fallen_enemies.append(figure)
+	# Cha-ching and friends: your surviving figures react to each enemy that fell.
+	for victim in fallen_enemies:
+		for player in _players:
+			if _is_alive(player):
+				player.ability.on_opponent_knocked_off(player, victim)
 
 
 ## Bubble Shield: the figure stops right at the table edge instead of falling off.

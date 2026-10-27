@@ -86,3 +86,20 @@ func get_wrap_count(figure: Figure) -> int:
 
 func is_plowing(figure: Figure) -> bool:
 	return first.is_plowing(figure) or second.is_plowing(figure)
+
+
+func get_aura_radius(figure: Figure) -> float:
+	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
+
+
+func get_aura_flick_multiplier(figure: Figure) -> float:
+	return first.get_aura_flick_multiplier(figure) * second.get_aura_flick_multiplier(figure)
+
+
+func get_aura_knockback_multiplier(figure: Figure) -> float:
+	return first.get_aura_knockback_multiplier(figure) * second.get_aura_knockback_multiplier(figure)
+
+
+func on_opponent_knocked_off(figure: Figure, victim: Figure) -> void:
+	first.on_opponent_knocked_off(figure, victim)
+	second.on_opponent_knocked_off(figure, victim)

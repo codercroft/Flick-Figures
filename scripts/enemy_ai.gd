@@ -112,8 +112,9 @@ func _shot_rank(shot: Dictionary) -> float:
 func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
-	var max_speed := max_force * enemy.data.flick_power_multiplier / enemy.mass
-	var top_speed := minf(max_speed, reference_speed * enemy.data.flick_power_multiplier)
+	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier()
+	var max_speed := max_force * power / enemy.mass
+	var top_speed := minf(max_speed, reference_speed * power)
 
 	var best := {}
 	for target in players:
@@ -213,8 +214,10 @@ func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, cont
 	var total_mass := shooter.mass + target.mass
 	var shooter_change := -(1.0 + bounce) * target.mass / total_mass * closing * normal
 	var target_change := (1.0 + bounce) * shooter.mass / total_mass * closing * normal
-	shooter_change *= shooter.data.knockback_taken_multiplier * shooter.ability.get_knockback_multiplier(shooter, target)
-	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter)
+	shooter_change *= shooter.data.knockback_taken_multiplier * shooter.ability.get_knockback_multiplier(shooter, target) \
+			* shooter.aura_knockback_multiplier()
+	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter) \
+			* target.aura_knockback_multiplier()
 	return {"shooter": velocity + shooter_change, "target": target_change}
 
 
@@ -304,22 +307,44 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 	var best := {}
 	var best_score := -INF
 	var safe_area := table.grow(-reposition_edge_margin)
-	for i in 8:
-		var direction := Vector2.from_angle(TAU * i / 8.0)
-		var end := _flight_end(enemy, enemy.global_position, direction * (reposition_distance * enemy.linear_damp + enemy.stop_speed), table)
-		if not safe_area.has_point(end):
+	var inside := table.grow(-enemy.radius)
+	# An enemy already close to the edge can't end up inside the safe area with a short flick, so
+	# for it any shot that gets clearly farther from the edge counts (it still must not fall off).
+	var start_margin := _edge_margin(enemy.global_position, table)
+	var near_edge := start_margin < reposition_edge_margin
+	var speed := reposition_distance * enemy.linear_damp + enemy.stop_speed
+	for i in 16:
+		var direction := Vector2.from_angle(TAU * i / 16.0)
+		var end := _flight_end(enemy, enemy.global_position, direction * speed, table)
+		var end_margin := _edge_margin(end, table)
+		if near_edge:
+			if not inside.has_point(end) or end_margin < start_margin + 40.0:
+				continue
+		elif not safe_area.has_point(end):
 			continue
 		# A little extra length so we don't end up nearly touching something.
 		if not _first_hit(enemy, shape, direction, reposition_distance + 30.0).is_empty():
 			continue
-		# Prefer ending up closer to the nearest player figure.
+		# Prefer ending up closer to the nearest player figure (and, near the edge, farther from it).
 		var score := -_nearest_distance(end, players)
+		if near_edge:
+			score += 2.0 * minf(end_margin, reposition_edge_margin)
 		if score > best_score:
 			best_score = score
 			best = {"kind": "reposition", "score": score, "direction": direction,
-					"speed": reposition_distance * enemy.linear_damp + enemy.stop_speed,
-					"distance": reposition_distance}
+					"speed": speed, "distance": reposition_distance}
+	if best.is_empty() and near_edge:
+		# Boxed in: a gentle flick straight toward the middle of the table is better than passing.
+		var inward := (table.get_center() - enemy.global_position).normalized()
+		best = {"kind": "reposition", "score": 0.0, "direction": inward,
+				"speed": speed * 0.6, "distance": reposition_distance * 0.6}
 	return best
+
+
+## Distance from a point to the nearest table edge (negative outside the table).
+func _edge_margin(pos: Vector2, table: Rect2) -> float:
+	return minf(minf(pos.x - table.position.x, table.end.x - pos.x),
+			minf(pos.y - table.position.y, table.end.y - pos.y))
 
 
 # --- Prediction helpers ------------------------------------------------------

@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Crazy Man"
-description = "Extremely bouncy. Rebounds faster."
+description = "Extremely bouncy. Teammates close by flick 50% harder and take 1.5x less knockback."
 rarity = 1
 label = "CM"
 icon = 5

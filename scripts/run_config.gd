@@ -22,6 +22,8 @@ extends Resource
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []
 ## Money the run starts with.
+## Multiplies the push of EVERY explosion (Bombo, Sneaky Bomber, Firecracker, Short Fuse, Bomb Drop).
+@export var explosion_force_multiplier := 1.3
 @export var starting_money := 0
 ## Money earned at the end of a won combat for each of your figures still on the table.
 @export var income_per_figure := 1

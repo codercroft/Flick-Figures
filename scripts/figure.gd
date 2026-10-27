@@ -25,7 +25,7 @@ const ENEMY_RING := Color(0.95, 0.15, 0.15)
 const KNOCKBACK_MIN_CHANGE := 60.0
 const BLAST_RING_TIME := 0.35
 ## Ability numbers that the Glow-in-the-dark finish makes stronger (radius, pull, bounce).
-const STRENGTH_PROPERTIES := ["explosion_radius", "pull_radius", "pull_acceleration", "bounce_boost", "bump_ratio", "nudge_speed"]
+const STRENGTH_PROPERTIES := ["explosion_radius", "pull_radius", "pull_acceleration", "bounce_boost", "bump_ratio", "nudge_speed", "aura_radius"]
 
 var team := Team.PLAYER
 var data: FigureData  # may be a modified copy of base_data (upgrades and finishes change stats)
@@ -163,7 +163,7 @@ func _ready() -> void:
 	lock_rotation = true
 	can_sleep = false
 	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
-	continuous_cd = RigidBody2D.CCD_MODE_CAST_RAY
+	continuous_cd = RigidBody2D.CCD_MODE_CAST_SHAPE
 	contact_monitor = true
 	max_contacts_reported = 8
 	body_entered.connect(_on_body_entered)
@@ -239,6 +239,11 @@ func _update_collision() -> void:
 
 
 func _draw() -> void:
+	# A faint circle shows the aura (Crazy Man) around the figure.
+	var aura_radius := ability.get_aura_radius(self)
+	if aura_radius > 0.0:
+		draw_circle(Vector2.ZERO, aura_radius, Color(data.color, 0.08))
+		draw_arc(Vector2.ZERO, aura_radius, 0.0, TAU, 72, Color(data.color, 0.3), 4.0, true)
 	var greyed := team == Team.PLAYER and not flickable
 	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
 	# The body squashes/stretches along _squash_angle; the details on top only grow.
@@ -302,7 +307,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	elif state.get_contact_count() > 0:
 		var hitter := _hardest_hitter(state)
 		var multiplier := data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, hitter) \
-				* RunManager.relic_knockback_taken(self, hitter)
+				* RunManager.relic_knockback_taken(self, hitter) * aura_knockback_multiplier()
 		if hitter != null:
 			var impact := maxf((_last_velocity - hitter._last_velocity).length(),
 					(_prev_velocity - hitter._prev_velocity).length())
@@ -372,6 +377,37 @@ func _on_body_entered(body: Node) -> void:
 		ability.on_hit_wall.call_deferred(self, body)
 
 
+## Flick power multiplier from teammates' auras (Crazy Man) that this figure stands inside.
+func aura_flick_multiplier() -> float:
+	var multiplier := 1.0
+	for source in _aura_sources():
+		multiplier *= source.ability.get_aura_flick_multiplier(source)
+	return multiplier
+
+
+## Knockback-taken multiplier from teammates' auras (below 1 = tougher).
+func aura_knockback_multiplier() -> float:
+	var multiplier := 1.0
+	for source in _aura_sources():
+		multiplier *= source.ability.get_aura_knockback_multiplier(source)
+	return multiplier
+
+
+## Teammates (not this figure) whose aura reaches this figure.
+func _aura_sources() -> Array[Figure]:
+	var sources: Array[Figure] = []
+	if not is_inside_tree():
+		return sources
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == self or other.knocked_off or other.team != team or other.ability == null:
+			continue
+		var reach := other.ability.get_aura_radius(other)
+		if reach > 0.0 and other.global_position.distance_to(global_position) <= reach:
+			sources.append(other)
+	return sources
+
+
 ## Below the settle speed right now (not necessarily stopped for good yet).
 func is_slow() -> bool:
 	return linear_velocity.length() < stop_speed
@@ -413,7 +449,7 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 		return
 	_skip_knockback_frames = 2
 	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source)
-			* RunManager.relic_knockback_taken(self, source))
+			* RunManager.relic_knockback_taken(self, source) * aura_knockback_multiplier())
 
 
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
@@ -495,6 +531,7 @@ func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 ## figure within blast_radius away, except `source` and `spared`.
 static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: float,
 		source: Figure = null, spared: Figure = null) -> void:
+	force *= RunManager.explosion_force_multiplier()
 	for node in tree.get_nodes_in_group("figures"):
 		var other := node as Figure
 		if other == source or other == spared or other.knocked_off:

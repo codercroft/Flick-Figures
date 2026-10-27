@@ -13,6 +13,10 @@ extends Resource
 @export var patches: Array[ArenaPatch] = []
 
 
+## Boost patches must stay at least this far (px) from the left and right edges of the board.
+const BOOST_SIDE_MARGIN := 150
+
+
 ## Problems with this layout (empty if it looks fine) for a board of the given size.
 func get_warnings(board_size: Vector2) -> PackedStringArray:
 	var warnings: PackedStringArray = []
@@ -26,4 +30,8 @@ func get_warnings(board_size: Vector2) -> PackedStringArray:
 	for patch in patches:
 		if patch.position.y + patch.size.y / 2.0 > board_size.y + 1.0:
 			warnings.append("patch at %s reaches into the deck strip" % patch.position)
+		# A boost near a side edge can push figures straight off the table.
+		if patch.kind == ArenaPatch.Kind.BOOST and minf(patch.position.x - patch.size.x / 2.0,
+				board_size.x - patch.position.x - patch.size.x / 2.0) < BOOST_SIDE_MARGIN:
+			warnings.append("boost patch at %s is within %d px of a side edge" % [patch.position, BOOST_SIDE_MARGIN])
 	return warnings

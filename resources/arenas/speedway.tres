@@ -20,8 +20,8 @@ rotation_degrees = 0.0
 [sub_resource type="Resource" id="patch_1"]
 script = ExtResource("4")
 kind = 1
-position = Vector2(170, 640)
-size = Vector2(160, 420)
+position = Vector2(270, 640)
+size = Vector2(150, 420)
 direction_degrees = -90
 turn = 1
 strength = 1.0
@@ -29,8 +29,8 @@ strength = 1.0
 [sub_resource type="Resource" id="patch_2"]
 script = ExtResource("4")
 kind = 1
-position = Vector2(730, 640)
-size = Vector2(160, 420)
+position = Vector2(630, 640)
+size = Vector2(150, 420)
 direction_degrees = -90
 turn = 1
 strength = 1.0
