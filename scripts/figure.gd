@@ -629,6 +629,7 @@ func set_size(new_radius: float, new_mass: float) -> void:
 
 ## Called by main.gd at the start of each round: powers that last "a round" count down here.
 func tick_round() -> void:
+	ability.on_round_ticked(self)
 	if frozen_rounds > 0:
 		frozen_rounds -= 1
 		if frozen_rounds == 0:

@@ -65,6 +65,7 @@ var _last_player_flicker: Figure
 var _bonus_figure: Figure  # Speedo: the figure that may take its extra flick right now
 var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager, grows with splits)
 var _last_flicker: Figure  # the enemy that flicked last (for no_repeat_enemy)
+var _enemy_cycle := {}  # enemies that have flicked since the enemy side's flicks last reset (instance ids)
 var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
@@ -227,7 +228,7 @@ func _start_player_turn(new_round := true) -> void:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
 	_bonus_figure = null
-	arena.remove_temp_pins()
+	arena.prune_temp_pins()
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
@@ -249,6 +250,7 @@ func _start_player_turn(new_round := true) -> void:
 
 ## Everyone has gone: the whole squad can be flicked again from where they stand.
 func _make_all_flickable() -> void:
+	arena.remove_team_pins(Figure.Team.PLAYER)  # the player side's flick cycle reset: its Pinhead pins go
 	for figure in _players:
 		if _is_alive(figure):
 			figure.flickable = true
@@ -291,8 +293,6 @@ func _select(figure: Figure) -> void:
 func _deselect() -> void:
 	if is_instance_valid(_selected):
 		_selected.selected = false
-		if _selected.flickable:
-			arena.remove_temp_pins(_selected)  # a Pinhead that was not flicked takes its pin back
 	_selected = null
 
 
@@ -437,7 +437,6 @@ func _finish_player_turn() -> void:
 	await _wait_until_settled()
 	if serial != _turn_serial:
 		return
-	arena.remove_temp_pins()  # Pinhead's pin goes once its flick has settled
 	if _check_game_over():
 		return
 	if _has_flick_left(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
@@ -469,6 +468,7 @@ func _run_enemy_turn() -> void:
 	var flicks_taken := 0
 	while flicks_taken < _enemy_flicks:
 		flicks_taken += 1
+		_refresh_enemy_cycle()
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		if serial != _turn_serial:
 			return
@@ -479,13 +479,13 @@ func _run_enemy_turn() -> void:
 		if choice.is_empty() or not _is_alive(choice.enemy):
 			break  # nothing good and nothing safe: the enemy side passes
 		_last_flicker = choice.enemy
+		_enemy_cycle[choice.enemy.get_instance_id()] = true
 		if choice.has("pin"):  # an enemy Pinhead sets up a bank shot
 			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
 		choice.enemy.launch(choice.impulse)
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
-		arena.remove_temp_pins()
 		if _check_game_over():
 			return
 		# Speedo-style extra flicks: only taken when the shot scores well.
@@ -527,6 +527,18 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 	_start_player_turn()
+
+
+## When every enemy that can flick has flicked, the enemy side's cycle resets (they could all flick again):
+## their Pinhead pins go away. (The player side does the same in _make_all_flickable.)
+func _refresh_enemy_cycle() -> void:
+	arena.prune_temp_pins()
+	for enemy in _enemies:
+		if _is_alive(enemy) and enemy.data.can_flick and not enemy.is_frozen() \
+				and not _enemy_cycle.has(enemy.get_instance_id()):
+			return
+	_enemy_cycle.clear()
+	arena.remove_team_pins(Figure.Team.ENEMY)
 
 
 ## The enemies allowed to flick right now: alive, able to flick, and not the one that flicked

@@ -366,9 +366,10 @@ func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, cont
 	if shooter_bounce < 0.0:
 		shooter_bounce = shooter.data.bounce
 	var bounce := clampf(shooter_bounce + target.data.bounce, 0.0, 1.0)
-	var total_mass := shooter.mass + target.mass
+	var shooter_mass := shooter.mass * shooter.ability.get_hit_mass_multiplier(shooter)  # Pusher hits heavier
+	var total_mass := shooter_mass + target.mass
 	var shooter_change := -(1.0 + bounce) * target.mass / total_mass * closing * normal
-	var target_change := (1.0 + bounce) * shooter.mass / total_mass * closing * normal
+	var target_change := (1.0 + bounce) * shooter_mass / total_mass * closing * normal
 	shooter_change *= shooter.data.knockback_taken_multiplier * shooter.ability.get_knockback_multiplier(shooter, target) \
 			* shooter.aura_knockback_multiplier()
 	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter) \

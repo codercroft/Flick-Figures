@@ -176,3 +176,13 @@ func draw_body(_figure: Figure) -> void:
 ## A figure hit one of this figure's EXTRA collision shapes (`shape_node`) at relative speed `speed`.
 func on_shape_hit(_figure: Figure, _other: Figure, _shape_node: Node, _speed: float) -> void:
 	pass
+
+
+## ENEMY AI HINT: multiplier on this figure's mass when it hits something during its own flick (Pusher).
+func get_hit_mass_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
+## Called on every figure at the start of each round (the player's turn start): short effects wear off.
+func on_round_ticked(_figure: Figure) -> void:
+	pass

@@ -145,3 +145,12 @@ func draw_body(figure: Figure) -> void:
 func on_shape_hit(figure: Figure, other: Figure, shape_node: Node, speed: float) -> void:
 	first.on_shape_hit(figure, other, shape_node, speed)
 	second.on_shape_hit(figure, other, shape_node, speed)
+
+
+func get_hit_mass_multiplier(figure: Figure) -> float:
+	return first.get_hit_mass_multiplier(figure) * second.get_hit_mass_multiplier(figure)
+
+
+func on_round_ticked(figure: Figure) -> void:
+	first.on_round_ticked(figure)
+	second.on_round_ticked(figure)

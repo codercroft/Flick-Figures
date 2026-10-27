@@ -244,6 +244,7 @@ func toggle_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: R
 
 ## Places a temporary pin if the spot is free. Returns whether it was placed.
 func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2) -> bool:
+	remove_temp_pins(owner_figure)  # a new pin replaces the old one
 	if not is_spot_free(get_world_2d().direct_space_state, board, pos, radius):
 		return false
 	var pin := TempPin.new()
@@ -269,6 +270,26 @@ func remove_temp_pins(owner_figure: Figure = null) -> void:
 		var pin := _temp_pins[i]
 		if owner_figure == null or pin.owner_figure == owner_figure or not is_instance_valid(pin.owner_figure):
 			remove_child(pin)  # out of the physics space right away (queue_free alone waits a frame)
+			pin.queue_free()
+			_temp_pins.remove_at(i)
+
+
+## Removes every temporary pin that belongs to a figure of `team` (that side's flick cycle reset).
+func remove_team_pins(team: int) -> void:
+	for i in range(_temp_pins.size() - 1, -1, -1):
+		var pin := _temp_pins[i]
+		if not is_instance_valid(pin.owner_figure) or pin.owner_figure.team == team:
+			remove_child(pin)
+			pin.queue_free()
+			_temp_pins.remove_at(i)
+
+
+## Removes pins whose Pinhead is gone (knocked off).
+func prune_temp_pins() -> void:
+	for i in range(_temp_pins.size() - 1, -1, -1):
+		var pin := _temp_pins[i]
+		if not is_instance_valid(pin.owner_figure) or pin.owner_figure.knocked_off:
+			remove_child(pin)
 			pin.queue_free()
 			_temp_pins.remove_at(i)
 

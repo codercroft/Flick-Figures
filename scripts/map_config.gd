@@ -14,10 +14,12 @@ extends Resource
 ## Elites only appear from this column on (default: the middle of the act). Always optional.
 @export var elite_from_column := 3
 @export_range(0.0, 1.0) var elite_chance := 0.25
-## Shops: this many (1-3) are placed at random nodes each act, chosen so that EVERY path from the
-## start to the boss passes at least one. (If that is impossible with this few, the map is rerolled.)
-@export var shop_count_min := 1
-@export var shop_count_max := 3
+## Shops: how many each act gets (1 to 3, at random, about 2 on average). Entry 0 is the weight of
+## one shop, entry 1 of two shops, entry 2 of three: [1, 2, 1] = 25% / 50% / 25%.
+@export var shop_count_weights: Array[float] = [1.0, 2.0, 1.0]
+## Shops only appear from this row on (0 = first row, so 2 = the 3rd row). Never two in the same row.
+## Nothing guarantees that every path passes a shop.
+@export var shop_from_column := 2
 ## The chest row: this whole column (0 = first) is made of treasure chests, so every path passes
 ## exactly one chest, at the same place on every act's map (the middle). Chests always give a relic.
 @export var chest_column := 2

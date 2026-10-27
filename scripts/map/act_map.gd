@@ -58,16 +58,10 @@ static func generate(config: MapConfig, rng: RandomNumberGenerator = null) -> Ac
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 		rng.randomize()
-	# Rarely a layout has no way to cover every path with a few shops; just roll another one.
-	for attempt in 200:
-		var map := _generate_once(config, rng)
-		if map != null:
-			return map
-	push_warning("ActMap: no valid layout in 200 tries, using the last one")
-	return _generate_once(config, rng, true)
+	return _generate_once(config, rng)
 
 
-static func _generate_once(config: MapConfig, rng: RandomNumberGenerator, force := false) -> ActMap:
+static func _generate_once(config: MapConfig, rng: RandomNumberGenerator) -> ActMap:
 	var map := ActMap.new()
 	map.columns = config.columns
 	map.lanes = config.lanes
@@ -131,8 +125,7 @@ static func _generate_once(config: MapConfig, rng: RandomNumberGenerator, force 
 	map.boss_id = boss.id
 	for id in map.column_ids(config.columns - 1):
 		map.nodes[id].next.append(boss.id)
-	if not map._assign_types(config, rng) and not force:
-		return null
+	map._assign_types(config, rng)
 	return map
 
 
@@ -143,23 +136,24 @@ static func _has_incoming(map: ActMap, column: int, id: int) -> bool:
 	return false
 
 
-## Gives every node its type. Returns false if no shop placement covers every path.
-func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> bool:
+## Gives every node its type.
+func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
 	# The chest row: ONE whole column of chests, so every path passes exactly one chest.
 	var chest_column := clampi(config.chest_column, 1, columns - 1)
 	for node in nodes:
 		if node.column == chest_column and node.type != MapNode.Type.BOSS:
 			node.type = MapNode.Type.TREASURE
-	# Shops: a few random nodes that together sit on every path.
-	var eligible: Array[int] = []
-	for node in nodes:
-		if node.column >= 1 and node.column != chest_column and node.type != MapNode.Type.BOSS:
-			eligible.append(node.id)
-	var shops := _random_shop_cover(eligible, config.shop_count_min, config.shop_count_max, rng)
-	if shops.is_empty():
-		return false
-	for id in shops:
-		nodes[id].type = MapNode.Type.SHOP
+	# Shops: a random number (shop_count_weights), each in its own row (column), never before row
+	# shop_from_column, and not in the chest row. There is no guarantee that a path reaches one.
+	var rows: Array[int] = []
+	for column in range(config.shop_from_column, columns):
+		if column != chest_column:
+			rows.append(column)
+	rows.shuffle()
+	for i in mini(_shop_count(config, rng), rows.size()):
+		var in_row: Array[int] = column_ids(rows[i])
+		if not in_row.is_empty():
+			nodes[in_row[rng.randi_range(0, in_row.size() - 1)]].type = MapNode.Type.SHOP
 	# Elites: only from the middle on, never forced, at least one per act.
 	for node in nodes:
 		if node.type == MapNode.Type.COMBAT and node.column >= config.elite_from_column \
@@ -172,55 +166,23 @@ func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> bool:
 			later.append(column)
 		_convert_random(MapNode.Type.ELITE, later, rng)
 		_make_elites_optional()
-	return true
 
 
-## A random set of `min_count` to `max_count` of the `eligible` nodes such that every path from the
-## start to the boss passes at least one of them. Empty if there is none.
-func _random_shop_cover(eligible: Array[int], min_count: int, max_count: int, rng: RandomNumberGenerator) -> Array[int]:
-	var by_size := {}  # set size -> every covering set of that size
-	var pick: Array[int] = []
-	_collect_covers(eligible, 0, pick, clampi(max_count, 1, 4), by_size)
-	var sizes: Array[int] = []
-	for size in by_size:
-		if size >= min_count:
-			sizes.append(size)
-	if sizes.is_empty():
-		return []
-	var covers: Array = by_size[sizes[rng.randi_range(0, sizes.size() - 1)]]
-	var chosen: Array = covers[rng.randi_range(0, covers.size() - 1)]
-	var result: Array[int] = []
-	result.assign(chosen)
-	return result
-
-
-func _collect_covers(eligible: Array[int], start: int, pick: Array[int], max_count: int, by_size: Dictionary) -> void:
-	if not pick.is_empty() and _covers_every_path(pick):
-		if not by_size.has(pick.size()):
-			by_size[pick.size()] = []
-		by_size[pick.size()].append(pick.duplicate())
-		return  # adding more nodes to a covering set would only be a bigger version of it
-	if pick.size() >= max_count:
-		return
-	for i in range(start, eligible.size()):
-		pick.append(eligible[i])
-		_collect_covers(eligible, i + 1, pick, max_count, by_size)
-		pick.pop_back()
-
-
-## True if the boss cannot be reached from the start without passing one of `blocked` nodes.
-func _covers_every_path(blocked: Array[int]) -> bool:
-	var open := {}
-	for id in column_ids(0):
-		open[id] = true
-	for column in columns:
-		for id in column_ids(column):
-			if not open.has(id):
-				continue
-			for next_id in nodes[id].next:
-				if not blocked.has(next_id):
-					open[next_id] = true
-	return not open.has(boss_id)
+## How many shops this act gets: 1 to 3, picked with the weights in shop_count_weights
+## (entry 0 = one shop, entry 1 = two shops...).
+func _shop_count(config: MapConfig, rng: RandomNumberGenerator) -> int:
+	var weights := config.shop_count_weights
+	if weights.is_empty():
+		return 2
+	var total := 0.0
+	for weight in weights:
+		total += weight
+	var roll := rng.randf() * total
+	for i in weights.size():
+		roll -= weights[i]
+		if roll <= 0.0:
+			return i + 1
+	return weights.size()
 
 
 func _has_type(node_type: MapNode.Type) -> bool:
