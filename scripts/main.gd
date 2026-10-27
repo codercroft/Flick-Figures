@@ -663,6 +663,8 @@ func _spawn_enemies() -> void:
 		# Stagger every other enemy so they are not in a straight line.
 		# Big figures start a bit lower so they don't overlap the arena's top wall.
 		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
+		if RunManager.enemies[i].spawn_margin > 0.0:
+			top_margin = RunManager.enemies[i].spawn_margin
 		var stagger := 0.0 if RunManager.enemies_in_row else 120.0 * (i % 2)
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + stagger)
 		if i < RunManager.enemy_positions.size() and RunManager.enemy_positions[i] != Vector2.INF:
@@ -681,10 +683,29 @@ func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: Equi
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
 	figure.split_requested.connect(_on_split_requested)
+	figure.shed_requested.connect(_on_shed_requested)
 	figure.on_deck = team == Figure.Team.PLAYER
 	figure.position = pos
 	figures_root.add_child(figure)
 	return figure
+
+
+## A figure sheds pieces but stays (Skull-o-tron loses an arm): the pieces join its team as new figures.
+func _on_shed_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> void:
+	if not _is_alive(parent):
+		return
+	for piece in pieces:
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, null, parent.scale_factors)
+		spawned.apply_central_impulse(piece.velocity * spawned.mass)
+		if parent.team == Figure.Team.ENEMY:
+			_enemies.append(spawned)
+		else:
+			spawned.on_deck = false
+			spawned.flickable = false
+			spawned.deck_position = parent.deck_position
+			_players.append(spawned)
+	if grants_flicks and parent.team == Figure.Team.ENEMY:
+		_enemy_flicks = mini(_enemy_flicks + flicks_per_split * pieces.size(), maxi(max_enemy_flicks, _enemy_flicks))
 
 
 ## A figure (a Slime) splits: spawn its pieces on its team, then remove it. The pieces are new

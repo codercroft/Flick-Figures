@@ -105,6 +105,6 @@ func _draw_node(font: Font, node: MapNode, is_reachable: bool) -> void:
 	if node.id == RunManager.current_node:
 		draw_arc(center, radius + 6.0, 0.0, TAU, 40, Color.WHITE, 5.0, true)
 	var ink := text_color if (is_reachable or node.visited) else dim_text_color
-	MapIcons.draw(self, font, node.type, center, radius, ink, RunManager.boss.map_label)
+	MapIcons.draw(self, font, node.type, center, radius, ink, RunManager.boss.map_label, RunManager.boss.map_icon)
 	if node.visited:
 		draw_polyline(PackedVector2Array([center + Vector2(-12, 26), center + Vector2(-3, 36), center + Vector2(16, 14)]), Color.WHITE, 6.0, true)

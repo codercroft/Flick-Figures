@@ -8,6 +8,8 @@ extends Resource
 ## Placeholder text and color for this boss's node on the run map.
 @export var map_label := "B"
 @export var map_color := Color(0.8, 0.2, 0.2)
+## Optional little icon drawn above the label on the map (FigureIcons.Icon, 0 = none).
+@export var map_icon: FigureIcons.Icon = FigureIcons.Icon.NONE
 ## The enemy figures for the boss fight, left to right.
 @export var enemies: Array[FigureData] = []
 ## How many flicks the enemy side takes per turn in this fight (each one is the best shot of

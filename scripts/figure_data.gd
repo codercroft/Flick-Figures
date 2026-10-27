@@ -35,3 +35,5 @@ extends Resource
 @export var pays_income := true
 ## Optional special behavior. Pick a FigureAbility subclass (e.g. BomboAbility) in the Inspector.
 @export var ability: FigureAbility
+## Bosses with a big body: distance (px) from the top of the board where it starts (0 = the normal margin).
+@export var spawn_margin := 0.0

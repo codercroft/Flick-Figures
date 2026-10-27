@@ -30,7 +30,7 @@ static func color_for(node_type: MapNode.Type, boss_color: Color) -> Color:
 
 
 ## Swords for combat, a star for elite, $ for shop, a chest for treasure, a label for the boss.
-static func draw(canvas: CanvasItem, font: Font, node_type: MapNode.Type, c: Vector2, r: float, ink: Color, boss_label := "B") -> void:
+static func draw(canvas: CanvasItem, font: Font, node_type: MapNode.Type, c: Vector2, r: float, ink: Color, boss_label := "B", boss_icon := FigureIcons.Icon.NONE) -> void:
 	match node_type:
 		MapNode.Type.COMBAT:
 			canvas.draw_line(c + Vector2(-r, -r) * 0.5, c + Vector2(r, r) * 0.5, ink, maxf(r * 0.16, 2.0), true)
@@ -49,4 +49,8 @@ static func draw(canvas: CanvasItem, font: Font, node_type: MapNode.Type, c: Vec
 			canvas.draw_arc(c + Vector2(0.0, -r * 0.1), r * 0.55, PI, TAU, 12, ink, w, true)
 			canvas.draw_circle(c + Vector2(0.0, r * 0.2), maxf(r * 0.12, 2.0), ink)
 		MapNode.Type.BOSS:
-			canvas.draw_string(font, c + Vector2(-r, r * 0.3), boss_label, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, int(r * 0.9), ink)
+			if boss_icon != FigureIcons.Icon.NONE:
+				FigureIcons.draw(canvas, boss_icon, c + Vector2(0.0, -r * 0.28), r * 0.42, ink)
+				canvas.draw_string(font, c + Vector2(-r, r * 0.62), boss_label, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, int(r * 0.5), ink)
+			else:
+				canvas.draw_string(font, c + Vector2(-r, r * 0.3), boss_label, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, int(r * 0.9), ink)

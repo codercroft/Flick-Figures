@@ -159,3 +159,20 @@ func get_flick_bounce(_figure: Figure) -> float:
 ## True if this figure never rebounds after hitting something during its own flick (Pusher).
 func cancels_rebound(_figure: Figure) -> bool:
 	return false
+
+
+## BODY HOOKS (bosses with a custom shape, Skull-o-tron).
+
+## Called once when the figure is ready: add extra collision shapes, allow spinning...
+func setup_body(_figure: Figure) -> void:
+	pass
+
+
+## Drawn first, under the round body, in the figure's own (rotating) coordinates.
+func draw_body(_figure: Figure) -> void:
+	pass
+
+
+## A figure hit one of this figure's EXTRA collision shapes (`shape_node`) at relative speed `speed`.
+func on_shape_hit(_figure: Figure, _other: Figure, _shape_node: Node, _speed: float) -> void:
+	pass

@@ -63,7 +63,7 @@ func _draw() -> void:
 			draw_arc(c, r + 3.0 + 2.0 * sin(_time * 4.0 + node.id), 0.0, TAU, 28, Color(1.0, 0.85, 0.3), 3.0, true)
 		if node.id == RunManager.current_node:
 			draw_arc(c, r + 4.0, 0.0, TAU, 28, Color.WHITE, 3.0, true)
-		MapIcons.draw(self, font, node.type, c, r, Color(0.92, 0.94, 1.0), RunManager.boss.map_label)
+		MapIcons.draw(self, font, node.type, c, r, Color(0.92, 0.94, 1.0), RunManager.boss.map_label, RunManager.boss.map_icon)
 	# "You are here": a marker at the start of the act, or the ringed node.
 	if RunManager.current_node == -1:
 		draw_string(font, Vector2(8.0, size.y - 6.0), "Start of the act", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.7, 0.75, 0.85))

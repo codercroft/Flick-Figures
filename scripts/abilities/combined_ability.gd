@@ -130,3 +130,18 @@ func get_flick_bounce(figure: Figure) -> float:
 
 func cancels_rebound(figure: Figure) -> bool:
 	return first.cancels_rebound(figure) or second.cancels_rebound(figure)
+
+
+func setup_body(figure: Figure) -> void:
+	first.setup_body(figure)
+	second.setup_body(figure)
+
+
+func draw_body(figure: Figure) -> void:
+	first.draw_body(figure)
+	second.draw_body(figure)
+
+
+func on_shape_hit(figure: Figure, other: Figure, shape_node: Node, speed: float) -> void:
+	first.on_shape_hit(figure, other, shape_node, speed)
+	second.on_shape_hit(figure, other, shape_node, speed)

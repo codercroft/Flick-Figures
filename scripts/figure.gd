@@ -10,6 +10,8 @@ signal fell_off(figure: Figure)
 ## A figure wants to be replaced by new figures (Slime splitting). `pieces` is an array of
 ## {data, position, velocity} dictionaries; main.gd spawns them and removes `parent`.
 signal split_requested(parent: Figure, pieces: Array, grants_flicks: bool)
+## A figure sheds pieces but stays itself (Skull-o-tron's arms): main.gd spawns them.
+signal shed_requested(parent: Figure, pieces: Array, grants_flicks: bool)
 
 enum Team { PLAYER, ENEMY }
 
@@ -167,6 +169,7 @@ func _ready() -> void:
 	contact_monitor = true
 	max_contacts_reported = 8
 	body_entered.connect(_on_body_entered)
+	body_shape_entered.connect(_on_body_shape_entered)
 	add_to_group("figures")
 	if finish != null:
 		if finish.look == FinishData.Look.TRANSLUCENT:
@@ -188,6 +191,7 @@ func _ready() -> void:
 	add_child(collision)
 
 	_update_collision()
+	ability.setup_body(self)
 
 
 ## The toy finish drawn on top of the body: sparkle, sheen, glow or rubber (translucent is
@@ -239,6 +243,7 @@ func _update_collision() -> void:
 
 
 func _draw() -> void:
+	ability.draw_body(self)
 	# A faint circle shows the aura (Crazy Man) around the figure.
 	var aura_radius := ability.get_aura_radius(self)
 	if aura_radius > 0.0:
@@ -248,11 +253,11 @@ func _draw() -> void:
 	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
 	# The body squashes/stretches along _squash_angle; the details on top only grow.
 	var stretch := maxf(1.0 + _squash_amount, 0.2)
-	draw_set_transform(Vector2.ZERO, _squash_angle, Vector2(stretch, 1.0 / stretch) * (1.0 + _pop))
+	draw_set_transform(Vector2.ZERO, _squash_angle - rotation, Vector2(stretch, 1.0 / stretch) * (1.0 + _pop))
 	draw_circle(Vector2.ZERO, radius, fill)
 	# The ring shows which side the figure is on (any figure can be on either side).
 	draw_arc(Vector2.ZERO, radius - 4.0, 0.0, TAU, 48, ENEMY_RING if team == Team.ENEMY else PLAYER_RING, 8.0, true)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * (1.0 + _pop))
+	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE * (1.0 + _pop))
 	if selected:
 		draw_arc(Vector2.ZERO, radius + 10.0, 0.0, TAU, 48, Color(1.0, 0.9, 0.3), 8.0, true)
 	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
@@ -270,7 +275,7 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(-radius, -radius * 0.08), label,
 				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
 		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
 	if upgrade != null:
 		# A little gold pip in the upper right marks a figure-specific upgrade.
 		var pip := Vector2(radius, -radius) * 0.66
@@ -422,6 +427,17 @@ func _aura_sources() -> Array[Figure]:
 	return sources
 
 
+## A hit on one of the body's collision shapes: lets the ability react to hits on extra shapes (arms).
+func _on_body_shape_entered(_body_rid: RID, body: Node, _body_shape: int, local_shape: int) -> void:
+	var other := body as Figure
+	if other == null or local_shape == 0:
+		return
+	var shape_node := shape_owner_get_owner(shape_find_owner(local_shape))
+	var speed := maxf((_last_velocity - other._last_velocity).length(),
+			(_prev_velocity - other._prev_velocity).length())
+	ability.on_shape_hit.call_deferred(self, other, shape_node, speed)
+
+
 ## Below the settle speed right now (not necessarily stopped for good yet).
 func is_slow() -> bool:
 	return linear_velocity.length() < stop_speed
@@ -563,6 +579,11 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 ## `grants_flicks` = the enemy side gets an extra flick per turn for it (Slime does, Splitter doesn't).
 func split_into(pieces: Array, grants_flicks := false) -> void:
 	split_requested.emit(self, pieces, grants_flicks)
+
+
+## Sheds `pieces` ({data, position, velocity}) as new figures on this team; this figure stays.
+func shed(pieces: Array, grants_flicks := false) -> void:
+	shed_requested.emit(self, pieces, grants_flicks)
 
 
 ## Power: can't flick and can't be moved (a static body) for `rounds` rounds.
