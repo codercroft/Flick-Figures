@@ -12,4 +12,5 @@ display_name = "Second Wind"
 label = "SW"
 description = "The first of your figures knocked off each combat returns to the deck strip."
 color = Color(0.6, 0.9, 0.85, 1)
+rarity = 2
 effect = SubResource("Resource_1")

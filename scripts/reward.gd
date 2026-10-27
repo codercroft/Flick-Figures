@@ -117,14 +117,14 @@ func _on_replace_chosen(slot: int) -> void:
 
 ## Boss: pick 1 of N relics you don't have yet.
 func _show_relic_choices() -> void:
-	var choices := RunManager.random_new_relics(RunManager.config.rewards.boss_relic_choices)
+	var choices := RunManager.random_boss_relics(RunManager.config.rewards.boss_relic_choices)
 	if choices.is_empty():
 		_next_step()
 		return
 	_clear_cards()
 	title.text = "Pick a relic"
 	for relic in choices:
-		var card := _add_card(null, ITEM_CARD_HEIGHT * 0.8, "%s\n%s" % [relic.display_name, relic.description])
+		var card := _add_card(null, ITEM_CARD_HEIGHT * 0.8, "%s (%s)\n%s" % [relic.display_name, relic.rarity_name(), relic.description])
 		card.pressed.connect(_take_relic.bind(relic))
 	_add_button("Skip", _next_step)
 
@@ -134,7 +134,7 @@ func _show_found_relic(heading: String) -> void:
 	if found.is_empty():
 		_next_step()
 		return
-	_show_item(heading, "%s\n%s" % [found[0].display_name, found[0].description], _take_relic.bind(found[0]))
+	_show_item(heading, "%s (%s)\n%s" % [found[0].display_name, found[0].rarity_name(), found[0].description], _take_relic.bind(found[0]))
 
 
 func _take_relic(relic: RelicData) -> void:

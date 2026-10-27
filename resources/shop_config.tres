@@ -24,7 +24,7 @@ price = 3
 script = ExtResource("5")
 display_name = "Relics for sale"
 count = 1
-price = 7
+price_by_rarity = Array[int]([10, 12, 14])
 
 [sub_resource type="Resource" id="powers_for_sale"]
 script = ExtResource("6")
@@ -44,7 +44,7 @@ display_name = "Upgrades for sale"
 specific_count = 1
 finish_count = 1
 specific_price = 6
-finish_price = 4
+finish_price = 7
 
 [resource]
 script = ExtResource("1")

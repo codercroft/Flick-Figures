@@ -19,16 +19,17 @@ func refresh() -> void:
 	var shown := mini(RunManager.relics.size(), max_icons)
 	for i in shown:
 		var relic: RelicData = RunManager.relics[i]
-		var button := _icon_button(relic.label, relic.color)
+		var button := _icon_button(relic.label, relic.color, relic.rarity_color())
 		button.pressed.connect(RunInfo.open.bind("relics", relic))
 		add_child(button)
 	if RunManager.relics.size() > shown:
-		var more := _icon_button("+%d" % (RunManager.relics.size() - shown), Color(0.4, 0.43, 0.52))
+		var more := _icon_button("+%d" % (RunManager.relics.size() - shown), Color(0.4, 0.43, 0.52), Color(0.1, 0.1, 0.12))
 		more.pressed.connect(RunInfo.open.bind("relics", null))
 		add_child(more)
 
 
-func _icon_button(text: String, color: Color) -> Button:
+## The border color shows the relic's rarity (white common, green uncommon, blue rare, orange boss).
+func _icon_button(text: String, color: Color, border: Color) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(icon_size, icon_size)
@@ -39,7 +40,7 @@ func _icon_button(text: String, color: Color) -> Button:
 		var box := StyleBoxFlat.new()
 		box.bg_color = color
 		box.set_corner_radius_all(int(icon_size / 2.0))
-		box.set_border_width_all(3)
-		box.border_color = Color(0.1, 0.1, 0.12)
+		box.set_border_width_all(5)
+		box.border_color = border
 		button.add_theme_stylebox_override(style_name, box)
 	return button

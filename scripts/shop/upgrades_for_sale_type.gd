@@ -7,7 +7,7 @@ extends ShopItemType
 @export var specific_count := 1
 @export var finish_count := 1
 @export var specific_price := 6
-@export var finish_price := 4
+@export var finish_price := 7
 
 
 func create_offers(_registry: FigureRegistry) -> Array[ShopOffer]:

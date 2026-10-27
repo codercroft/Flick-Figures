@@ -12,4 +12,5 @@ display_name = "Trophy Case"
 label = "TC"
 description = "Figure reward screens offer 4 choices instead of 3."
 color = Color(0.9, 0.7, 0.2, 1)
+rarity = 1
 effect = SubResource("Resource_1")

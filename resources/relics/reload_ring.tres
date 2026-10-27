@@ -12,4 +12,5 @@ display_name = "Reload Ring"
 label = "RR"
 description = "Turns on the old reload rule: when everyone has flicked, tap a figure to reload it to the deck."
 color = Color(0.5, 0.7, 0.9, 1)
+rarity = 2
 effect = SubResource("Resource_1")

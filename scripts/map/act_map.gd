@@ -58,6 +58,16 @@ static func generate(config: MapConfig, rng: RandomNumberGenerator = null) -> Ac
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 		rng.randomize()
+	# Rarely a layout has no way to cover every path with a few shops; just roll another one.
+	for attempt in 200:
+		var map := _generate_once(config, rng)
+		if map != null:
+			return map
+	push_warning("ActMap: no valid layout in 200 tries, using the last one")
+	return _generate_once(config, rng, true)
+
+
+static func _generate_once(config: MapConfig, rng: RandomNumberGenerator, force := false) -> ActMap:
 	var map := ActMap.new()
 	map.columns = config.columns
 	map.lanes = config.lanes
@@ -121,7 +131,8 @@ static func generate(config: MapConfig, rng: RandomNumberGenerator = null) -> Ac
 	map.boss_id = boss.id
 	for id in map.column_ids(config.columns - 1):
 		map.nodes[id].next.append(boss.id)
-	map._assign_types(config, rng)
+	if not map._assign_types(config, rng) and not force:
+		return null
 	return map
 
 
@@ -132,103 +143,84 @@ static func _has_incoming(map: ActMap, column: int, id: int) -> bool:
 	return false
 
 
-func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
-	# Whole column of shops: every path crosses it.
-	var shop_column := -1
-	if not config.shop_columns.is_empty():
-		shop_column = config.shop_columns[rng.randi_range(0, config.shop_columns.size() - 1)]
+## Gives every node its type. Returns false if no shop placement covers every path.
+func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> bool:
+	# The chest row: ONE whole column of chests, so every path passes exactly one chest.
+	var chest_column := clampi(config.chest_column, 1, columns - 1)
 	for node in nodes:
-		if node.type == MapNode.Type.BOSS or node.column == 0:
-			continue
-		if node.column == shop_column:
-			node.type = MapNode.Type.SHOP
-		elif absi(node.column - shop_column) > 1 and rng.randf() < config.extra_shop_chance:
-			node.type = MapNode.Type.SHOP
-		elif node.column >= config.elite_from_column and rng.randf() < config.elite_chance:
+		if node.column == chest_column and node.type != MapNode.Type.BOSS:
+			node.type = MapNode.Type.TREASURE
+	# Shops: a few random nodes that together sit on every path.
+	var eligible: Array[int] = []
+	for node in nodes:
+		if node.column >= 1 and node.column != chest_column and node.type != MapNode.Type.BOSS:
+			eligible.append(node.id)
+	var shops := _random_shop_cover(eligible, config.shop_count_min, config.shop_count_max, rng)
+	if shops.is_empty():
+		return false
+	for id in shops:
+		nodes[id].type = MapNode.Type.SHOP
+	# Elites: only from the middle on, never forced, at least one per act.
+	for node in nodes:
+		if node.type == MapNode.Type.COMBAT and node.column >= config.elite_from_column \
+				and rng.randf() < config.elite_chance:
 			node.type = MapNode.Type.ELITE
 	_make_elites_optional()
-	# Exactly one treasure chest per act, and at least one elite.
-	_place_chest(config, rng)
 	if not _has_type(MapNode.Type.ELITE):
 		var later: Array[int] = []
-		for column in range(config.elite_from_column, config.columns):
-			if column != shop_column:
-				later.append(column)
+		for column in range(config.elite_from_column, columns):
+			later.append(column)
 		_convert_random(MapNode.Type.ELITE, later, rng)
 		_make_elites_optional()
+	return true
 
 
-## The single treasure chest: a plain combat node in one of the treasure columns that every
-## starting node can reach, picking the one with the most routes through it (so it is hard to miss).
-func _place_chest(config: MapConfig, rng: RandomNumberGenerator) -> void:
-	var starts := column_ids(0)
-	var forward := {}  # routes from any start to the node
-	for id in starts:
-		forward[id] = 1
+## A random set of `min_count` to `max_count` of the `eligible` nodes such that every path from the
+## start to the boss passes at least one of them. Empty if there is none.
+func _random_shop_cover(eligible: Array[int], min_count: int, max_count: int, rng: RandomNumberGenerator) -> Array[int]:
+	var by_size := {}  # set size -> every covering set of that size
+	var pick: Array[int] = []
+	_collect_covers(eligible, 0, pick, clampi(max_count, 1, 4), by_size)
+	var sizes: Array[int] = []
+	for size in by_size:
+		if size >= min_count:
+			sizes.append(size)
+	if sizes.is_empty():
+		return []
+	var covers: Array = by_size[sizes[rng.randi_range(0, sizes.size() - 1)]]
+	var chosen: Array = covers[rng.randi_range(0, covers.size() - 1)]
+	var result: Array[int] = []
+	result.assign(chosen)
+	return result
+
+
+func _collect_covers(eligible: Array[int], start: int, pick: Array[int], max_count: int, by_size: Dictionary) -> void:
+	if not pick.is_empty() and _covers_every_path(pick):
+		if not by_size.has(pick.size()):
+			by_size[pick.size()] = []
+		by_size[pick.size()].append(pick.duplicate())
+		return  # adding more nodes to a covering set would only be a bigger version of it
+	if pick.size() >= max_count:
+		return
+	for i in range(start, eligible.size()):
+		pick.append(eligible[i])
+		_collect_covers(eligible, i + 1, pick, max_count, by_size)
+		pick.pop_back()
+
+
+## True if the boss cannot be reached from the start without passing one of `blocked` nodes.
+func _covers_every_path(blocked: Array[int]) -> bool:
+	var open := {}
+	for id in column_ids(0):
+		open[id] = true
 	for column in columns:
 		for id in column_ids(column):
+			if not open.has(id):
+				continue
 			for next_id in nodes[id].next:
-				forward[next_id] = forward.get(next_id, 0) + forward.get(id, 0)
-	var backward := {boss_id: 1}  # routes from the node to the boss
-	for column in range(columns - 1, -1, -1):
-		for id in column_ids(column):
-			var total := 0
-			for next_id in nodes[id].next:
-				total += backward.get(next_id, 0)
-			backward[id] = total
-	var reached_by := {}  # node id -> how many starting nodes can reach it
-	for start in starts:
-		var seen := {start: true}
-		var frontier: Array[int] = [start]
-		while not frontier.is_empty():
-			var id: int = frontier.pop_back()
-			for next_id in nodes[id].next:
-				if not seen.has(next_id):
-					seen[next_id] = true
-					frontier.append(next_id)
-		for id in seen:
-			reached_by[id] = reached_by.get(id, 0) + 1
-	var best: MapNode = null
-	var best_score := -1.0
-	for node in nodes:
-		if node.type != MapNode.Type.COMBAT or not config.treasure_columns.has(node.column):
-			continue
-		var score: float = reached_by.get(node.id, 0) * 1000000.0 + forward.get(node.id, 0) * backward.get(node.id, 0) + rng.randf()
-		if score > best_score:
-			best_score = score
-			best = node
-	if best == null:  # fall back to any plain combat node in the middle of the act
-		var middle: Array[int] = []
-		for column in range(1, columns - 1):
-			middle.append(column)
-		_convert_random(MapNode.Type.TREASURE, middle, rng)
-	else:
-		best.type = MapNode.Type.TREASURE
-		_connect_starts_to(best)
-
-
-## Makes sure every starting node has a route to `target` (rare: the best chest spot is out of reach
-## of one start): adds a path from that start into a first-column-after node that can reach it.
-func _connect_starts_to(target: MapNode) -> void:
-	var can_reach := {target.id: true}  # nodes with a route to the target
-	for column in range(target.column - 1, -1, -1):
-		for id in column_ids(column):
-			for next_id in nodes[id].next:
-				if can_reach.has(next_id):
-					can_reach[id] = true
-	for start_id in column_ids(0):
-		if can_reach.has(start_id):
-			continue
-		var linked: Array[int] = []
-		for id in column_ids(1):
-			if can_reach.has(id):
-				linked.append(id)
-		if linked.is_empty():
-			continue
-		linked.sort_custom(func(a: int, b: int) -> bool:
-			return absi(nodes[a].lane - nodes[start_id].lane) < absi(nodes[b].lane - nodes[start_id].lane))
-		nodes[start_id].next.append(linked[0])
-		can_reach[start_id] = true
+				if not blocked.has(next_id):
+					open[next_id] = true
+	return not open.has(boss_id)
 
 
 func _has_type(node_type: MapNode.Type) -> bool:

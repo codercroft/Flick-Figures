@@ -12,4 +12,5 @@ display_name = "Extra Pocket"
 label = "EP"
 description = "+1 deck slot."
 color = Color(0.6, 0.45, 0.3, 1)
+rarity = 3
 effect = SubResource("Resource_1")

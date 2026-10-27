@@ -12,5 +12,6 @@ display_name = "Lucky Coin"
 label = "LC"
 description = "+$1 after every won combat."
 color = Color(1.0, 0.82, 0.2, 1)
+rarity = 0
 economy = true
 effect = SubResource("Resource_1")

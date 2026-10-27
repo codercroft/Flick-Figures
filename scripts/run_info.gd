@@ -200,11 +200,11 @@ func _fill_relics() -> void:
 	var page: Dictionary = _pages.relics
 	_clear(page, "Tap a relic to read what it does." if not RunManager.relics.is_empty() else "You have no relics yet.")
 	for relic in RunManager.relics:
-		_row(page, null, "[%s] %s" % [relic.label, relic.display_name], _relic_text(relic))
+		_row(page, null, "[%s] %s (%s)" % [relic.label, relic.display_name, relic.rarity_name()], _relic_text(relic))
 
 
 func _relic_text(relic: RelicData) -> String:
-	return "%s\n%s" % [relic.display_name, relic.description]
+	return "%s (%s)\n%s" % [relic.display_name, relic.rarity_name(), relic.description]
 
 
 func _fill_powers() -> void:

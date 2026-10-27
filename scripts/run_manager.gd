@@ -112,13 +112,10 @@ func add_relic(relic: RelicData) -> bool:
 	return true
 
 
-## A relic from the pool that the run does not hold yet, or null if it holds them all.
+## A relic from the pool that the run does not hold yet (never a Boss relic), or null.
 func random_new_relic() -> RelicData:
-	var choices: Array[RelicData] = []
-	for relic in config.relic_pool:
-		if not relics.has(relic):
-			choices.append(relic)
-	return choices.pick_random() if not choices.is_empty() else null
+	var found := random_new_relics(1)
+	return found[0] if not found.is_empty() else null
 
 
 ## One more deck slot, filled with the starting figure (Extra Pocket).
@@ -296,6 +293,7 @@ func build_rewards() -> void:
 			for i in rewards.elite_guaranteed_relics:
 				reward_steps.append({"kind": "relic"})
 			reward_steps.append({"kind": "figures"})
+			_add_bonus_items()
 			_roll_drop("power", rewards.elite_power_chance)
 			_roll_drop("equipment", rewards.elite_equipment_chance)
 			_roll_drop("finish", rewards.elite_finish_chance)
@@ -307,8 +305,15 @@ func build_rewards() -> void:
 			reward_steps.append({"kind": "power" if randf() < rewards.boss_power_chance else "equipment"})
 		_:
 			reward_steps.append({"kind": "figures"})
+			_add_bonus_items()
 			_roll_drop("power", rewards.combat_power_chance)
 			_roll_drop("equipment", rewards.combat_equipment_chance)
+
+
+## The act's bonus rewards after the figure draft: each a random power, equipment item or upgrade.
+func _add_bonus_items() -> void:
+	for i in config.rewards.bonus_items(act):
+		reward_steps.append({"kind": ["power", "equipment", "upgrade_item"].pick_random()})
 
 
 ## Adds a "lucky" drop step with the given chance.
@@ -345,14 +350,50 @@ func enemy_scale(index := -1) -> Dictionary:
 
 # --- Reward helpers ----------------------------------------------------------
 
-## `count` different relics the run doesn't hold yet.
+## `count` different relics the run doesn't hold yet, for chests, elites and the shop: the rarity of
+## each is rolled with RewardConfig.relic_weights (mostly Common/Uncommon, rarely Rare), never Boss.
 func random_new_relics(count: int) -> Array[RelicData]:
-	var choices: Array[RelicData] = []
+	var picked: Array[RelicData] = []
+	var weights := config.rewards.relic_weights
+	for i in count:
+		var by_rarity: Array = []
+		var total := 0.0
+		for rarity in 3:
+			var options := _unheld_relics([rarity], picked)
+			by_rarity.append(options)
+			if not options.is_empty():
+				total += weights[rarity]
+		var roll := randf() * total
+		for rarity in 3:
+			if by_rarity[rarity].is_empty():
+				continue
+			roll -= weights[rarity]
+			if roll <= 0.0 or rarity == 2:
+				picked.append(by_rarity[rarity].pick_random())
+				break
+	return picked
+
+
+## Boss reward: `count` relics, taken from the Boss and Rare ones first (then any other unheld relic
+## if there are not enough).
+func random_boss_relics(count: int) -> Array[RelicData]:
+	var top := _unheld_relics([RelicData.Rarity.BOSS, RelicData.Rarity.RARE], [])
+	top.shuffle()
+	var picked: Array[RelicData] = top.slice(0, count)
+	if picked.size() < count:
+		var rest := _unheld_relics([RelicData.Rarity.COMMON, RelicData.Rarity.UNCOMMON], [])
+		rest.shuffle()
+		picked.append_array(rest.slice(0, count - picked.size()))
+	return picked
+
+
+## Pool relics of the given rarities that the run doesn't hold and `taken` doesn't contain.
+func _unheld_relics(rarities: Array, taken: Array) -> Array[RelicData]:
+	var found: Array[RelicData] = []
 	for relic in config.relic_pool:
-		if not relics.has(relic):
-			choices.append(relic)
-	choices.shuffle()
-	return choices.slice(0, count)
+		if rarities.has(relic.rarity) and not relics.has(relic) and not taken.has(relic):
+			found.append(relic)
+	return found
 
 
 func random_equipment() -> EquipmentData:
@@ -384,7 +425,7 @@ func has_free_power_slot() -> bool:
 ## The figures a figure reward offers: different from each other, weighted by rarity for this act
 ## (act 1 is mostly common figures, later acts lean rarer).
 func offer_rewards() -> Array[FigureData]:
-	var count := config.rewards.figure_choices
+	var count := config.rewards.figure_choices(act)
 	for relic in relics:
 		if relic.effect != null:
 			count += relic.effect.get_reward_choice_bonus()

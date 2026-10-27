@@ -11,7 +11,7 @@ const DESCRIPTIONS := {
 	MapNode.Type.COMBAT: "Combat: a normal fight. Win it for money and a figure to pick.",
 	MapNode.Type.ELITE: "Elite: a tougher fight (optional). Wins pay more and give a relic.",
 	MapNode.Type.SHOP: "Shop: spend your money on figures, relics, powers, equipment and upgrades.",
-	MapNode.Type.TREASURE: "Treasure chest: the only one on this floor. It always holds a relic.",
+	MapNode.Type.TREASURE: "Treasure chest: every path passes exactly one. It always holds a relic.",
 	MapNode.Type.BOSS: "Boss: the end of the act.",
 }
 

@@ -4,11 +4,20 @@ extends Resource
 ## (Money per surviving figure is RunConfig.income_per_figure.)
 
 @export_group("Figure drafts")
-## How many figures a figure reward offers (relics like Trophy Case add more).
-@export var figure_choices := 3
+## How many figures a figure reward offers, one entry per act (relics like Trophy Case add more).
+## Act 1 is a pure figure draft; later acts swap choices for bonus items (below).
+@export var figure_choices_by_act: Array[int] = [3, 2, 1]
+## Extra random rewards after a regular combat's or elite's figure draft, one entry per act. Each is
+## one of: a power, an equipment item or an upgrade (a figure-specific upgrade or a finish).
+@export var bonus_items_by_act: Array[int] = [0, 1, 2]
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
 @export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.75, 0.22, 0.03), Vector3(0.45, 0.4, 0.15), Vector3(0.25, 0.45, 0.3)]
+
+@export_group("Relics")
+## Weights (common, uncommon, rare) for relics from chests, elites and the shop. Boss relics never
+## show up there.
+@export var relic_weights := Vector3(0.65, 0.3, 0.05)
 
 @export_group("Regular combat")
 ## Bonus drops, rolled after each regular combat win.
@@ -34,6 +43,16 @@ extends Resource
 @export_range(0.0, 1.0) var boss_specific_upgrade_chance := 0.5
 ## The guaranteed extra item is a power or an equipment item: this is the power chance.
 @export_range(0.0, 1.0) var boss_power_chance := 0.5
+
+
+## Figure choices for a figure reward in `act` (0 = act 1), before relic bonuses.
+func figure_choices(act: int) -> int:
+	return figure_choices_by_act[clampi(act, 0, figure_choices_by_act.size() - 1)] if not figure_choices_by_act.is_empty() else 3
+
+
+## Bonus random items after the figure draft in `act`.
+func bonus_items(act: int) -> int:
+	return bonus_items_by_act[clampi(act, 0, bonus_items_by_act.size() - 1)] if not bonus_items_by_act.is_empty() else 0
 
 
 ## Weights (common, uncommon, rare) for drafts in `act` (0 = act 1).

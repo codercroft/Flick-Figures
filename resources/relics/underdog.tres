@@ -12,4 +12,5 @@ display_name = "Underdog"
 label = "UD"
 description = "+50% flick power while you have fewer figures on the table than the enemy."
 color = Color(0.7, 0.55, 0.85, 1)
+rarity = 1
 effect = SubResource("Resource_1")

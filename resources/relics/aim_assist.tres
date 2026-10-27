@@ -12,4 +12,5 @@ display_name = "Aim Assist"
 label = "AA"
 description = "The aim line shows the first bounce off a wall, pin or figure."
 color = Color(0.4, 0.9, 0.6, 1)
+rarity = 0
 effect = SubResource("Resource_1")
