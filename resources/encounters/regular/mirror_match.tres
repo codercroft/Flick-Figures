@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
+
+[resource]
+script = ExtResource("2")
+display_name = "Mirror Match"
+enemy_flicks_per_turn = 1
+acts = Array[int]([3])
+fill_with_grunts = true
+mirror_deck = true

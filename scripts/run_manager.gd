@@ -36,6 +36,11 @@ var enemy_elite: Array[bool] = []
 ## stat boosts (parallel to `enemies`; {} = none).
 var encounter_name := ""
 var enemy_boosts: Array[Dictionary] = []
+## Where each enemy starts in board space (parallel to `enemies`; Vector2.INF = the default spread-out row).
+var enemy_positions: Array[Vector2] = []
+## The arena the current encounter asks for (null = random), and the regular encounters used this run.
+var encounter_arena: ArenaData
+var used_encounters: Array[EncounterData] = []
 ## Finishes, equipment and upgrades each enemy carries (parallel to `enemies`): {finish, equipment, upgrade}.
 var enemy_gear: Array[Dictionary] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
@@ -85,6 +90,7 @@ func start_new_run() -> void:
 	last_income = {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 	shop_offers.clear()
 	reward_steps.clear()
+	used_encounters.clear()
 	_reset_powers()
 	_reset_relics()
 	act = 0
@@ -549,11 +555,17 @@ func _build_lineup() -> void:
 	enemies.clear()
 	enemy_elite.clear()
 	enemy_boosts.clear()
+	enemy_positions.clear()
 	enemy_gear.clear()
 	encounter_name = ""
+	encounter_arena = null
 	var registry := config.registry
 	var difficulty := config.difficulty
-	var encounter := _pick_encounter() if node.type == MapNode.Type.ELITE else null
+	var encounter: EncounterData = null
+	if node.type == MapNode.Type.ELITE:
+		encounter = _pick_encounter()
+	elif node.type == MapNode.Type.COMBAT:
+		encounter = _pick_regular_encounter()
 	if encounter != null:
 		_build_encounter(encounter)
 	elif node.type == MapNode.Type.BOSS:
@@ -584,6 +596,8 @@ func _build_lineup() -> void:
 			enemy_flicks_per_turn += difficulty.elite_extra_flicks
 	while enemy_boosts.size() < enemies.size():
 		enemy_boosts.append({})
+	while enemy_positions.size() < enemies.size():
+		enemy_positions.append(Vector2.INF)
 	# Later acts: enemies may carry finishes, equipment and upgrades (elites and bosses roll a step higher).
 	var tougher := node.type == MapNode.Type.ELITE or node.type == MapNode.Type.BOSS
 	for figure in enemies:
@@ -622,15 +636,90 @@ func _pick_encounter() -> EncounterData:
 	return choices.pick_random() if not choices.is_empty() else null
 
 
+## A hand-made regular encounter for this act that the run has not played yet (if all of them have been
+## played, the used ones become available again), or null if the act has none.
+func _pick_regular_encounter() -> EncounterData:
+	var fresh: Array[EncounterData] = []
+	var all_here: Array[EncounterData] = []
+	for encounter in config.regular_encounters:
+		if encounter.available_in(act):
+			all_here.append(encounter)
+			if not used_encounters.has(encounter):
+				fresh.append(encounter)
+	if fresh.is_empty() and not all_here.is_empty():
+		for encounter in all_here:
+			used_encounters.erase(encounter)
+		fresh = all_here
+	if fresh.is_empty():
+		return null
+	var chosen: EncounterData = fresh.pick_random()
+	used_encounters.append(chosen)
+	return chosen
+
+
 func _build_encounter(encounter: EncounterData) -> void:
 	encounter_name = encounter.display_name
+	encounter_arena = encounter.arena
 	for entry in encounter.enemies:
 		for i in entry.count:
 			enemies.append(entry.figure)
 			enemy_elite.append(false)
 			enemy_boosts.append(entry.boost())
-	enemy_flicks_per_turn = encounter.enemy_flicks_per_turn
+			enemy_positions.append(entry.positions[i] if i < entry.positions.size() else Vector2.INF)
+	if encounter.mirror_deck:
+		_add_mirror_enemies(encounter)
+	if encounter.fill_with_grunts:
+		_fill_with_grunts(encounter)
+	enemy_flicks_per_turn = maxi(encounter.enemy_flicks_per_turn, config.difficulty.flicks_per_turn(act))
 	enemies_in_row = false
+
+
+## Mirror Match: one enemy per slot of the act's enemy count, cycling through the figure types of the
+## player's current deck (economy figures, which enemies never use, become Grunts), all boosted.
+func _add_mirror_enemies(encounter: EncounterData) -> void:
+	var types: Array[FigureData] = []
+	for figure in deck:
+		types.append(config.registry.random_grunt() if config.registry.economy.has(figure) else figure)
+	types.shuffle()
+	var boost := {"mass": encounter.mirror_mass_multiplier, "power": encounter.mirror_power_multiplier,
+			"accuracy": encounter.mirror_accuracy_multiplier, "bounce": 0.0, "ability": 1.0}
+	for i in config.difficulty.enemy_count(act):
+		enemies.append(types[i % types.size()])
+		enemy_elite.append(false)
+		enemy_boosts.append(boost.duplicate())
+		enemy_positions.append(Vector2.INF)
+
+
+## Tops the lineup up to the act's enemy count with Grunts in free spots: the spot farthest from
+## everything already placed, clear of the arena's walls and pins.
+func _fill_with_grunts(encounter: EncounterData) -> void:
+	var want := config.difficulty.enemy_count(act)
+	var grunt_radius := config.registry.grunts[0].radius
+	var spots: Array[Vector2] = []
+	for y in [150.0, 270.0, 390.0]:
+		for x in [130.0, 290.0, 450.0, 610.0, 770.0]:
+			spots.append(Vector2(x, y))
+	while enemies.size() < want:
+		var grunt := config.registry.random_grunt()
+		var best := Vector2.INF
+		var best_gap := -1.0
+		var any_auto := enemy_positions.has(Vector2.INF)
+		if not any_auto:
+			for spot in spots:
+				if encounter.arena != null and encounter.arena.blocks_circle(spot, grunt_radius + 10.0):
+					continue
+				var gap := INF
+				for i in enemies.size():
+					gap = minf(gap, spot.distance_to(enemy_positions[i]) - enemies[i].radius)
+				if gap > best_gap:
+					best_gap = gap
+					best = spot
+			if best_gap < grunt_radius + 20.0:
+				best = Vector2.INF  # no room: it takes a default slot
+		enemies.append(grunt)
+		enemy_elite.append(false)
+		enemy_boosts.append({})
+		enemy_positions.append(best)
 
 
 ## Random layout from the pool, not the same as last time, and only ones a creeping boss can use
@@ -639,6 +728,9 @@ func _pick_arena() -> void:
 	# Boss fights are always on the fully open layout (no walls, pins or patches).
 	if node != null and node.type == MapNode.Type.BOSS and config.boss_arena != null:
 		arena = config.boss_arena
+		return
+	if encounter_arena != null:  # a hand-made encounter brings its own layout
+		arena = encounter_arena
 		return
 	var has_creeper := false
 	for enemy in enemies:

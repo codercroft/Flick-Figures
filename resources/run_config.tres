@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=85 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=97 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -84,6 +84,18 @@
 [ext_resource type="Resource" path="res://resources/encounters/bumper_duo.tres" id="152"]
 [ext_resource type="Resource" path="res://resources/encounters/fireworks.tres" id="153"]
 [ext_resource type="Resource" path="res://resources/encounters/well_rounded_squad.tres" id="154"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/bodyguards.tres" id="enc_bodyguards"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/bent_lane.tres" id="enc_bent_lane"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/glass_cannons.tres" id="enc_glass_cannons"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/pushover.tres" id="enc_pushover"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/tinderbox.tres" id="enc_tinderbox"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/ghost_patrol.tres" id="enc_ghost_patrol"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/the_setup.tres" id="enc_the_setup"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/sticky_situation.tres" id="enc_sticky_situation"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/fortress.tres" id="enc_fortress"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/speed_trap.tres" id="enc_speed_trap"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/demolition_crew.tres" id="enc_demolition_crew"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/mirror_match.tres" id="enc_mirror_match"]
 
 [resource]
 script = ExtResource("1")
@@ -110,6 +122,7 @@ relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), 
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
+regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew"), ExtResource("enc_mirror_match")])
 elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])
 rewards = ExtResource("142")
 enemy_gear = ExtResource("143")

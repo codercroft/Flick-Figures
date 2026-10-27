@@ -35,3 +35,17 @@ func get_warnings(board_size: Vector2) -> PackedStringArray:
 				board_size.x - patch.position.x - patch.size.x / 2.0) < BOOST_SIDE_MARGIN:
 			warnings.append("boost patch at %s is within %d px of a side edge" % [patch.position, BOOST_SIDE_MARGIN])
 	return warnings
+
+
+## True if a circle at `pos` (board space) of `radius` overlaps a wall or pin of this layout.
+func blocks_circle(pos: Vector2, radius: float) -> bool:
+	for wall in walls:
+		var local := (pos - wall.position).rotated(-deg_to_rad(wall.rotation_degrees))
+		var dx := maxf(absf(local.x) - wall.size.x / 2.0, 0.0)
+		var dy := maxf(absf(local.y) - wall.size.y / 2.0, 0.0)
+		if Vector2(dx, dy).length() < radius:
+			return true
+	for pin in pins:
+		if pos.distance_to(pin.position) < radius + pin.radius:
+			return true
+	return false

@@ -665,6 +665,8 @@ func _spawn_enemies() -> void:
 		var top_margin := maxf(160.0, RunManager.enemies[i].radius + 45.0)
 		var stagger := 0.0 if RunManager.enemies_in_row else 120.0 * (i % 2)
 		var pos := Vector2(rect.position.x + slot_width * (i + 0.5), rect.position.y + top_margin + stagger)
+		if i < RunManager.enemy_positions.size() and RunManager.enemy_positions[i] != Vector2.INF:
+			pos = rect.position + RunManager.enemy_positions[i]  # a hand-made encounter's spot
 		var gear: Dictionary = RunManager.enemy_gear[i]
 		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, gear.equipment, gear.finish,
 				gear.upgrade, RunManager.enemy_scale(i), RunManager.enemy_elite[i]))

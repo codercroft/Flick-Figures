@@ -13,6 +13,8 @@ extends Resource
 @export var difficulty: DifficultyConfig
 ## The named encounters elite nodes pick from (instead of a random lineup).
 @export var elite_encounters: Array[EncounterData] = []
+## The hand-made encounters regular combats pick from (by act, no repeats within a run where possible).
+@export var regular_encounters: Array[EncounterData] = []
 ## How likely enemies are to carry finishes, equipment and upgrades in later acts.
 @export var enemy_gear: EnemyGearConfig
 ## Boss fights always use this arena (the fully open layout: no walls, pins or patches).

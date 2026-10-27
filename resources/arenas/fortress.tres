@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[sub_resource type="Resource" id="wall_1"]
+script = ExtResource("2")
+position = Vector2(450, 18)
+size = Vector2(460, 36)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="wall_2"]
+script = ExtResource("2")
+position = Vector2(18, 480)
+size = Vector2(36, 560)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="wall_3"]
+script = ExtResource("2")
+position = Vector2(882, 480)
+size = Vector2(36, 560)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="wall_4"]
+script = ExtResource("2")
+position = Vector2(250, 600)
+size = Vector2(170, 36)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="wall_5"]
+script = ExtResource("2")
+position = Vector2(650, 600)
+size = Vector2(170, 36)
+rotation_degrees = 0.0
+
+[resource]
+script = ExtResource("1")
+display_name = "Fortress Walls"
+creeper_safe = false
+walls = Array[ExtResource("2")]([SubResource("wall_1"), SubResource("wall_2"), SubResource("wall_3"), SubResource("wall_4"), SubResource("wall_5")])
+pins = Array[ExtResource("3")]([])
+patches = Array[ExtResource("4")]([])

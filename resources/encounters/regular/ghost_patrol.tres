@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/duwall.tres" id="f0"]
+[ext_resource type="Resource" path="res://resources/figures/ghost.tres" id="f1"]
+[ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="arena"]
+
+[sub_resource type="Resource" id="enemy_0"]
+script = ExtResource("1")
+figure = ExtResource("f1")
+count = 3
+positions = Array[Vector2]([Vector2(170, 180), Vector2(450, 150), Vector2(730, 180)])
+
+[sub_resource type="Resource" id="enemy_1"]
+script = ExtResource("1")
+figure = ExtResource("f0")
+count = 1
+positions = Array[Vector2]([Vector2(450, 360)])
+
+[resource]
+script = ExtResource("2")
+display_name = "Ghost Patrol"
+enemies = Array[ExtResource("1")]([SubResource("enemy_0"), SubResource("enemy_1")])
+enemy_flicks_per_turn = 1
+acts = Array[int]([2])
+arena = ExtResource("arena")
+fill_with_grunts = true

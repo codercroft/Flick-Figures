@@ -41,6 +41,7 @@ func _run() -> void:
 	_pool("finishes", config.finish_pool, 5)
 	_pool("upgrades", config.upgrade_pool, 5)
 	_pool("relics", config.relic_pool, 10)
+	_pool("regular encounters", config.regular_encounters, 12)
 	# Enemy gear rules: nothing that does nothing for the figure. (Loaded at run time: a typed GearRules
 	# reference would compile Figure before the autoloads exist when this script is run with -s.)
 	var rules = load("res://scripts/gear_rules.gd")

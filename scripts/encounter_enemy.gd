@@ -5,6 +5,9 @@ extends Resource
 
 @export var figure: FigureData
 @export var count := 1
+## Where each copy starts, in board space ((0, 0) = top-left of the board, y grows toward the player's
+## deck, enemies live in the top half). Missing entries (or none) use the normal spread-out row.
+@export var positions: Array[Vector2] = []
 @export_group("Boosts")
 @export var mass_multiplier := 1.0
 @export var flick_power_multiplier := 1.0
