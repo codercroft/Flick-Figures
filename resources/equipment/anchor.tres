@@ -13,3 +13,4 @@ label = "AN"
 description = "Ignores light hits."
 color = Color(0.3, 0.45, 0.65, 1)
 effect = SubResource("Resource_1")
+role_weights = {"heavy": 3.0}

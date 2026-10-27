@@ -32,3 +32,19 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 		var strength := (distance - inner_radius) / (pull_radius - inner_radius)
 		# Force = mass * acceleration, so heavy figures are pulled as hard as light ones.
 		other.apply_central_force(offset.normalized() * pull_acceleration * RunManager.relic_pull_multiplier() * strength * other.mass)
+
+
+func has_path_pull(figure: Figure) -> bool:
+	return not figure.on_deck
+
+
+## What the pull does to a moving figure at `point` (the enemy AI uses it to follow curved shots).
+func get_path_pull(figure: Figure, point: Vector2) -> Vector2:
+	if figure.on_deck:
+		return Vector2.ZERO
+	var offset := figure.global_position - point
+	var distance := offset.length()
+	if distance < inner_radius or distance > pull_radius:
+		return Vector2.ZERO
+	var strength := (distance - inner_radius) / (pull_radius - inner_radius)
+	return offset.normalized() * pull_acceleration * RunManager.relic_pull_multiplier() * strength

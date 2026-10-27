@@ -41,6 +41,22 @@ func _run() -> void:
 	_pool("finishes", config.finish_pool, 5)
 	_pool("upgrades", config.upgrade_pool, 5)
 	_pool("relics", config.relic_pool, 10)
+	# Enemy gear rules: nothing that does nothing for the figure. (Loaded at run time: a typed GearRules
+	# reference would compile Figure before the autoloads exist when this script is run with -s.)
+	var rules = load("res://scripts/gear_rules.gd")
+	var grunt = config.registry.grunts[0]
+	var glow = null
+	for finish in config.finish_pool:
+		if finish.needs_ability_numbers:
+			glow = finish
+	_check(glow != null and not rules.fits(glow, grunt), "Glow-in-the-dark must not fit a figure without an ability")
+	for item in config.equipment_pool:
+		for figure in config.registry.draftable:
+			if item.effect != null and figure.ability != null and item.effect.get_script() == figure.ability.get_script():
+				_check(not rules.fits(item, figure), "%s must not fit %s" % [item.display_name, figure.display_name])
+			for script in item.incompatible_abilities:
+				if figure.ability != null and figure.ability.get_script() == script:
+					_check(not rules.fits(item, figure), "%s must not fit %s" % [item.display_name, figure.display_name])
 	var rarities := {}
 	for relic in config.relic_pool:
 		rarities[relic.rarity] = true

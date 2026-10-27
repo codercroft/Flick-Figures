@@ -13,3 +13,4 @@ description = "+25% knockback dealt."
 look = 0
 color = Color(1.0, 0.88, 0.45, 1)
 effect = SubResource("Resource_1")
+role_weights = {"power": 2.5}

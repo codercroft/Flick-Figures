@@ -13,3 +13,4 @@ description = "Much bouncier off walls and pins."
 look = 4
 color = Color(0.2, 0.2, 0.25, 1)
 effect = SubResource("Resource_1")
+role_weights = {"bouncy": 2.0}

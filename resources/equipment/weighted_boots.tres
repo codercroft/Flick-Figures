@@ -9,3 +9,4 @@ label = "WB"
 description = "+50% mass: harder to push around."
 color = Color(0.45, 0.4, 0.5, 1)
 mass_multiplier = 1.5
+role_weights = {"heavy": 3.0}

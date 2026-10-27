@@ -393,6 +393,20 @@ func aura_knockback_multiplier() -> float:
 	return multiplier
 
 
+## True if this figure standing at `point` would be inside a teammate's aura (Crazy Man).
+func would_be_in_aura(point: Vector2) -> bool:
+	if not is_inside_tree():
+		return false
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == self or other.knocked_off or other.team != team or other.ability == null:
+			continue
+		var reach := other.ability.get_aura_radius(other)
+		if reach > 0.0 and other.global_position.distance_to(point) <= reach:
+			return true
+	return false
+
+
 ## Teammates (not this figure) whose aura reaches this figure.
 func _aura_sources() -> Array[Figure]:
 	var sources: Array[Figure] = []

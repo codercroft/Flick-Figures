@@ -128,6 +128,86 @@ func _physics_process(delta: float) -> void:
 		_apply_trail_piece(piece, figures)
 
 
+# --- Prediction for the enemy AI -----------------------------------------------
+
+## True if anything on the floor changes a moving figure's path (patches, Juicer trail, magnet zones).
+func has_floor_effects() -> bool:
+	return (_data != null and not _data.patches.is_empty()) or not _trail.is_empty() or _has_magnet_zone()
+
+
+func _has_magnet_zone() -> bool:
+	for zone in _zones:
+		if zone.kind == ZoneVisual.Kind.MAGNET:
+			return true
+	return false
+
+
+## True if the floor can curve a path (turn patches, magnet zones), so wide-angle shots are worth trying.
+func has_bending_floor() -> bool:
+	if _has_magnet_zone():
+		return true
+	if _data != null:
+		for patch in _data.patches:
+			if patch.kind == ArenaPatch.Kind.TURN:
+				return true
+	return false
+
+
+## True if anything on the floor is within `margin` px of the segment a-b (so a figure sliding along it
+## could be pushed or bent). Used by the enemy AI to skip the stepped simulation when nothing is near.
+func floor_near_segment(a: Vector2, b: Vector2, margin: float) -> bool:
+	if _data != null:
+		var samples := maxi(int(a.distance_to(b) / 50.0), 1)
+		for patch in _data.patches:
+			var rect := _patch_rect(patch).grow(margin)
+			for i in samples + 1:
+				if rect.has_point(a.lerp(b, float(i) / samples)):
+					return true
+	for piece in _trail:
+		var ability: JuicerAbility = piece.ability
+		var closest := Geometry2D.get_closest_point_to_segment(piece.center, a, b)
+		if closest.distance_to(piece.center) <= ability.segment_radius + margin:
+			return true
+	for zone in _zones:
+		if zone.kind == ZoneVisual.Kind.MAGNET:
+			var closest := Geometry2D.get_closest_point_to_segment(zone.center, a, b)
+			if closest.distance_to(zone.center) <= zone.radius:
+				return true
+	return false
+
+
+## The velocity a MOVING figure at `pos` with `velocity` has `delta` seconds later because of the floor
+## (the same maths as the real patches, trail pieces and magnet zones; damping is not included).
+func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float) -> Vector2:
+	if _data != null:
+		for patch in _data.patches:
+			if not _patch_rect(patch).has_point(pos):
+				continue
+			match patch.kind:
+				ArenaPatch.Kind.SLOW:
+					velocity -= velocity * slow_damping * patch.strength * delta
+				ArenaPatch.Kind.BOOST:
+					var direction := Vector2.from_angle(deg_to_rad(patch.direction_degrees))
+					if velocity.dot(direction) < boost_max_speed:
+						velocity += direction * boost_acceleration * patch.strength * delta
+				ArenaPatch.Kind.TURN:
+					var sign := 1.0 if patch.turn == ArenaPatch.Turn.RIGHT else -1.0
+					velocity = velocity.rotated(sign * deg_to_rad(turn_rate_degrees * patch.strength) * delta)
+	for piece in _trail:
+		var ability: JuicerAbility = piece.ability
+		if pos.distance_to(piece.center) <= ability.segment_radius and velocity.dot(piece.direction) < ability.boost_max_speed:
+			velocity += piece.direction * ability.boost_acceleration * delta
+	for zone in _zones:
+		if zone.kind != ZoneVisual.Kind.MAGNET:
+			continue
+		var offset: Vector2 = zone.center - pos
+		var distance := offset.length()
+		if distance >= zone.inner and distance <= zone.radius:
+			var strength: float = (distance - zone.inner) / (zone.radius - zone.inner)
+			velocity += offset.normalized() * zone.pull * RunManager.relic_pull_multiplier() * strength * delta
+	return velocity
+
+
 # --- Pinhead's temporary pins ------------------------------------------------------
 
 ## True if a pin of `radius` fits at `pos`: inside the board and not touching a figure, wall, pin or brick.

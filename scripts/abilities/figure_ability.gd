@@ -131,3 +131,31 @@ func on_opponent_knocked_off(_figure: Figure, _victim: Figure) -> void:
 ## Pinhead: the radius of the temporary pin this figure may place before it is flicked (0 = none).
 func get_pin_radius(_figure: Figure) -> float:
 	return 0.0
+
+
+## ENEMY AI HINTS (the AI reads these to plan shots that use abilities; they change nothing in play).
+
+## The explosion this figure is expected to set off, or {}: {"radius", "force", "when"} where when is
+## "hit" (on its first hit), "stop" (where it stops, if it touched nothing) or "ally_hit" (when a teammate hits it).
+func get_ai_blast(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## True if this figure bends the path of moving figures near it (Magnet).
+func has_path_pull(_figure: Figure) -> bool:
+	return false
+
+
+## The pull (px/s per second) this figure puts on a moving figure at `point` (Magnet).
+func get_path_pull(_figure: Figure, _point: Vector2) -> Vector2:
+	return Vector2.ZERO
+
+
+## The bounce this figure has during its OWN flick, or -1 for its normal bounce (Pusher: 0).
+func get_flick_bounce(_figure: Figure) -> float:
+	return -1.0
+
+
+## True if this figure never rebounds after hitting something during its own flick (Pusher).
+func cancels_rebound(_figure: Figure) -> bool:
+	return false

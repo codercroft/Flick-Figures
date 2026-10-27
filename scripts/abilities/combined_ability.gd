@@ -107,3 +107,26 @@ func on_opponent_knocked_off(figure: Figure, victim: Figure) -> void:
 
 func get_pin_radius(figure: Figure) -> float:
 	return maxf(first.get_pin_radius(figure), second.get_pin_radius(figure))
+
+
+func get_ai_blast(figure: Figure) -> Dictionary:
+	var blast := first.get_ai_blast(figure)
+	return blast if not blast.is_empty() else second.get_ai_blast(figure)
+
+
+func has_path_pull(figure: Figure) -> bool:
+	return first.has_path_pull(figure) or second.has_path_pull(figure)
+
+
+func get_path_pull(figure: Figure, point: Vector2) -> Vector2:
+	return first.get_path_pull(figure, point) + second.get_path_pull(figure, point)
+
+
+func get_flick_bounce(figure: Figure) -> float:
+	var a := first.get_flick_bounce(figure)
+	var b := second.get_flick_bounce(figure)
+	return a if b < 0.0 else (b if a < 0.0 else minf(a, b))
+
+
+func cancels_rebound(figure: Figure) -> bool:
+	return first.cancels_rebound(figure) or second.cancels_rebound(figure)

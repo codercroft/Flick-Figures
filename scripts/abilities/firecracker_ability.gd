@@ -26,3 +26,7 @@ func _explode(figure: Figure, spared: Figure) -> void:
 		return
 	_last_exploded_ms = now
 	figure.explode(explosion_radius, explosion_force, spared)
+
+
+func get_ai_blast(_figure: Figure) -> Dictionary:
+	return {"radius": explosion_radius, "force": explosion_force, "when": "ally_hit"}

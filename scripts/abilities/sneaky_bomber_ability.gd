@@ -28,3 +28,7 @@ func on_stopped(figure: Figure) -> void:
 		var travelled := figure.global_position.distance_to(_start)
 		figure.explode(explosion_radius + radius_per_100px * travelled / 100.0, explosion_force)
 	_flicking = false
+
+
+func get_ai_blast(_figure: Figure) -> Dictionary:
+	return {"radius": explosion_radius, "force": explosion_force, "when": "stop"}

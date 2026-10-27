@@ -55,3 +55,11 @@ func _stop_pushing(figure: Figure) -> void:
 		return
 	_pushing = false
 	figure.physics_material_override.bounce = _base_bounce
+
+
+func get_flick_bounce(_figure: Figure) -> float:
+	return 0.0
+
+
+func cancels_rebound(_figure: Figure) -> bool:
+	return true

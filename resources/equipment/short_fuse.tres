@@ -13,3 +13,4 @@ label = "SF"
 description = "Explodes when knocked off the table."
 color = Color(0.95, 0.4, 0.2, 1)
 effect = SubResource("Resource_1")
+role_weights = {"explosive": 3.0}

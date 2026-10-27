@@ -9,3 +9,4 @@ label = "BN"
 description = "Half damping: slides much farther."
 color = Color(1.0, 0.9, 0.3, 1)
 damping_multiplier = 0.5
+role_weights = {"light": 2.0, "slider": 1.0}

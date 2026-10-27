@@ -20,3 +20,7 @@ func on_hit(figure: Figure, _other: Figure) -> void:
 		return
 	_exploded = true
 	figure.explode(explosion_radius, explosion_force)
+
+
+func get_ai_blast(_figure: Figure) -> Dictionary:
+	return {"radius": explosion_radius, "force": explosion_force, "when": "hit"}

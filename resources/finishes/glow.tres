@@ -9,3 +9,5 @@ description = "Ability effects 50% stronger (radius, pull, bounce)."
 look = 2
 color = Color(0.55, 1.0, 0.45, 1)
 ability_strength = 1.5
+needs_ability_numbers = true
+role_weights = {"explosive": 3.0}

@@ -591,23 +591,23 @@ func _build_lineup() -> void:
 	_pick_arena()
 
 
-## Rolls what one enemy carries. Never economy or player-only equipment.
+## Rolls what one enemy carries. Never economy or player-only equipment, and only gear that does
+## something for this figure (GearRules), preferring gear that fits its role.
 func _roll_enemy_gear(figure: FigureData, tougher: bool) -> Dictionary:
 	var gear := {"finish": null, "equipment": null, "upgrade": null}
 	if config.enemy_gear == null:
 		return gear
 	var rates := config.enemy_gear.rates(act, tougher)
-	if randf() < rates.finish and not config.finish_pool.is_empty():
-		gear.finish = config.finish_pool.pick_random()
+	if randf() < rates.finish:
+		gear.finish = GearRules.pick(config.finish_pool, figure)
 	if randf() < rates.equipment:
 		var items: Array[EquipmentData] = []
 		for item in config.equipment_pool:
 			if not item.economy and not item.player_only:
 				items.append(item)
-		if not items.is_empty():
-			gear.equipment = items.pick_random()
+		gear.equipment = GearRules.pick(items, figure)
 	if randf() < rates.upgrade:
-		var upgrades := upgrades_for(figure)
+		var upgrades := upgrades_for(figure)  # only upgrades made for this exact figure
 		if not upgrades.is_empty():
 			gear.upgrade = upgrades.pick_random()
 	return gear

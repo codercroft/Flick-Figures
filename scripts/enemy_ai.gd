@@ -52,6 +52,50 @@ const TOUCH_MARGIN := 4.0
 ## Repositioning flicks must end at least this far (px) inside the table edge.
 @export var reposition_edge_margin := 150.0
 
+@export_group("Search depth")
+## How hard each tier of enemy searches for shots. 1 = the normal candidate shots. 2 adds finer angles
+## and power levels. 3 also adds wide angles (curved shots) and the strongest power levels, and a finer
+## Pinhead pin grid. Elite fights (and elite-flagged enemies) use the elite depth, bosses the boss depth.
+@export var search_depth_regular := 1
+@export var search_depth_elite := 2
+@export var search_depth_boss := 3
+## Extra angles (degrees) tried at depth 2+.
+@export var fine_angle_offsets_degrees: Array[float] = [-7.5, -2.5, 2.5, 7.5]
+## Wide angles tried at depth 3, or at any depth when the floor can bend a path (turn patches, magnets).
+@export var wide_angle_offsets_degrees: Array[float] = [-45.0, -30.0, -20.0, 20.0, 30.0, 45.0]
+## Extra power levels at depth 2+ and at depth 3.
+@export var fine_power_levels: Array[float] = [0.25, 0.35, 0.45, 0.55]
+@export var extra_power_levels: Array[float] = [0.7, 0.8]
+## Safety net for slow phones: once choosing has taken this long (ms) and there is a shot, the enemies not
+## looked at yet are skipped (they are looked at in random order, so none is always left out).
+@export var think_budget_ms := 700
+## How much the combo bonuses below (ability combos, chains through allies, bank shots) count, per tier.
+@export var combo_weight_regular := 1.0
+@export var combo_weight_elite := 1.5
+@export var combo_weight_boss := 2.0
+
+@export_group("Floor awareness")
+## The stepped simulation of a shot's path (patches, Juicer trails, magnets): step length in seconds and
+## the most steps. It is only used when the floor has something that changes a path.
+@export var sim_step := 0.08
+@export var sim_max_steps := 80
+
+@export_group("Ability combos")
+## Score for each player figure an explosion is predicted to push (scaled by how hard).
+@export var blast_hit_bonus := 50.0
+## An explosion that pushes allies counts against it by this fraction of what it would score on them.
+@export var blast_ally_factor := 1.0
+## How sure the AI is that a shot through an ally (Mr Potential bonk, Firecracker) lands as predicted.
+@export var chain_confidence := 0.8
+## Pusher pushes without rebounding, so edge pushes with it are worth this much more.
+@export var shove_edge_multiplier := 1.6
+## An enemy inside an allied Crazy Man's aura is reluctant to leave it (score taken off for a shot that
+## ends outside it) and repositioning flicks into the aura get this bonus.
+@export var aura_leave_penalty := 25.0
+@export var aura_stay_bonus := 40.0
+## A Sneaky Bomber aims to stop this far (px) short of a player figure so it explodes without touching it.
+@export var free_blast_gap := 30.0
+
 @export_group("Pinhead bank shots")
 ## An enemy Pinhead may place a temporary pin and bounce its flick off it into a player figure.
 ## Spacing (px) of the grid of pin spots it tries.
@@ -75,6 +119,13 @@ const TOUCH_MARGIN := 4.0
 		queue_redraw()
 
 var _debug_shots: Array[Dictionary] = []
+# Per choose_flick: the arena (for floor prediction), whether the floor changes paths, and Magnets.
+var _arena: Arena
+var _floor_on := false
+var _bends := false
+var _pull_sources: Array[Figure] = []
+var _fast_slides := false  # skip the stepped simulation for secondary slides (explosion pushes, ally chains)
+var _slide_cache := {}  # (figure, from, velocity) -> slide ratio, cleared each decision
 
 
 func clear_debug() -> void:
@@ -89,9 +140,15 @@ func clear_debug() -> void:
 ## With `min_score` set (extra flicks), only attacks scoring at least that are considered.
 func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_force: float,
 		min_score := -INF) -> Dictionary:
+	_prepare()
 	var best := {}
 	var best_enemy: Figure = null
+	var started := Time.get_ticks_msec()
+	candidates = candidates.duplicate()
+	candidates.shuffle()
 	for enemy in candidates:
+		if not best.is_empty() and Time.get_ticks_msec() - started > think_budget_ms:
+			break
 		var shot := _best_shot_for(enemy, players, table, max_force)
 		if shot.kind == "pass":
 			continue
@@ -122,6 +179,56 @@ func _shot_rank(shot: Dictionary) -> float:
 	return tier * 1000000.0 + shot.score
 
 
+## Looks at the arena once per decision: is there anything on the floor that bends or speeds up a path,
+## and which figures pull moving figures (Magnets)?
+func _prepare() -> void:
+	_arena = RunManager.combat.arena if RunManager.combat != null else null
+	_pull_sources.clear()
+	_slide_cache.clear()
+	for node in get_tree().get_nodes_in_group("figures"):
+		var figure := node as Figure
+		if not figure.knocked_off and figure.ability.has_path_pull(figure):
+			_pull_sources.append(figure)
+	_bends = not _pull_sources.is_empty() or (_arena != null and _arena.has_bending_floor())
+	_floor_on = _bends or (_arena != null and _arena.has_floor_effects())
+
+
+## 1 regular, 2 elite (elite fights and elite-flagged enemies), 3 boss.
+func _tier(enemy: Figure) -> int:
+	var node := RunManager.node
+	if node != null and node.type == MapNode.Type.BOSS:
+		return 3
+	if enemy.elite or (node != null and node.type == MapNode.Type.ELITE):
+		return 2
+	return 1
+
+
+func _depth(tier: int) -> int:
+	return [search_depth_regular, search_depth_elite, search_depth_boss][tier - 1]
+
+
+func _combo_weight(tier: int) -> float:
+	return [combo_weight_regular, combo_weight_elite, combo_weight_boss][tier - 1]
+
+
+func _angle_offsets(depth: int) -> Array[float]:
+	var list: Array[float] = angle_offsets_degrees.duplicate()
+	if depth >= 2:
+		list.append_array(fine_angle_offsets_degrees)
+	if depth >= 3 or _bends:
+		list.append_array(wide_angle_offsets_degrees)
+	return list
+
+
+func _power_levels(depth: int) -> Array[float]:
+	var list: Array[float] = power_levels.duplicate()
+	if depth >= 2:
+		list.append_array(fine_power_levels)
+	if depth >= 3:
+		list.append_array(extra_power_levels)
+	return list
+
+
 ## The best shot one enemy has: an attack if one scores above min_attack_score, otherwise a
 ## small safe reposition, otherwise a pass.
 func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
@@ -130,23 +237,32 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier()
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
+	var tier := _tier(enemy)
+	var depth := _depth(tier)
+	var offsets := _angle_offsets(depth)
+	var levels := _power_levels(depth)
 
 	var best := {}
 	for target in players:
 		var to_target := target.global_position - enemy.global_position
 		if to_target.is_zero_approx():
 			continue
-		for offset in angle_offsets_degrees:
+		for offset in offsets:
 			var direction := to_target.normalized().rotated(deg_to_rad(offset))
-			for level in power_levels:
-				var shot := _score_attack(enemy, shape, direction, level * top_speed, top_speed, players, table)
+			for level in levels:
+				var shot := _score_attack(enemy, shape, direction, level * top_speed, top_speed, players, table, tier)
 				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 					shot["target"] = target  # who it is aimed at (Lucky Charm adds aim error)
 					best = shot
 
+	# Sneaky Bomber: stop on an empty spot next to player figures so the explosion catches them.
+	var free_blast := _best_free_blast(enemy, shape, players, table, top_speed, tier)
+	if not free_blast.is_empty() and free_blast.score >= min_attack_score and (best.is_empty() or free_blast.score > best.score):
+		best = free_blast
+
 	# Pinhead: a pin that sets up a bank shot may beat every direct shot (or there may be none).
 	if enemy.ability.get_pin_radius(enemy) > 0.0:
-		var bank := _best_bank_shot(enemy, shape, players, table, top_speed)
+		var bank := _best_bank_shot(enemy, shape, players, table, top_speed, tier)
 		if not bank.is_empty() and bank.score >= min_attack_score and (best.is_empty() or bank.score > best.score):
 			best = bank
 
@@ -162,38 +278,50 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 # --- Attacks -----------------------------------------------------------------
 
 func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, speed: float,
-		max_speed: float, players: Array[Figure], table: Rect2) -> Dictionary:
-	var travel := _travel_distance(enemy, speed)
-	if travel < 1.0:
+		max_speed: float, players: Array[Figure], table: Rect2, tier := 1) -> Dictionary:
+	if _travel_distance(enemy, speed) < 1.0:
 		return {}
-	var hit := _first_hit(enemy, shape, direction, travel)
+	var hit := _shot_path(enemy, shape, direction, speed)
 	if hit.is_empty() or hit.collider == null:
 		return {}  # would not reach anything (or a wall or pin is in the way)
 	var other: Figure = hit.collider
 	var hit_distance: float = hit.distance
-	# Speed falls linearly with distance traveled under linear damping: v = v0 - damp * x.
-	var hit_speed := maxf(speed - enemy.linear_damp * hit_distance, 0.0)
+	var contact: Vector2 = hit.position
+	var weight := _combo_weight(tier)
 
 	# Predict the collision (masses, bounce, power) to see where both figures end up.
-	var contact := enemy.global_position + direction * hit_distance
-	var outcome := _predict_collision(enemy, other, direction * hit_speed, contact)
+	var outcome := _predict_collision(enemy, other, hit.velocity, contact)
 	var target_velocity: Vector2 = outcome.target
 	var shooter_velocity: Vector2 = outcome.shooter
 
 	var score := 0.0
 	var kind := "attack"
+	# What this shooter's own ability adds on impact (Bombo's explosion).
+	var combo := 0.0
+	var blast := enemy.ability.get_ai_blast(enemy)
+	if not blast.is_empty() and blast.when == "hit":
+		combo += _blast_value(contact, blast, enemy, null, players, table)
 	if other.team == Figure.Team.PLAYER:
 		var knocked_off := _leave_chance(other, other.global_position, target_velocity, table)
 		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
-		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * pushed_toward_edge
+		var edge_weight := shove_edge_multiplier if enemy.ability.cancels_rebound(enemy) else 1.0
+		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * edge_weight * pushed_toward_edge
 	else:
-		var behind := _player_behind_ally(enemy, other, direction, players)
+		# Hitting an ally can still pay: it may be shoved into a player figure (Mr Potential bonk), or it
+		# may be a Firecracker that goes off next to player figures.
+		var ally_value := 0.0
+		var behind := _player_behind_ally(enemy, other, contact - enemy.global_position, players)
 		if behind:
+			ally_value = ally_strategic_factor * (hit_player_bonus \
+					+ edge_bonus * _edge_factor(behind.global_position, hit.velocity.normalized(), table))
+		ally_value = maxf(ally_value, _ally_chain_value(other, target_velocity, players, table) * weight)
+		var ally_blast := other.ability.get_ai_blast(other)
+		if not ally_blast.is_empty() and ally_blast.when == "ally_hit":
+			combo += _blast_value(other.global_position, ally_blast, other, enemy, players, table)
+		if ally_value > 0.0 or combo > 0.0:
 			kind = "ally"
-			score = ally_strategic_factor * (hit_player_bonus \
-					+ edge_bonus * _edge_factor(behind.global_position, direction, table))
-		else:
-			score = -ally_hit_penalty
+		score = ally_value if ally_value > 0.0 else -ally_hit_penalty
+	score += combo * weight
 
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
 	score -= self_knock_off_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
@@ -203,6 +331,9 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			asin(clampf((enemy.radius + other.radius) / to_other.length(), 0.0, 1.0)))
 	if miss_chance > 0.0:
 		score -= self_knock_off_penalty * miss_chance * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
+	# An enemy inside an ally's Crazy Man aura would rather stay there.
+	if enemy.would_be_in_aura(enemy.global_position) and not enemy.would_be_in_aura(contact):
+		score -= aura_leave_penalty * weight
 	# Prefer the lowest power that gets the job done.
 	score -= overpower_penalty * speed / max_speed
 
@@ -231,7 +362,10 @@ func _hit_chance(angle_off: float, error: float, half_width: float) -> float:
 func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, contact: Vector2) -> Dictionary:
 	var normal := (target.global_position - contact).normalized()
 	var closing := maxf(velocity.dot(normal), 0.0)
-	var bounce := clampf(shooter.data.bounce + target.data.bounce, 0.0, 1.0)
+	var shooter_bounce := shooter.ability.get_flick_bounce(shooter)  # Pusher has none during its flick
+	if shooter_bounce < 0.0:
+		shooter_bounce = shooter.data.bounce
+	var bounce := clampf(shooter_bounce + target.data.bounce, 0.0, 1.0)
 	var total_mass := shooter.mass + target.mass
 	var shooter_change := -(1.0 + bounce) * target.mass / total_mass * closing * normal
 	var target_change := (1.0 + bounce) * shooter.mass / total_mass * closing * normal
@@ -239,7 +373,12 @@ func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, cont
 			* shooter.aura_knockback_multiplier()
 	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter) \
 			* target.aura_knockback_multiplier()
-	return {"shooter": velocity + shooter_change, "target": target_change}
+	var shooter_after := velocity + shooter_change
+	if shooter.ability.cancels_rebound(shooter):
+		var along := shooter_after.dot(normal)
+		if along < 0.0:
+			shooter_after -= normal * along  # Pusher: no rebound, it stays put
+	return {"shooter": shooter_after, "target": target_change}
 
 
 ## How far a figure at `from` moving at `velocity` slides, compared with the distance to the table
@@ -248,6 +387,26 @@ func _slide_ratio(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2
 	var speed := velocity.length()
 	if speed <= figure.stop_speed:
 		return -1.0
+	# The same slide is asked about several times per shot (knock-off chance, edge push...).
+	var key := [_fast_slides, figure.get_instance_id(), from.snapped(Vector2(6, 6)), velocity.snapped(Vector2(15, 15))]
+	if _slide_cache.has(key):
+		return _slide_cache[key]
+	var ratio := _slide_ratio_uncached(figure, from, velocity, table, speed)
+	_slide_cache[key] = ratio
+	return ratio
+
+
+func _slide_ratio_uncached(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2, speed: float) -> float:
+	if not _fast_slides and _path_affected(figure, from, velocity / speed, (speed - figure.stop_speed) / figure.linear_damp):
+		# Follow the slide step by step: off the table anywhere along it = gone.
+		var sim := _simulate_flight(figure, from, velocity)
+		for point in sim.points:
+			if not table.has_point(point):
+				return 1.3
+		var edge_now := _distance_to_edge(from, velocity / speed, table)
+		if edge_now <= 0.0:
+			return INF
+		return minf(sim.length / edge_now, 0.69)
 	var slide := (speed - figure.stop_speed) / figure.linear_damp
 	var edge := _distance_to_edge(from, velocity / speed, table)
 	if edge <= 0.0:
@@ -274,6 +433,10 @@ func _flight_leave_chance(figure: Figure, from: Vector2, velocity: Vector2, tabl
 
 ## Where a free flight ends up, counting wraps (the straight line if the figure can't wrap).
 func _flight_end(figure: Figure, from: Vector2, velocity: Vector2, table: Rect2) -> Vector2:
+	if figure.ability.get_wrap_count(figure) == 0 and velocity.length() > figure.stop_speed \
+			and _path_affected(figure, from, velocity.normalized(), (velocity.length() - figure.stop_speed) / figure.linear_damp):
+		var sim := _simulate_flight(figure, from, velocity)
+		return sim.points[sim.points.size() - 1]
 	var flight := _simulate_wraps(figure, from, velocity, table)
 	var speed: float = flight.velocity.length()
 	if speed <= figure.stop_speed:
@@ -322,6 +485,190 @@ func _player_behind_ally(shooter: Figure, ally: Figure, direction: Vector2, play
 	return null
 
 
+# --- Paths, explosions and combos ---------------------------------------------
+
+## The first thing a flick of `speed` along `direction` touches: {collider, distance, position, velocity}
+## (position and velocity are the shooter's at that moment), or {} if nothing. A wall or pin gives a null
+## collider. With floor effects on the board (patches, Juicer trails, magnets) the path is followed step by step
+## so curves and speed-ups count; otherwise it is a straight line.
+func _shot_path(shooter: Figure, shape: CircleShape2D, direction: Vector2, speed: float) -> Dictionary:
+	var travel := _travel_distance(shooter, speed)
+	if travel < 1.0:
+		return {}
+	if _path_affected(shooter, shooter.global_position, direction, travel):
+		return _first_hit_along(shooter, shape, _simulate_flight(shooter, shooter.global_position, direction * speed))
+	var hit := _first_hit(shooter, shape, direction, travel)
+	if hit.is_empty():
+		return {}
+	var distance: float = hit.distance
+	hit["position"] = shooter.global_position + direction * distance
+	hit["velocity"] = direction * maxf(speed - shooter.linear_damp * distance, 0.0)
+	return hit
+
+
+## True if the floor (patches, trails, magnets) could change a straight slide of `length` px from `from`.
+## A path that never comes near any of it is exactly the straight line, which is much cheaper to check.
+func _path_affected(figure: Figure, from: Vector2, direction: Vector2, length: float) -> bool:
+	if not _floor_on:
+		return false
+	var to := from + direction * length
+	if _arena != null and _arena.floor_near_segment(from, to, figure.radius):
+		return true
+	var samples := maxi(int(length / 60.0), 1)
+	for source in _pull_sources:
+		if source == figure:
+			continue
+		for i in samples + 1:
+			if source.ability.get_path_pull(source, from.lerp(to, float(i) / samples)) != Vector2.ZERO:
+				return true
+	return false
+
+
+## A free slide followed in small steps: the floor's push (patches, trails, magnet zones), Magnets'
+## pull and damping. Returns {points, velocities, length}. Stops when the figure is slow.
+func _simulate_flight(figure: Figure, from: Vector2, velocity: Vector2) -> Dictionary:
+	var points := PackedVector2Array([from])
+	var velocities := PackedVector2Array([velocity])
+	var pos := from
+	var vel := velocity
+	var length := 0.0
+	var damping := exp(-figure.linear_damp * sim_step)
+	for i in sim_max_steps:
+		if vel.length() <= figure.stop_speed:
+			break
+		if _arena != null:
+			vel = _arena.predict_floor_velocity(pos, vel, sim_step)
+		for source in _pull_sources:
+			if source != figure:
+				vel += source.ability.get_path_pull(source, pos) * sim_step
+		vel *= damping
+		pos += vel * sim_step
+		length += vel.length() * sim_step
+		points.append(pos)
+		velocities.append(vel)
+	return {"points": points, "velocities": velocities, "length": length}
+
+
+## Like _first_hit, but along a simulated path (segment by segment).
+func _first_hit_along(shooter: Figure, shape: CircleShape2D, sim: Dictionary) -> Dictionary:
+	var points: PackedVector2Array = sim.points
+	var velocities: PackedVector2Array = sim.velocities
+	var travelled := 0.0
+	var i := 0
+	while i < points.size() - 1:
+		# Short steps are merged into chords of about 100px so there are fewer shape casts.
+		var j := i + 1
+		while j < points.size() - 1 and points[i].distance_to(points[j]) < 100.0:
+			j += 1
+		var segment := points[j] - points[i]
+		var length := segment.length()
+		if length >= 1.0:
+			var hit := _first_hit(shooter, shape, segment / length, length, points[i], i == 0)
+			if not hit.is_empty():
+				var along: float = hit.distance
+				var fraction := along / length
+				hit["distance"] = travelled + along
+				hit["position"] = points[i] + segment * fraction
+				hit["velocity"] = velocities[i].lerp(velocities[j], fraction)
+				return hit
+			travelled += length
+		i = j
+	return {}
+
+
+## How good an explosion at `center` is for the enemy side: every player figure it pushes scores like a hit
+## (push strength, knock-off chance, edge push); allies it pushes count against it. `blast` is
+## a get_ai_blast() dictionary; `source` (the exploding figure) and `spared` are not pushed.
+func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Figure,
+		players: Array[Figure], table: Rect2) -> float:
+	var radius: float = blast.radius * RunManager.relic_explosion_multiplier()
+	var force: float = blast.force * RunManager.explosion_force_multiplier()
+	var total := 0.0
+	_fast_slides = true
+	for node in get_tree().get_nodes_in_group("figures"):
+		var figure := node as Figure
+		if figure == source or figure == spared or figure.knocked_off:
+			continue
+		var offset := figure.global_position - center
+		var distance := offset.length()
+		if distance >= radius:
+			continue
+		var push := (offset.normalized() if distance > 0.01 else Vector2.UP) * force * (1.0 - distance / radius)
+		var change := push / figure.mass * figure.data.knockback_taken_multiplier \
+				* figure.ability.get_explosion_multiplier(figure, source) \
+				* figure.ability.get_knockback_multiplier(figure, source) * figure.aura_knockback_multiplier()
+		var value := blast_hit_bonus * clampf(change.length() / 300.0, 0.0, 1.0) \
+				+ kill_bonus * _leave_chance(figure, figure.global_position, change, table) \
+				+ edge_bonus * _push_progress(figure, figure.global_position, change, table)
+		if figure.team == Figure.Team.PLAYER:
+			total += value
+		else:
+			total -= value * blast_ally_factor
+	_fast_slides = false
+	return total
+
+
+## An ally that has just been hit and is sliding away at `velocity`: if it runs into a player figure, how
+## good is that? (Mr Potential takes double knockback from teammates, so bonking him is a strong chain.)
+func _ally_chain_value(ally: Figure, velocity: Vector2, players: Array[Figure], table: Rect2) -> float:
+	var speed := velocity.length()
+	if speed <= ally.stop_speed + 50.0:
+		return 0.0
+	var shape := CircleShape2D.new()
+	shape.radius = ally.radius
+	var hit := _shot_path(ally, shape, velocity / speed, speed)
+	if hit.is_empty() or hit.collider == null or hit.collider.team != Figure.Team.PLAYER:
+		return 0.0
+	var victim: Figure = hit.collider
+	var outcome := _predict_collision(ally, victim, hit.velocity, hit.position)
+	_fast_slides = true
+	var value := hit_player_bonus \
+			+ kill_bonus * _leave_chance(victim, victim.global_position, outcome.target, table) \
+			+ edge_bonus * _push_progress(victim, victim.global_position, outcome.target, table)
+	value -= self_knock_off_penalty * _leave_chance(ally, hit.position, outcome.shooter, table)
+	_fast_slides = false
+	return maxf(value, 0.0) * chain_confidence
+
+
+## Sneaky Bomber: explodes where it stops if it touched nothing. Tries stopping spots just short of each
+## player figure (and the middle of the group) and scores the explosion there.
+func _best_free_blast(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2,
+		top_speed: float, tier: int) -> Dictionary:
+	var blast := enemy.ability.get_ai_blast(enemy)
+	if blast.is_empty() or blast.when != "stop" or players.is_empty():
+		return {}
+	var spots: Array[Vector2] = []
+	var middle := Vector2.ZERO
+	for player in players:
+		var to_player := player.global_position - enemy.global_position
+		var gap := enemy.radius + player.radius + free_blast_gap
+		if to_player.length() > gap + 60.0:
+			spots.append(enemy.global_position + to_player.normalized() * (to_player.length() - gap))
+		middle += player.global_position
+	middle /= players.size()
+	if players.size() > 1 and _nearest_distance(middle, players) > enemy.radius + 40.0:
+		spots.append(middle)
+	var weight := _combo_weight(tier)
+	var best := {}
+	for spot in spots:
+		var distance := enemy.global_position.distance_to(spot)
+		var speed := distance * enemy.linear_damp + enemy.stop_speed
+		if speed > top_speed * 0.9:
+			continue
+		var direction := (spot - enemy.global_position) / distance
+		if not _shot_path(enemy, shape, direction, speed).is_empty():
+			continue  # it would touch something on the way: no free-flight explosion
+		var end := _flight_end(enemy, enemy.global_position, direction * speed, table)
+		if not table.grow(-enemy.radius).has_point(end):
+			continue
+		var score := _blast_value(end, blast, enemy, null, players, table) * weight
+		score -= self_knock_off_penalty * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
+		score -= overpower_penalty * speed / top_speed
+		if best.is_empty() or score > best.score:
+			best = {"kind": "attack", "score": score, "direction": direction, "speed": speed, "distance": distance}
+	return best
+
+
 # --- Pinhead bank shots -------------------------------------------------------
 
 ## The best "place a pin, then bounce off it into a player figure" shot for a Pinhead, or {}. For every
@@ -329,7 +676,8 @@ func _player_behind_ally(shooter: Figure, ally: Figure, direction: Vector2, play
 ## it bounces (like light off a mirror) toward the figure, checks both legs are clear, and scores the
 ## hit like a normal attack minus bank_shot_penalty.
 func _best_bank_shot(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2,
-		top_speed: float) -> Dictionary:
+		top_speed: float, tier := 1) -> Dictionary:
+	var spacing := bank_grid_spacing / (1.0 + 0.4 * (_depth(tier) - 1))  # deeper search = finer grid
 	var pin_radius := enemy.ability.get_pin_radius(enemy)
 	var start := enemy.global_position
 	var bounce_radius := pin_radius + enemy.radius  # the shooter's center bounces at this distance
@@ -342,14 +690,14 @@ func _best_bank_shot(enemy: Figure, shape: CircleShape2D, players: Array[Figure]
 		var y := area.position.y
 		while y <= area.end.y:
 			var pin := Vector2(x, y)
-			y += bank_grid_spacing
+			y += spacing
 			if not _pin_spot_clear(pin, pin_radius, everyone):
 				continue
 			for target in players:
-				var shot := _bank_shot_via(enemy, shape, pin, pin_radius, bounce_radius, target, table, top_speed)
+				var shot := _bank_shot_via(enemy, shape, pin, pin_radius, bounce_radius, target, table, top_speed, tier)
 				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 					best = shot
-		x += bank_grid_spacing
+		x += spacing
 	# The spot must really be free of walls and other pins too (checked once, for the winner).
 	if not best.is_empty() and not Arena.is_spot_free(space, table, best.pin, pin_radius):
 		return {}
@@ -365,7 +713,7 @@ func _pin_spot_clear(pin: Vector2, pin_radius: float, everyone: Array) -> bool:
 
 
 func _bank_shot_via(enemy: Figure, shape: CircleShape2D, pin: Vector2, pin_radius: float, bounce_radius: float,
-		target: Figure, table: Rect2, top_speed: float) -> Dictionary:
+		target: Figure, table: Rect2, top_speed: float, tier := 1) -> Dictionary:
 	var start := enemy.global_position
 	var goal := target.global_position
 	# Contact normal n (from the pin toward the shooter at the bounce): it bisects "back to the
@@ -421,7 +769,7 @@ func _bank_shot_via(enemy: Figure, shape: CircleShape2D, pin: Vector2, pin_radiu
 	var pushed := _push_progress(other, other.global_position, outcome.target, table)
 	var score := hit_player_bonus + kill_bonus * knocked_off + edge_bonus * pushed
 	score -= self_knock_off_penalty * _leave_chance(enemy, contact, outcome.shooter, table)
-	score -= bank_shot_penalty + overpower_penalty * speed / top_speed
+	score -= bank_shot_penalty / _combo_weight(tier) + overpower_penalty * speed / top_speed
 	return {"kind": "attack", "score": score, "direction": direction, "speed": speed, "distance": leg1,
 			"pin": pin, "pin_radius": pin_radius, "target": other}
 
@@ -452,6 +800,8 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 			continue
 		# Prefer ending up closer to the nearest player figure (and, near the edge, farther from it).
 		var score := -_nearest_distance(end, players)
+		if enemy.would_be_in_aura(end):
+			score += aura_stay_bonus  # stay close to (or move into) an allied Crazy Man's aura
 		if near_edge:
 			score += 2.0 * minf(end_margin, reposition_edge_margin)
 		if score > best_score:
@@ -482,7 +832,7 @@ func _travel_distance(figure: Figure, speed: float) -> float:
 ## Sweeps the shooter's circle along `direction` for `length` px. Returns the first figure it
 ## would touch and how far the shooter travels to do so, or {} if the path is clear.
 func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, length: float,
-		from := Vector2.INF) -> Dictionary:
+		from := Vector2.INF, check_touching := true) -> Dictionary:
 	if from == Vector2.INF:
 		from = shooter.global_position  # (a bank shot's second leg starts at the pin)
 	var space := shooter.get_world_2d().direct_space_state
@@ -501,7 +851,7 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 	touch_query.transform = query.transform
 	touch_query.collision_mask = query.collision_mask
 	touch_query.exclude = query.exclude
-	for result in space.intersect_shape(touch_query, 8):
+	for result in (space.intersect_shape(touch_query, 8) if check_touching else []):
 		var touching := result.collider as Figure
 		if touching != null and direction.dot((touching.global_position - from).normalized()) > 0.05:
 			return {"collider": touching, "distance": 0.0}

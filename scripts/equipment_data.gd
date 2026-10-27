@@ -29,3 +29,12 @@ extends Resource
 @export_group("Effect")
 ## Optional special behavior using the ability hooks.
 @export var effect: FigureAbility
+
+@export_group("Who it suits (enemy gear rules)")
+## Only useful on figures whose ability has numbers it can scale (explosion radius, pull, bounce...).
+@export var needs_ability_numbers := false
+## Figures with one of these abilities never get this (it would do nothing: Wings on a Ghost).
+@export var incompatible_abilities: Array[Script] = []
+## Enemies favor figures that match these roles ("heavy", "light", "power", "bouncy", "explosive", "slider"):
+## the weight is added to 1 for each role the figure has. See GearRules.
+@export var role_weights := {}

@@ -10,3 +10,4 @@ look = 1
 color = Color(0.8, 0.85, 0.95, 1)
 mass_multiplier = 1.5
 knockback_taken_multiplier = 0.75
+role_weights = {"heavy": 3.0}
