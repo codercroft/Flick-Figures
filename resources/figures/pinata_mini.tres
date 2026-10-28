@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Piñata Bit"
+description = "A piece of a burst Piñata. Light and average."
+label = "pn"
+color = Color(0.95, 0.35, 0.85, 1)
+radius = 34.0
+mass = 0.5
+bounce = 0.7
+accuracy = 0.8
+pays_income = false

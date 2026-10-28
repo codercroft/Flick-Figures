@@ -1,15 +1,18 @@
-[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="FigureData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/abilities/pinata_ability.gd" id="2"]
 
+[ext_resource type="Resource" path="res://resources/figures/pinata_mini.tres" id="3"]
+
 [sub_resource type="Resource" id="Resource_1"]
 script = ExtResource("2")
+piece = ExtResource("3")
 
 [resource]
 script = ExtResource("1")
 display_name = "Piñata"
-description = "Caught in an explosion, it pays you money and is pushed less."
+description = "Caught in an explosion, it pays you money and bursts into three small figures."
 rarity = 1
 label = "PN"
 icon = 19
