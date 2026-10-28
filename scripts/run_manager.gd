@@ -306,7 +306,7 @@ func build_rewards() -> void:
 		MapNode.Type.BOSS:
 			reward_steps.append({"kind": "relics"})
 			reward_steps.append({"kind": "upgrade_item"})
-			reward_steps.append({"kind": "figures"})
+			reward_steps.append({"kind": "figures", "boss": true})
 			# One guaranteed extra: a power or an equipment item.
 			reward_steps.append({"kind": "power" if randf() < rewards.boss_power_chance else "equipment"})
 		_:
@@ -430,11 +430,16 @@ func has_free_power_slot() -> bool:
 
 ## The figures a figure reward offers: different from each other, weighted by rarity for this act
 ## (act 1 is mostly common figures, later acts lean rarer).
-func offer_rewards() -> Array[FigureData]:
-	var count := config.rewards.figure_choices(act)
+func offer_rewards(boss := false) -> Array[FigureData]:
+	var count := config.rewards.boss_figure_choices if boss else config.rewards.figure_choices(act)
 	for relic in relics:
 		if relic.effect != null:
 			count += relic.effect.get_reward_choice_bonus()
+	if boss:
+		# Boss rewards: Rare figures you don't own (Uncommon, then Common, only if there are not enough).
+		var owned: Array[FigureData] = []
+		owned.append_array(deck)
+		return config.registry.random_draftable_top(count, owned)
 	return draft_figures(count)
 
 

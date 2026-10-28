@@ -13,3 +13,4 @@ map_color = Color(0.55, 0.58, 0.7, 1)
 map_icon = 22
 enemies = Array[ExtResource("2")]([ExtResource("3")])
 enemy_flicks_per_turn = 1
+back_wall = true

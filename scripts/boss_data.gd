@@ -17,3 +17,6 @@ extends Resource
 @export var enemy_flicks_per_turn := 1
 ## Line the enemies up in one straight row across the board (The Wall) instead of staggering them.
 @export var straight_row := false
+## A solid wall along the whole top edge of the table, behind the boss, so it cannot be knocked straight
+## off the back in one shot (Slime, Skull-o-tron).
+@export var back_wall := false

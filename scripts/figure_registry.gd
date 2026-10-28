@@ -94,6 +94,22 @@ func random_draftable_weighted(count: int, weights: Vector3, exclude: Array[Figu
 	return picked
 
 
+## Boss reward picks: up to `count` different draftable figures of the highest rarity first (Rare, then
+## Uncommon, then Common) that are not in `exclude` (the figures the player already owns).
+func random_draftable_top(count: int, exclude: Array[FigureData] = []) -> Array[FigureData]:
+	var picked: Array[FigureData] = []
+	for rarity in [2, 1, 0]:
+		var pool: Array[FigureData] = []
+		for figure in draftable:
+			if figure.rarity == rarity and not exclude.has(figure) and not picked.has(figure):
+				pool.append(figure)
+		pool.shuffle()
+		picked.append_array(pool.slice(0, count - picked.size()))
+		if picked.size() >= count:
+			break
+	return picked
+
+
 func is_grunt(figure: FigureData) -> bool:
 	return grunts.has(figure)
 

@@ -34,7 +34,15 @@ var _trail: Array[Dictionary] = []  # Juicer's boost pieces: {owner, ability, ce
 
 
 ## Builds the layout. `board_rect` is the board in world space; layout positions are relative to it.
-func build(data: ArenaData, board_rect: Rect2) -> void:
+func build(data: ArenaData, board_rect: Rect2, back_wall := false) -> void:
+	if back_wall and data != null:
+		# A private copy of the layout with one more wall along the whole top edge (BossData.back_wall).
+		data = data.duplicate()
+		data.walls = data.walls.duplicate()
+		var wall := ArenaWall.new()
+		wall.position = Vector2(board_rect.size.x / 2.0, 18.0)
+		wall.size = Vector2(board_rect.size.x, 36.0)
+		data.walls.append(wall)
 	_data = data
 	_origin = board_rect.position
 	for child in get_children():

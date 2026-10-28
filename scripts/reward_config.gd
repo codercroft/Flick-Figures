@@ -6,13 +6,15 @@ extends Resource
 @export_group("Figure drafts")
 ## How many figures a figure reward offers, one entry per act (relics like Trophy Case add more).
 ## Act 1 is a pure figure draft; later acts swap choices for bonus items (below).
+## How many figures the BOSS reward offers (Rare ones you do not own; see RunManager.offer_rewards).
+@export var boss_figure_choices := 3
 @export var figure_choices_by_act: Array[int] = [3, 2, 1]
 ## Extra random rewards after a regular combat's or elite's figure draft, one entry per act. Each is
 ## one of: a power, an equipment item or an upgrade (a figure-specific upgrade or a finish).
 @export var bonus_items_by_act: Array[int] = [0, 1, 2]
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
-@export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.75, 0.22, 0.03), Vector3(0.45, 0.4, 0.15), Vector3(0.25, 0.45, 0.3)]
+@export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.8, 0.18, 0.02), Vector3(0.35, 0.5, 0.15), Vector3(0.2, 0.5, 0.3)]
 
 @export_group("Relics")
 ## Weights (common, uncommon, rare) for relics from chests, elites and the shop. Boss relics never

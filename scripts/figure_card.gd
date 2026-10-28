@@ -13,7 +13,7 @@ func setup(figure_data: FigureData, card_height: float, text_override := "") -> 
 	if text_override != "":
 		text = text_override
 	else:
-		text = "%s\n%s" % [data.display_name, data.description]
+		text = "%s (%s)\n%s" % [data.display_name, data.rarity_name(), data.description]
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_theme_font_size_override("font_size", 40 if text_override == "" else 32)
@@ -34,6 +34,10 @@ func _box(background: Color, card_height: float) -> StyleBoxFlat:
 	box.content_margin_right = 24.0
 	box.content_margin_top = 8.0
 	box.content_margin_bottom = 8.0
+	if data != null:
+		# The border color shows the figure's rarity (same colors as relics).
+		box.set_border_width_all(5)
+		box.border_color = data.rarity_color()
 	return box
 
 

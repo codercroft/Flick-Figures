@@ -11,3 +11,4 @@ description = "Splits when hit hard. Every piece takes a turn."
 map_label = "SL"
 map_color = Color(0.4, 0.85, 0.3, 1)
 enemies = Array[ExtResource("2")]([ExtResource("3")])
+back_wall = true

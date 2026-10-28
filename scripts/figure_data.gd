@@ -37,3 +37,12 @@ extends Resource
 @export var ability: FigureAbility
 ## Bosses with a big body: distance (px) from the top of the board where it starts (0 = the normal margin).
 @export var spawn_margin := 0.0
+
+
+## The colored border used for this figure's rarity (same colors as relics: white, green, blue).
+func rarity_color() -> Color:
+	return RelicData.RARITY_COLORS[clampi(rarity, 0, 2)]
+
+
+func rarity_name() -> String:
+	return RelicData.RARITY_NAMES[clampi(rarity, 0, 2)]

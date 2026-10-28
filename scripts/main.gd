@@ -115,7 +115,9 @@ func _ready() -> void:
 	ui.power_pressed.connect(_on_power_slot_pressed)
 	ui.set_powers(RunManager.powers)
 	_update_status()
-	arena.build(RunManager.arena, board.board_rect)
+	var boss_wall := RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS \
+			and RunManager.boss != null and RunManager.boss.back_wall
+	arena.build(RunManager.arena, board.board_rect, boss_wall)
 	var banner: Array[String] = []
 	if RunManager.encounter_name != "":
 		banner.append(RunManager.encounter_name)

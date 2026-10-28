@@ -52,7 +52,7 @@ func _next_step() -> void:
 	_lucky = step.get("lucky", false)
 	match step.kind:
 		"figures":
-			_offers = RunManager.offer_rewards()
+			_offers = RunManager.offer_rewards(step.get("boss", false))
 			_show_offers()
 		"relics":
 			_show_relic_choices()

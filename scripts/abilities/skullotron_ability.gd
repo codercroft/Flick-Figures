@@ -16,11 +16,13 @@ extends FigureAbility
 @export var ball: FigureData
 ## How fast (px/s) a freed ball flies outward.
 @export var burst_speed := 320.0
-## While moving it spins at this many rad/s per px/s of speed, up to `max_spin`.
-@export var spin_per_speed := 0.004
-@export var max_spin := 5.0
+## While moving it spins at this many rad/s per px/s of speed, up to `max_spin`. The angle turned in a move is
+## spin_per_speed x the distance travelled (speed integrates to distance), so 0.017 turns about 180 degrees
+## per 180px move (the AI's typical shot).
+@export var spin_per_speed := 0.017
+@export var max_spin := 9.0
 ## With every arm gone, the core's mass is multiplied by this (lighter = easier to knock off).
-@export var armless_mass_multiplier := 0.4
+@export var armless_mass_multiplier := 0.3
 ## At most one arm breaks per this many ms (a single smash can't strip all three).
 @export var break_cooldown_ms := 350
 
