@@ -12,7 +12,7 @@ piece = ExtResource("3")
 [resource]
 script = ExtResource("1")
 display_name = "Piñata"
-description = "Caught in an explosion, it pays you money and bursts into three small figures."
+description = "Pays $2 and bursts into three small figures when caught in an explosion."
 rarity = 1
 label = "PN"
 icon = 19

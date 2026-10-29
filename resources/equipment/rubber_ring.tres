@@ -6,7 +6,7 @@
 script = ExtResource("1")
 display_name = "Rubber Ring"
 label = "RR"
-description = "Much bouncier."
+description = "+0.5 bounce."
 color = Color(1.0, 0.5, 0.6, 1)
 bounce_bonus = 0.5
 role_weights = {"light": 2.0}

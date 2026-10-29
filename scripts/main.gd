@@ -470,6 +470,8 @@ func _run_enemy_turn() -> void:
 	var flicks_taken := 0
 	while flicks_taken < _enemy_flicks:
 		flicks_taken += 1
+		if _enemy_flicks > 1:
+			ui.show_enemy_turn("Enemy flicks: %d/%d" % [flicks_taken, _enemy_flicks])
 		_refresh_enemy_cycle()
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		if serial != _turn_serial:

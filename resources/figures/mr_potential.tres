@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Mr Potential"
-description = "Takes double knockback from its own team."
+description = "Takes double knockback from his own team."
 rarity = 1
 label = "MP"
 icon = 6

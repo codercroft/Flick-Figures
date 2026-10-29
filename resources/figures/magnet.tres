@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Magnet"
-description = "Bends the path of moving figures that pass near it."
+description = "While on the board, bends the path of moving figures that pass near it."
 rarity = 1
 label = "MG"
 icon = 8

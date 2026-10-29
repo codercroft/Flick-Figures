@@ -21,8 +21,8 @@ func show_your_turn(text := "Your turn") -> void:
 	turn_label.add_theme_color_override("font_color", your_turn_color)
 
 
-func show_enemy_turn() -> void:
-	turn_label.text = "Enemy turn"
+func show_enemy_turn(text := "Enemy turn") -> void:
+	turn_label.text = text
 	turn_label.add_theme_color_override("font_color", enemy_turn_color)
 
 

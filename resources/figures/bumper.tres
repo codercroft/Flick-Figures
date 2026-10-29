@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Bumper"
-description = "Heavy and slow. Anything that hits it is launched away."
+description = "Bouncy and slowish. Whatever bounces off it is launched away harder."
 rarity = 2
 label = "BP"
 icon = 9

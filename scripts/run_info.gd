@@ -6,6 +6,8 @@ extends CanvasLayer
 ## state: it only reads RunManager (combat input is ignored while it is open, see `is_open`).
 
 const TAB_NAMES := ["map", "roster", "relics", "powers", "inventory"]
+## One color per tab (the tab buttons and their highlight).
+const TAB_COLORS := [Color(0.25, 0.6, 0.85), Color(0.9, 0.5, 0.25), Color(0.7, 0.45, 0.9), Color(0.3, 0.75, 0.45), Color(0.85, 0.7, 0.2)]
 
 ## True while the overlay is showing (main.gd ignores touches then).
 var is_open := false
@@ -17,6 +19,7 @@ var _tabs := TabContainer.new()
 var _map_mini := MapMini.new()
 var _map_detail := Label.new()
 var _pages := {}  # tab name -> {list: VBoxContainer, detail: Label}
+var _tab_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -63,8 +66,21 @@ func _ready() -> void:
 	close.pressed.connect(close_overlay)
 	header.add_child(close)
 
+	# Big colored tab buttons (the TabContainer's own small tab bar is hidden).
+	var tab_row := HBoxContainer.new()
+	tab_row.add_theme_constant_override("separation", 8)
+	column.add_child(tab_row)
+	for i in TAB_NAMES.size():
+		var button := Button.new()
+		button.text = TAB_NAMES[i].capitalize()
+		button.custom_minimum_size = Vector2(0.0, 100.0)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 28)
+		button.pressed.connect(_select_tab.bind(i))
+		tab_row.add_child(button)
+		_tab_buttons.append(button)
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_font_size_override("font_size", 28)
+	_tabs.tabs_visible = false
 	column.add_child(_tabs)
 	_build_map_page()
 	for tab in ["roster", "relics", "powers", "inventory"]:
@@ -77,9 +93,27 @@ func open(tab := "map", selected = null) -> void:
 	_root.visible = true  # show first so the cards lay out at the real width
 	is_open = true
 	_refresh_all()
-	_tabs.current_tab = maxi(TAB_NAMES.find(tab), 0)
+	_select_tab(maxi(TAB_NAMES.find(tab), 0))
 	if selected is RelicData:
 		_pages.relics.detail.text = _relic_text(selected)
+
+
+## Shows one page and highlights its button: the active tab is bright with a white border, the others dim.
+func _select_tab(index: int) -> void:
+	_tabs.current_tab = index
+	for i in _tab_buttons.size():
+		var active := i == index
+		var color: Color = TAB_COLORS[i]
+		for state in ["normal", "hover", "pressed", "focus"]:
+			var box := StyleBoxFlat.new()
+			box.bg_color = color if active else color.darkened(0.6)
+			box.set_corner_radius_all(18)
+			box.set_border_width_all(6 if active else 2)
+			box.border_color = Color(1, 1, 1) if active else color.darkened(0.2)
+			_tab_buttons[i].add_theme_stylebox_override(state, box)
+		var ink := Color(0.08, 0.08, 0.1) if active else Color(0.85, 0.87, 0.92)
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			_tab_buttons[i].add_theme_color_override(state, ink)
 
 
 func close_overlay() -> void:
@@ -166,9 +200,9 @@ func _clear(page: Dictionary, hint: String) -> void:
 	page.detail.text = hint
 
 
-func _row(page: Dictionary, data: FigureData, text: String, detail: String) -> void:
+func _row(page: Dictionary, data: FigureData, text: String, detail: String, height := 110.0, font_size := 0) -> void:
 	var card := FigureCard.new()
-	card.setup(data, 110.0, text)
+	card.setup(data, height, text, font_size)
 	card.pressed.connect(func(): page.detail.text = detail)
 	page.list.add_child(card)
 
@@ -181,14 +215,15 @@ func _fill_roster() -> void:
 		var finish: FinishData = RunManager.deck_finish[slot]
 		var upgrade: UpgradeData = RunManager.deck_upgrade[slot]
 		var item: EquipmentData = RunManager.deck_equipment[slot]
-		var summary := "%s\n%s" % [figure.display_name, figure.description]
-		var gear := "Finish: %s | Upgrade: %s | Item: %s" % [finish.display_name if finish else "none",
+		# A tall card with one line per thing (the list scrolls): name and rarity, ability, then the gear.
+		var summary := "%s (%s)\n%s" % [figure.display_name, figure.rarity_name(), figure.description]
+		var gear := "Finish: %s\nUpgrade: %s\nItem: %s" % [finish.display_name if finish else "none",
 				upgrade.display_name if upgrade else "none", item.display_name if item else "none"]
-		_row(page, figure, summary + "\n" + gear, _figure_text(figure, finish, upgrade, item))
+		_row(page, figure, summary + "\n" + gear, _figure_text(figure, finish, upgrade, item), 330.0, 28)
 
 
 func _figure_text(figure: FigureData, finish: FinishData, upgrade: UpgradeData, item: EquipmentData) -> String:
-	var lines: Array[String] = [figure.display_name, figure.description,
+	var lines: Array[String] = ["%s (%s)" % [figure.display_name, figure.rarity_name()], figure.description,
 			"Mass %.1f, size %d, flick power x%.1f, bounce %.1f" % [figure.mass, figure.radius, figure.flick_power_multiplier, figure.bounce]]
 	lines.append("Finish: %s" % ("%s - %s" % [finish.display_name, finish.description] if finish else "none"))
 	lines.append("Upgrade: %s" % ("%s - %s" % [upgrade.display_name, upgrade.description] if upgrade else "none"))

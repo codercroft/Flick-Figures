@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Juicer"
-description = "Leaves a trail of weak speed-boost goo behind it that pushes figures the way it was heading. The trail fades after a few rounds."
+description = "Leaves a weak speed-boost trail that pushes figures the way it was heading, and fades."
 rarity = 1
 label = "JU"
 icon = 21

@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Pinhead"
-description = "Before flicking, tap an empty spot on the board to place a temporary pin: a bumper that lasts until its flick settles."
+description = "Tap an empty spot before flicking to place a pin that lasts until its side's flicks reset."
 rarity = 0
 label = "PH"
 icon = 20

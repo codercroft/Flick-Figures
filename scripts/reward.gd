@@ -129,8 +129,14 @@ func _show_relic_choices() -> void:
 	_add_button("Skip", _next_step)
 
 
-func _show_found_relic(heading: String) -> void:
-	var found := RunManager.random_new_relics(1)
+func _show_found_relic(heading: String, rare := false) -> void:
+	var found: Array[RelicData] = []
+	if rare:
+		var rare_relic := RunManager.random_rare_relic()
+		if rare_relic != null:
+			found.append(rare_relic)
+	else:
+		found = RunManager.random_new_relics(1)
 	if found.is_empty():
 		_next_step()
 		return
@@ -242,8 +248,10 @@ func _apply_to_figure(item: Resource, slot: int) -> void:
 
 ## Treasure chest: always a relic (if every relic is already held, equipment instead).
 func _show_treasure() -> void:
+	# The act 1 chest always holds a Rare relic.
+	var rare := RunManager.act == 0
 	if not RunManager.random_new_relics(1).is_empty():
-		_show_found_relic("Treasure chest: a relic!")
+		_show_found_relic("Treasure chest: a Rare relic!" if rare else "Treasure chest: a relic!", rare)
 	elif RunManager.random_equipment() != null:
 		_show_equipment("Treasure chest: equipment!")
 	else:

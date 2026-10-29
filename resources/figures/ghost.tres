@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Ghost"
-description = "Leaves the table mid-flick without touching anything? It wraps to the other side."
+description = "If its flick touches nothing and leaves the table, it wraps to the other side."
 rarity = 1
 label = "GH"
 icon = 14

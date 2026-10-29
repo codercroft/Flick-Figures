@@ -380,6 +380,15 @@ func random_new_relics(count: int) -> Array[RelicData]:
 	return picked
 
 
+## The act 1 chest: an unheld Rare relic (any other unheld relic if every Rare one is held).
+func random_rare_relic() -> RelicData:
+	var rare := _unheld_relics([RelicData.Rarity.RARE], [])
+	if not rare.is_empty():
+		return rare.pick_random()
+	var other := random_new_relics(1)
+	return other[0] if not other.is_empty() else null
+
+
 ## Boss reward: `count` relics, taken from the Boss and Rare ones first (then any other unheld relic
 ## if there are not enough).
 func random_boss_relics(count: int) -> Array[RelicData]:
@@ -518,10 +527,7 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 
 
 func income_text() -> String:
-	var text := "Earned $%d: $%d for %d figures" % [last_income.total, last_income.base, last_income.figures]
-	if last_income.bonus > 0:
-		text += ", +$%d bonus" % last_income.bonus
-	text += ". You have $%d." % money
+	var text := "$%d earned, you have $%d total" % [last_income.total, money]
 	for note in relic_notes:
 		text += "\n" + note
 	return text

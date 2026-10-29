@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Rally"
-description = "When flicked, nudges all your other figures forward, on the board and on deck."
+description = "When flicked, nudges all your other figures forward, on deck too."
 rarity = 0
 label = "RY"
 icon = 17

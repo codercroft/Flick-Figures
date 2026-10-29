@@ -7,7 +7,7 @@ var data: FigureData
 
 ## `text_override` replaces the default "name + description" text (the shop adds prices).
 ## `figure_data` may be null for a card with no picture.
-func setup(figure_data: FigureData, card_height: float, text_override := "") -> void:
+func setup(figure_data: FigureData, card_height: float, text_override := "", font_size := 0) -> void:
 	data = figure_data
 	custom_minimum_size = Vector2(0.0, card_height)
 	if text_override != "":
@@ -16,7 +16,7 @@ func setup(figure_data: FigureData, card_height: float, text_override := "") -> 
 		text = "%s (%s)\n%s" % [data.display_name, data.rarity_name(), data.description]
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_theme_font_size_override("font_size", 40 if text_override == "" else 32)
+	add_theme_font_size_override("font_size", font_size if font_size > 0 else (40 if text_override == "" else 32))
 	# Leave room on the left for the figure's picture.
 	add_theme_stylebox_override("normal", _box(Color(0.2, 0.22, 0.28), card_height))
 	add_theme_stylebox_override("hover", _box(Color(0.26, 0.28, 0.36), card_height))

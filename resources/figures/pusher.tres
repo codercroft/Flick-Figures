@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Pusher"
-description = "Short range, but it shoves: it hits like it is 75% heavier, never rebounds, and keeps driving into what it hits."
+description = "Short range. Hits like it is 75% heavier, never rebounds, and keeps pushing."
 rarity = 0
 label = "PU"
 icon = 1

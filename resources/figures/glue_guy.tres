@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Glue Guy"
-description = "The first figure it touches sticks to it, making one heavier body."
+description = "Sticks to the first figure it touches, until an explosion."
 rarity = 1
 label = "GG"
 icon = 15

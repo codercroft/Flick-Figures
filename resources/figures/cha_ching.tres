@@ -10,7 +10,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Cha-ching"
-description = "Earns an extra $2 if it is still on the table when you win, and $1 for every enemy knocked off while it is."
+description = "+$2 if it survives to a win, and +$1 for each enemy knocked off while it is on the table."
 label = "CC"
 icon = 12
 color = Color(1, 0.76, 0.1, 1)

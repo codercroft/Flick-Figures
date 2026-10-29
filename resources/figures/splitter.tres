@@ -11,7 +11,7 @@ piece = ExtResource("3")
 [resource]
 script = ExtResource("1")
 display_name = "Splitter"
-description = "Breaks into two minis on its first hit after a flick."
+description = "Breaks into two bigger minis on its first hit after a flick."
 rarity = 0
 label = "SX"
 icon = 16
