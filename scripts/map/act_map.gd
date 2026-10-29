@@ -154,6 +154,24 @@ func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
 		var in_row: Array[int] = column_ids(rows[i])
 		if not in_row.is_empty():
 			nodes[in_row[rng.randi_range(0, in_row.size() - 1)]].type = MapNode.Type.SHOP
+	# Events: same rules as shops (from row event_from_column, one per row), on plain combat nodes.
+	var event_rows: Array[int] = []
+	for column in range(config.event_from_column, columns):
+		if column != chest_column:
+			event_rows.append(column)
+	event_rows.shuffle()
+	var placed := 0
+	var want := _weighted_count(config.event_count_weights, rng, 2)
+	for row in event_rows:
+		if placed >= want:
+			break
+		var plain: Array[int] = []
+		for id in column_ids(row):
+			if nodes[id].type == MapNode.Type.COMBAT:
+				plain.append(id)
+		if not plain.is_empty():
+			nodes[plain[rng.randi_range(0, plain.size() - 1)]].type = MapNode.Type.EVENT
+			placed += 1
 	# Elites: only from the middle on, never forced, at least one per act.
 	for node in nodes:
 		if node.type == MapNode.Type.COMBAT and node.column >= config.elite_from_column \
@@ -171,9 +189,13 @@ func _assign_types(config: MapConfig, rng: RandomNumberGenerator) -> void:
 ## How many shops this act gets: 1 to 3, picked with the weights in shop_count_weights
 ## (entry 0 = one shop, entry 1 = two shops...).
 func _shop_count(config: MapConfig, rng: RandomNumberGenerator) -> int:
-	var weights := config.shop_count_weights
+	return _weighted_count(config.shop_count_weights, rng, 2)
+
+
+## 1 + the index picked by weight (entry 0 = 1, entry 1 = 2...); `fallback` if there are no weights.
+func _weighted_count(weights: Array[float], rng: RandomNumberGenerator, fallback: int) -> int:
 	if weights.is_empty():
-		return 2
+		return fallback
 	var total := 0.0
 	for weight in weights:
 		total += weight

@@ -42,6 +42,9 @@ func _run() -> void:
 	_pool("upgrades", config.upgrade_pool, 5)
 	_pool("relics", config.relic_pool, 10)
 	_pool("regular encounters", config.regular_encounters, 12)
+	_pool("events", config.event_pool, 1)
+	for event in config.event_pool:
+		_check(event.scene != null and event.scene.instantiate() != null, "event %s has no scene" % event.display_name)
 	# Enemy gear rules: nothing that does nothing for the figure. (Loaded at run time: a typed GearRules
 	# reference would compile Figure before the autoloads exist when this script is run with -s.)
 	var rules = load("res://scripts/gear_rules.gd")

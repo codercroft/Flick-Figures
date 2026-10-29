@@ -44,6 +44,14 @@ func _ready() -> void:
 	hint.add_theme_font_size_override("font_size", 32)
 	hint.add_theme_color_override("font_color", Color(0.6, 0.63, 0.72))
 	column.add_child(hint)
+	if RunManager.minigame_penalty:
+		# A warning while the penalty is set: the next fight is harder.
+		var warning := Label.new()
+		warning.text = "!  The next fight will be harder"
+		warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		warning.add_theme_font_size_override("font_size", 32)
+		warning.add_theme_color_override("font_color", Color(1.0, 0.45, 0.35))
+		column.add_child(warning)
 
 	# Equip / upgrade buttons, side by side along the bottom (thumb reach).
 	var buttons := HBoxContainer.new()
@@ -87,5 +95,11 @@ func _go_to(id: int) -> void:
 			get_tree().change_scene_to_file(SHOP_SCENE)
 		MapNode.Type.TREASURE:
 			get_tree().change_scene_to_file(REWARD_SCENE)
+		MapNode.Type.EVENT:
+			if RunManager.event != null and RunManager.event.scene != null:
+				get_tree().change_scene_to_packed(RunManager.event.scene)
+			else:
+				RunManager.finish_node()  # no event available: the stop is simply passed
+				get_tree().reload_current_scene()
 		_:
 			get_tree().change_scene_to_file(COMBAT_SCENE)

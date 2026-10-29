@@ -6,6 +6,7 @@ const COMBAT_COLOR := Color(0.75, 0.3, 0.3)
 const ELITE_COLOR := Color(0.9, 0.45, 0.1)
 const SHOP_COLOR := Color(0.85, 0.7, 0.15)
 const TREASURE_COLOR := Color(0.6, 0.4, 0.2)
+const EVENT_COLOR := Color(0.5, 0.35, 0.8)
 
 const DESCRIPTIONS := {
 	MapNode.Type.COMBAT: "Combat: a normal fight. Win it for money and a figure to pick.",
@@ -13,6 +14,7 @@ const DESCRIPTIONS := {
 	MapNode.Type.SHOP: "Shop: spend your money on figures, relics, powers, equipment and upgrades.",
 	MapNode.Type.TREASURE: "Treasure chest: every path passes exactly one. It always holds a relic.",
 	MapNode.Type.BOSS: "Boss: the end of the act.",
+	MapNode.Type.EVENT: "Event: something unusual happens. Take a chance, or not.",
 }
 
 
@@ -24,6 +26,8 @@ static func color_for(node_type: MapNode.Type, boss_color: Color) -> Color:
 			return SHOP_COLOR
 		MapNode.Type.TREASURE:
 			return TREASURE_COLOR
+		MapNode.Type.EVENT:
+			return EVENT_COLOR
 		MapNode.Type.BOSS:
 			return boss_color
 	return COMBAT_COLOR
@@ -41,6 +45,8 @@ static func draw(canvas: CanvasItem, font: Font, node_type: MapNode.Type, c: Vec
 				var length := r * (0.7 if i % 2 == 0 else 0.32)
 				points.append(c + Vector2.from_angle(-PI / 2.0 + TAU * i / 10.0) * length)
 			canvas.draw_colored_polygon(points, ink)
+		MapNode.Type.EVENT:
+			canvas.draw_string(font, c + Vector2(-r, r * 0.42), "?", HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, int(r * 1.4), ink)
 		MapNode.Type.SHOP:
 			canvas.draw_string(font, c + Vector2(-r, r * 0.38), "$", HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, int(r * 1.3), ink)
 		MapNode.Type.TREASURE:

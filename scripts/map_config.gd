@@ -23,3 +23,7 @@ extends Resource
 ## The chest row: this whole column (0 = first) is made of treasure chests, so every path passes
 ## exactly one chest, at the same place on every act's map (the middle). Chests always give a relic.
 @export var chest_column := 2
+## Events: how many each act gets (entry 0 = one event, 1 = two, 2 = three; [1, 2, 1] = usually two).
+@export var event_count_weights: Array[float] = [1.0, 2.0, 1.0]
+## Events only appear from this row on (0 = first row, 2 = the 3rd), at most one per row.
+@export var event_from_column := 2

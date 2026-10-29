@@ -2,7 +2,7 @@ class_name MapNode
 extends RefCounted
 ## One stop on an act's map.
 
-enum Type { COMBAT, ELITE, SHOP, TREASURE, BOSS }
+enum Type { COMBAT, ELITE, SHOP, TREASURE, BOSS, EVENT }
 
 var id := 0
 var column := 0
@@ -14,4 +14,4 @@ var visited := false
 
 
 static func type_name(node_type: Type) -> String:
-	return ["Combat", "Elite", "Shop", "Treasure", "Boss"][node_type]
+	return ["Combat", "Elite", "Shop", "Treasure", "Boss", "Event"][node_type]

@@ -123,6 +123,8 @@ func _ready() -> void:
 		banner.append(RunManager.encounter_name)
 	if RunManager.arena != null:
 		banner.append(RunManager.arena.display_name)
+	if RunManager.penalty_text != "":
+		banner.append(RunManager.penalty_text)
 	if not banner.is_empty():
 		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
 	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom)

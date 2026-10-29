@@ -41,6 +41,13 @@ var enemy_positions: Array[Vector2] = []
 ## The arena the current encounter asks for (null = random), and the regular encounters used this run.
 var encounter_arena: ArenaData
 var used_encounters: Array[EncounterData] = []
+## Map events: the one being played, and the ones already seen this run (no repeats where possible).
+var event: EventData
+var used_events: Array[EventData] = []
+## Minigame penalty: set by an event or minigame. The NEXT combat entered is harder (+1 Grunt or one enemy
+## gets compatible gear), then the flag clears. `penalty_text` says what happened (shown in the combat banner).
+var minigame_penalty := false
+var penalty_text := ""
 ## Finishes, equipment and upgrades each enemy carries (parallel to `enemies`): {finish, equipment, upgrade}.
 var enemy_gear: Array[Dictionary] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
@@ -91,6 +98,9 @@ func start_new_run() -> void:
 	shop_offers.clear()
 	reward_steps.clear()
 	used_encounters.clear()
+	used_events.clear()
+	minigame_penalty = false
+	event = null
 	_reset_powers()
 	_reset_relics()
 	act = 0
@@ -269,6 +279,8 @@ func enter_node(id: int) -> bool:
 			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
 		MapNode.Type.TREASURE:
 			reward_steps = [{"kind": "treasure"}]
+		MapNode.Type.EVENT:
+			event = _pick_event()
 	return true
 
 
@@ -570,6 +582,7 @@ func _build_lineup() -> void:
 	enemy_gear.clear()
 	encounter_name = ""
 	encounter_arena = null
+	penalty_text = ""
 	var registry := config.registry
 	var difficulty := config.difficulty
 	var encounter: EncounterData = null
@@ -613,6 +626,7 @@ func _build_lineup() -> void:
 	var tougher := node.type == MapNode.Type.ELITE or node.type == MapNode.Type.BOSS
 	for figure in enemies:
 		enemy_gear.append(_roll_enemy_gear(figure, tougher))
+	_apply_minigame_penalty()
 	_pick_arena()
 
 
@@ -705,19 +719,21 @@ func _add_mirror_enemies(encounter: EncounterData) -> void:
 ## everything already placed, clear of the arena's walls and pins.
 func _fill_with_grunts(encounter: EncounterData) -> void:
 	var want := config.difficulty.enemy_count(act)
-	var grunt_radius := config.registry.grunts[0].radius
-	var spots: Array[Vector2] = []
-	for y in [150.0, 270.0, 390.0]:
-		for x in [130.0, 290.0, 450.0, 610.0, 770.0]:
-			spots.append(Vector2(x, y))
 	while enemies.size() < want:
-		var grunt := config.registry.random_grunt()
-		var best := Vector2.INF
-		var best_gap := -1.0
-		var any_auto := enemy_positions.has(Vector2.INF)
-		if not any_auto:
-			for spot in spots:
-				if encounter.arena != null and encounter.arena.blocks_circle(spot, grunt_radius + 10.0):
+		_add_grunt(encounter.arena)
+
+
+## Adds one Grunt to the lineup in the free spot farthest from everything already placed (clear of the
+## arena's walls and pins). If any enemy uses the default row, the Grunt does too.
+func _add_grunt(arena_data: ArenaData) -> void:
+	var grunt := config.registry.random_grunt()
+	var best := Vector2.INF
+	var best_gap := -1.0
+	if not enemy_positions.has(Vector2.INF):
+		for y in [150.0, 270.0, 390.0]:
+			for x in [130.0, 290.0, 450.0, 610.0, 770.0]:
+				var spot := Vector2(x, y)
+				if arena_data != null and arena_data.blocks_circle(spot, grunt.radius + 10.0):
 					continue
 				var gap := INF
 				for i in enemies.size():
@@ -725,12 +741,88 @@ func _fill_with_grunts(encounter: EncounterData) -> void:
 				if gap > best_gap:
 					best_gap = gap
 					best = spot
-			if best_gap < grunt_radius + 20.0:
-				best = Vector2.INF  # no room: it takes a default slot
-		enemies.append(grunt)
-		enemy_elite.append(false)
-		enemy_boosts.append({})
-		enemy_positions.append(best)
+		if best_gap < grunt.radius + 20.0:
+			best = Vector2.INF  # no room: it takes a default slot
+	enemies.append(grunt)
+	enemy_elite.append(false)
+	enemy_boosts.append({})
+	enemy_positions.append(best)
+
+
+## The minigame penalty, if set: the next combat gets +1 Grunt or one enemy gets a compatible finish,
+## upgrade or equipment item. Then the flag clears.
+func _apply_minigame_penalty() -> void:
+	if not minigame_penalty:
+		return
+	minigame_penalty = false
+	var can_add_grunt := node.type != MapNode.Type.BOSS and not enemies_in_row
+	if can_add_grunt and (randf() < 0.5 or enemies.is_empty()):
+		# (_add_grunt appends to the gear list too, which the caller filled for the original enemies only)
+		_add_penalty_grunt()
+		return
+	var index := randi_range(0, enemies.size() - 1)
+	var figure := enemies[index]
+	var choices: Array[String] = []
+	if enemy_gear[index].finish == null and GearRules.pick(config.finish_pool, figure) != null:
+		choices.append("finish")
+	if enemy_gear[index].equipment == null:
+		choices.append("equipment")
+	if enemy_gear[index].upgrade == null and not upgrades_for(figure).is_empty():
+		choices.append("upgrade")
+	if choices.is_empty():
+		if can_add_grunt:
+			_add_penalty_grunt()
+		return
+	match choices.pick_random():
+		"finish":
+			enemy_gear[index].finish = GearRules.pick(config.finish_pool, figure)
+		"equipment":
+			var items: Array[EquipmentData] = []
+			for item in config.equipment_pool:
+				if not item.economy and not item.player_only:
+					items.append(item)
+			var picked := GearRules.pick(items, figure)
+			if picked != null:
+				enemy_gear[index].equipment = picked
+		"upgrade":
+			enemy_gear[index].upgrade = upgrades_for(figure).pick_random()
+	penalty_text = "Penalty: a %s is upgraded" % figure.display_name
+
+
+func _add_penalty_grunt() -> void:
+	_add_grunt(encounter_arena)
+	enemy_gear.append({"finish": null, "equipment": null, "upgrade": null})  # (this runs after the gear rolls)
+	penalty_text = "Penalty: +1 Grunt"
+
+
+## A map event this run has not seen yet (all seen = they become available again), or null if there are none.
+func _pick_event() -> EventData:
+	var fresh: Array[EventData] = []
+	for candidate in config.event_pool:
+		if not used_events.has(candidate):
+			fresh.append(candidate)
+	if fresh.is_empty() and not config.event_pool.is_empty():
+		used_events.clear()
+		fresh.append_array(config.event_pool)
+	if fresh.is_empty():
+		return null
+	var chosen: EventData = fresh.pick_random()
+	used_events.append(chosen)
+	return chosen
+
+
+## Removes a figure from the deck for good (its equipment goes back to the inventory). Never removes the
+## last figure. Returns whether it was removed.
+func remove_deck_slot(slot: int) -> bool:
+	if deck.size() <= 1 or slot < 0 or slot >= deck.size():
+		return false
+	if deck_equipment[slot] != null:
+		equipment_inventory.append(deck_equipment[slot])
+	deck.remove_at(slot)
+	deck_equipment.remove_at(slot)
+	deck_finish.remove_at(slot)
+	deck_upgrade.remove_at(slot)
+	return true
 
 
 ## Random layout from the pool, not the same as last time, and only ones a creeping boss can use
