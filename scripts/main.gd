@@ -770,9 +770,9 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)
 		else:
-			# Born out on the board: not on deck, and it waits for the next round like its parent.
+			# Born out on the board: not on deck, but fresh and unflicked: it can be flicked this same round.
 			spawned.on_deck = false
-			spawned.flickable = false
+			spawned.flickable = true
 			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
 	if grants_flicks and parent.team == Figure.Team.ENEMY:

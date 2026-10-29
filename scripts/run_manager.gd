@@ -46,6 +46,8 @@ var event: EventData
 var used_events: Array[EventData] = []
 ## Minigame penalty: set by an event or minigame. The NEXT combat entered is harder (+1 Grunt or one enemy
 ## gets compatible gear), then the flag clears. `penalty_text` says what happened (shown in the combat banner).
+## The first combat of a run is always 4 Grunts (no encounter); this is set once it has been entered.
+var first_combat_played := false
 var minigame_penalty := false
 ## What a minigame paid out, shown on the reward screen that follows it.
 var event_reward_text := ""
@@ -101,6 +103,7 @@ func start_new_run() -> void:
 	reward_steps.clear()
 	used_encounters.clear()
 	used_events.clear()
+	first_combat_played = false
 	minigame_penalty = false
 	event = null
 	_reset_powers()
@@ -591,7 +594,9 @@ func _build_lineup() -> void:
 	if node.type == MapNode.Type.ELITE:
 		encounter = _pick_encounter()
 	elif node.type == MapNode.Type.COMBAT:
-		encounter = _pick_regular_encounter()
+		if first_combat_played:
+			encounter = _pick_regular_encounter()  # (the very first combat is plain Grunts: no encounter)
+		first_combat_played = true
 	if encounter != null:
 		_build_encounter(encounter)
 	elif node.type == MapNode.Type.BOSS:
