@@ -17,6 +17,8 @@ extends Resource
 @export var regular_encounters: Array[EncounterData] = []
 ## The map events (see EventData). Each Event node picks one at random, avoiding repeats in a run.
 @export var event_pool: Array[EventData] = []
+## Rewards and opponent strength for the minigame events.
+@export var minigames: MinigameConfig
 ## How likely enemies are to carry finishes, equipment and upgrades in later acts.
 @export var enemy_gear: EnemyGearConfig
 ## Boss fights always use this arena (the fully open layout: no walls, pins or patches).

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/events/curling_minigame.gd" id="1"]
+
+[node name="Curling" type="Node2D"]
+script = ExtResource("1")

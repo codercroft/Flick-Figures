@@ -40,6 +40,8 @@ func _earned_text() -> String:
 			return RunManager.income_text()
 		MapNode.Type.BOSS:
 			return "Boss defeated! " + RunManager.income_text()
+		MapNode.Type.EVENT:
+			return RunManager.event_reward_text
 	return ""
 
 

@@ -47,6 +47,8 @@ var used_events: Array[EventData] = []
 ## Minigame penalty: set by an event or minigame. The NEXT combat entered is harder (+1 Grunt or one enemy
 ## gets compatible gear), then the flag clears. `penalty_text` says what happened (shown in the combat banner).
 var minigame_penalty := false
+## What a minigame paid out, shown on the reward screen that follows it.
+var event_reward_text := ""
 var penalty_text := ""
 ## Finishes, equipment and upgrades each enemy carries (parallel to `enemies`): {finish, equipment, upgrade}.
 var enemy_gear: Array[Dictionary] = []

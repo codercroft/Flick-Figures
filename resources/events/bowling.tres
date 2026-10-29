@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/events/bowling.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Bowling"
+description = "Two flicks at ten pins. More pins, bigger prize."
+scene = ExtResource("2")
