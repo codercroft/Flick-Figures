@@ -21,10 +21,3 @@ extends Resource
 @export_range(0.0, 1.0) var golf_ai_accuracy := 0.7
 ## Random error on the golf opponent's power (0.04 = up to 4%).
 @export var golf_ai_power_error := 0.04
-
-@export_group("Bowling")
-## Money by number of pins knocked over (entry 0 = none, entry 10 = all ten). Smaller than the
-## contests above.
-@export var bowling_money_by_pins: Array[int] = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 5]
-## A strike (all ten with the first flick) or a spare (all ten with two) also gives a random power.
-@export var bowling_power_on_clear := true

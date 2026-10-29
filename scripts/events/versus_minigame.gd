@@ -1,6 +1,6 @@
 class_name VersusMinigame
 extends Minigame
-## Shared rules of Bocce and Curling: you and an AI opponent take turns flicking Grunts (you first).
+## Shared rules of Bocce and Curling: you and an AI opponent take turns flicking heavy Grunts (a coin flip decides who goes first).
 ## When all are flicked and settled, whoever has the Grunt closest to the goal wins. A win pays money
 ## plus one random item (MinigameConfig); a loss makes the next fight harder (the minigame penalty).
 ## Subclasses give the goal point (`_goal()`), the table look and any setup.
@@ -10,16 +10,25 @@ extends Minigame
 @export var stones_each := 3
 @export var player_color := Color(0.3, 0.55, 1.0)
 @export var opponent_color := Color(0.95, 0.5, 0.15)
+## How long the coin-flip result is shown at the start (seconds).
+@export var coin_flip_seconds := 1.8
 ## The opponent starts from the top edge (Bocce) instead of the bottom (Curling).
 @export var opponent_from_top := false
 ## Distances are capped at this many px when scoring shots, so a shot that loses a stone is bad but finite.
 @export var distance_cap := 3000.0
+## The Grunts are this many times heavier than a normal Grunt, and flick this much harder to match, so
+## they travel as far as ever but a hit stone is nudged rather than blasted away.
+@export var stone_mass_multiplier := 3.5
+## Bounce of the Grunts (a normal Grunt is 0.7). Colliding bodies add their bounces, so a low value makes
+## a hit stone take about half the hitter's speed instead of nearly all of it (equal masses alone would not).
+@export_range(0.0, 1.0) var stone_bounce := 0.1
 
 var ai := MinigameAI.new()
 var stones: Array[Figure] = []
 var _player_data: FigureData
 var _opponent_data: FigureData
 var _thrown := {Figure.Team.PLAYER: 0, Figure.Team.ENEMY: 0}  # flicks taken by each side
+var _player_first := true
 var _judged := false
 var _closest_player := INF
 var _closest_opponent := INF
@@ -53,17 +62,30 @@ func _after_throw() -> void:
 func _run() -> void:
 	ai.name = "AI"
 	add_child(ai)
-	_player_data = colored_grunt(player_color)
-	_opponent_data = colored_grunt(opponent_color)
+	_player_data = heavy_grunt(player_color)
+	_opponent_data = heavy_grunt(opponent_color)
+	_player_first = randf() < 0.5
+	status_label.text = "Coin flip: %s" % ("you throw first!" if _player_first else "the opponent throws first.")
+	await get_tree().create_timer(coin_flip_seconds).timeout
 	await _setup_table()
 	for i in stones_each * 2:
-		if i % 2 == 0:
+		if (i % 2 == 0) == _player_first:
 			await _player_throw()
 		else:
 			await _opponent_throw()
 		await wait_until_settled()
 		await _after_throw()
 	_judge()
+
+
+## A Grunt copy for this match: heavy, with the flick power raised by the same factor (same speed as a
+## normal Grunt's flick) and low bounce.
+func heavy_grunt(color: Color) -> FigureData:
+	var data := colored_grunt(color)
+	data.mass *= stone_mass_multiplier
+	data.flick_power_multiplier *= stone_mass_multiplier
+	data.bounce = stone_bounce
+	return data
 
 
 func _left(team: Figure.Team) -> int:
