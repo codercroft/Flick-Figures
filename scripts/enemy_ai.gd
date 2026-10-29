@@ -107,6 +107,22 @@ const TOUCH_MARGIN := 4.0
 ## The shot must still arrive at the target at least this fast (px/s).
 @export var bank_min_hit_speed := 400.0
 
+@export_group("Turrets")
+## Engineer turret spots are tried on this grid (px).
+@export var turret_grid_spacing := 100.0
+## A flick lane counts as covered when the turret is within this many px of it (nearer = better)...
+@export var turret_cover_radius := 380.0
+## ...but not closer than this, so flicks do not simply plow into the turret.
+@export var turret_lane_gap := 80.0
+## Spots this close to the table edge are skipped (the turret would be knocked off easily).
+@export var turret_edge_margin := 150.0
+## Spots closer than this to the bottom of the board (the player's deck) are skipped: figures there would shove the turret around.
+@export var turret_deck_margin := 240.0
+## An existing turret is only moved when a spot is this many times better.
+@export var turret_replace_gain := 1.3
+## Weight of simply being near the player's figures (a turret near them fires at them sooner).
+@export var turret_near_player_weight := 0.5
+
 @export_group("Accuracy")
 ## Aim error (degrees, either way) for an enemy whose FigureData accuracy is 0. At 1 it is perfect.
 @export var max_aim_error_degrees := 20.0
@@ -938,3 +954,62 @@ func _draw() -> void:
 		draw_circle(shot.to, 14.0, color)
 		draw_string(ThemeDB.fallback_font, shot.to + Vector2(20.0, -20.0), "%s %.0f" % [shot.kind, shot.score],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 32, color)
+
+
+# --- Engineer turrets ---------------------------------------------------------------
+
+## Where an enemy Engineer should put its turret: close to the lanes the player's flicks will travel
+## (the lines from each player figure to each enemy figure), so pellets nudge or deflect them, and
+## near the player's figures. Returns Vector2.INF if nothing beats the current turret by
+## `turret_replace_gain` (or there is no free spot).
+func choose_turret_spot(engineer: Figure, players: Array[Figure], enemies: Array[Figure], stats: Dictionary,
+		arena_node: Arena, board_rect: Rect2, table: Rect2) -> Vector2:
+	var lanes: Array[PackedVector2Array] = []
+	for player in players:
+		if not is_instance_valid(player) or player.knocked_off:
+			continue
+		for enemy in enemies:
+			if is_instance_valid(enemy) and not enemy.knocked_off:
+				lanes.append(PackedVector2Array([player.global_position, enemy.global_position]))
+	var space := engineer.get_world_2d().direct_space_state
+	var radius: float = stats.radius
+	var current := arena_node.turret_of(engineer)
+	var best := Vector2.INF
+	var best_score := 0.0
+	var spot_area := board_rect.grow(-radius)
+	var x := spot_area.position.x
+	while x <= spot_area.end.x:
+		var y := spot_area.position.y
+		while y <= spot_area.end.y:
+			var spot := Vector2(x, y)
+			y += turret_grid_spacing
+			if not table.grow(-turret_edge_margin).has_point(spot) or spot.y > board_rect.end.y - turret_deck_margin:
+				continue
+			if current != null and spot.distance_to(current.global_position) < radius * 2.0:
+				continue  # (the turret's own body would block the check)
+			if not Arena.is_spot_free(space, board_rect, spot, radius):
+				continue
+			var score := _turret_score(spot, lanes, players, stats)
+			if score > best_score:
+				best_score = score
+				best = spot
+		x += turret_grid_spacing
+	if best == Vector2.INF:
+		return Vector2.INF
+	if current != null and best_score < _turret_score(current.global_position, lanes, players, stats) * turret_replace_gain:
+		return Vector2.INF
+	return best
+
+
+func _turret_score(spot: Vector2, lanes: Array[PackedVector2Array], players: Array[Figure], stats: Dictionary) -> float:
+	var score := 0.0
+	for lane in lanes:
+		var closest := Geometry2D.get_closest_point_to_segment(spot, lane[0], lane[1])
+		var distance := spot.distance_to(closest)
+		if distance >= turret_lane_gap and distance <= turret_cover_radius:
+			score += 1.0 - 0.5 * (distance - turret_lane_gap) / (turret_cover_radius - turret_lane_gap)
+	var reach: float = stats.range
+	for player in players:
+		if is_instance_valid(player) and not player.knocked_off and not player.on_deck:
+			score += turret_near_player_weight * maxf(1.0 - spot.distance_to(player.global_position) / reach, 0.0)
+	return score

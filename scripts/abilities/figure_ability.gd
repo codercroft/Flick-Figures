@@ -133,6 +133,11 @@ func get_pin_radius(_figure: Figure) -> float:
 	return 0.0
 
 
+## Engineer: the turret this figure may place before it is flicked ({} = none). See EngineerAbility.
+func get_turret_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
 ## ENEMY AI HINTS (the AI reads these to plan shots that use abilities; they change nothing in play).
 
 ## The explosion this figure is expected to set off, or {}: {"radius", "force", "when"} where when is

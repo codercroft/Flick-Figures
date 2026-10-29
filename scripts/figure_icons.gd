@@ -4,7 +4,7 @@ extends RefCounted
 ## entry to the enum and a new case in draw() to make another icon.
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
-		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL }
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -109,6 +109,10 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_arc(center + Vector2(s * 0.2, s * 0.2), s * 0.6, 0.0, TAU, 20, color, w)
 			canvas.draw_line(center + Vector2(s * 0.2, -s * 0.4), center + Vector2(s * 0.2, -s * 0.95), color, w)
 			canvas.draw_line(center + Vector2(-s, s * 0.2), center + Vector2(-s * 0.6, s * 0.2), color, w)
+		Icon.TURRET:  # a round base with a gun barrel
+			canvas.draw_arc(center + Vector2(0, s * 0.35), s * 0.55, 0.0, TAU, 16, color, w)
+			canvas.draw_line(center + Vector2(0, s * 0.1), center + Vector2(0, -s * 0.95), color, w * 1.5)
+			canvas.draw_line(center + Vector2(-s * 0.8, s * 0.95), center + Vector2(s * 0.8, s * 0.95), color, w)
 		Icon.SKULL:  # a skull: round head, two eyes, jaw
 			canvas.draw_arc(center + Vector2(0, -s * 0.15), s * 0.75, 0.0, TAU, 20, color, w)
 			canvas.draw_circle(center + Vector2(-s * 0.3, -s * 0.2), w * 0.9, color)

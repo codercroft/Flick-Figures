@@ -30,6 +30,7 @@ var _origin := Vector2.ZERO
 var _bricks: Array[Dictionary] = []  # {body, rounds}
 var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
 var _temp_pins: Array[TempPin] = []  # Pinhead's pins
+var _turrets: Array[Turret] = []  # Engineer's turrets
 var _trail: Array[Dictionary] = []  # Juicer's boost pieces: {owner, ability, center, direction, rounds, node}
 
 
@@ -307,6 +308,61 @@ func has_temp_pin(owner_figure: Figure) -> bool:
 		if pin.owner_figure == owner_figure:
 			return true
 	return false
+
+
+# --- Engineer's turrets ---------------------------------------------------------------
+
+## Tap with an Engineer selected: places its turret at `pos` (a second turret of the same Engineer is
+## replaced), or takes the turret back if `pos` is on it. Returns "placed", "removed" or "blocked".
+func toggle_turret(engineer: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> String:
+	var mine := turret_of(engineer)
+	if mine != null and mine.position.distance_to(pos) <= mine.radius + 10.0:
+		remove_turret(engineer)
+		return "removed"
+	var old_spot := mine.position if mine != null else Vector2.INF
+	if not place_turret(engineer, pos, stats, board):
+		if old_spot != Vector2.INF:  # blocked: the old turret stays where it was
+			place_turret(engineer, old_spot, stats, board)
+		return "blocked"
+	return "placed"
+
+
+## Places the Engineer's turret if the spot is free (the old one goes). Returns whether it was placed.
+func place_turret(engineer: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> bool:
+	remove_turret(engineer)
+	if not is_spot_free(get_world_2d().direct_space_state, board, pos, stats.radius):
+		return false
+	var turret := Turret.new()
+	turret.setup(engineer, stats)
+	turret.position = pos
+	add_child(turret)
+	_turrets.append(turret)
+	return true
+
+
+func turret_of(engineer: Figure) -> Turret:
+	for turret in _turrets:
+		if is_instance_valid(turret) and turret.owner_figure == engineer:
+			return turret
+	return null
+
+
+func remove_turret(engineer: Figure) -> void:
+	for i in range(_turrets.size() - 1, -1, -1):
+		var turret := _turrets[i]
+		if not is_instance_valid(turret):
+			_turrets.remove_at(i)
+		elif turret.owner_figure == engineer:
+			remove_child(turret)  # out of the physics space right away
+			turret.queue_free()
+			_turrets.remove_at(i)
+
+
+## Forgets turrets that are gone (knocked off the table, or their Engineer fell).
+func prune_turrets() -> void:
+	for i in range(_turrets.size() - 1, -1, -1):
+		if not is_instance_valid(_turrets[i]) or _turrets[i].is_queued_for_deletion():
+			_turrets.remove_at(i)
 
 
 # --- Juicer's trail ----------------------------------------------------------

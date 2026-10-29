@@ -75,6 +75,8 @@ var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
+## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn.
+var turret_side := -1
 
 var _top_bar := TopBar.new()
 
@@ -233,6 +235,8 @@ func _start_player_turn(new_round := true) -> void:
 			figure.turn_flicks = 0
 	_bonus_figure = null
 	arena.prune_temp_pins()
+	arena.prune_turrets()
+	turret_side = Figure.Team.PLAYER
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
@@ -382,6 +386,16 @@ func _has_flick_left(figure) -> bool:
 func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
 		return
+	var turret := _selected.ability.get_turret_stats(_selected)
+	if not turret.is_empty():  # Engineer
+		match arena.toggle_turret(_selected, pos, turret, board.board_rect):
+			"placed":
+				ui.show_your_turn("Turret placed. Drag anywhere to flick")
+			"removed":
+				ui.show_your_turn("Turret removed. Drag anywhere to flick")
+			_:
+				ui.show_your_turn("Can't place a turret there")
+		return
 	var radius := _selected.ability.get_pin_radius(_selected)
 	if radius <= 0.0:
 		return
@@ -462,11 +476,16 @@ func _is_alive(figure) -> bool:  # untyped on purpose: a freed Figure can't be p
 func _run_enemy_turn() -> void:
 	var serial := _turn_serial
 	_state = State.ENEMY_TURN
+	turret_side = Figure.Team.ENEMY
 	ui.show_enemy_turn()
 	ai.clear_debug()
 	for enemy in _enemies:
 		if _is_alive(enemy):
 			enemy.turn_flicks = 0
+	await get_tree().physics_frame  # turret spots are checked in the physics space
+	if serial != _turn_serial:
+		return
+	_place_enemy_turrets()
 	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
 	# _enemy_flicks is read every round because a split can raise it mid-turn.
 	var flicks_taken := 0
@@ -533,6 +552,19 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 	_start_player_turn()
+
+
+## Enemy Engineers put their turret where it covers the player's flick lanes (before the flicks).
+func _place_enemy_turrets() -> void:
+	for enemy in _enemies:
+		if not _is_alive(enemy):
+			continue
+		var stats := enemy.ability.get_turret_stats(enemy)
+		if stats.is_empty():
+			continue
+		var spot := ai.choose_turret_spot(enemy, _players, _enemies, stats, arena, board.board_rect, board.get_table_rect())
+		if spot != Vector2.INF:
+			arena.place_turret(enemy, spot, stats, board.board_rect)
 
 
 ## When every enemy that can flick has flicked, the enemy side's cycle resets (they could all flick again):
@@ -638,6 +670,7 @@ func _check_game_over() -> bool:
 
 func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
+	turret_side = -1
 	if won:
 		# Money for every win (elites and bosses pay a bonus on top: see RewardConfig).
 		var on_table: Array[FigureData] = []

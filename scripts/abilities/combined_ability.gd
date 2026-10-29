@@ -109,6 +109,11 @@ func get_pin_radius(figure: Figure) -> float:
 	return maxf(first.get_pin_radius(figure), second.get_pin_radius(figure))
 
 
+func get_turret_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_turret_stats(figure)
+	return stats if not stats.is_empty() else second.get_turret_stats(figure)
+
+
 func get_ai_blast(figure: Figure) -> Dictionary:
 	var blast := first.get_ai_blast(figure)
 	return blast if not blast.is_empty() else second.get_ai_blast(figure)

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/engineer_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Engineer"
+description = "Tap an empty spot before flicking to place a turret that shoots the foe's nearest figure on their turn."
+rarity = 2
+label = "EN"
+icon = 23
+color = Color(0.25, 0.65, 0.7, 1)
+radius = 60.0
+mass = 1.0
+bounce = 0.7
+damping_multiplier = 1.0
+flick_power_multiplier = 1.0
+knockback_taken_multiplier = 1.0
+accuracy = 0.8
+ability = SubResource("Resource_1")
