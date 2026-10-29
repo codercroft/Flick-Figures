@@ -107,6 +107,12 @@ const TOUCH_MARGIN := 4.0
 ## The shot must still arrive at the target at least this fast (px/s).
 @export var bank_min_hit_speed := 400.0
 
+@export_group("Bummer auras")
+## Score lost by a shot whose shooter would end up inside a player Bummer's aura (it would flick recklessly)...
+@export var bummer_aura_penalty := 120.0
+## ...and gained by a reposition flick that gets a figure out of one.
+@export var bummer_exit_bonus := 100.0
+
 @export_group("Turrets")
 ## Engineer turret spots are tried on this grid (px).
 @export var turret_grid_spacing := 100.0
@@ -140,6 +146,7 @@ var _arena: Arena
 var _floor_on := false
 var _bends := false
 var _pull_sources: Array[Figure] = []
+var _self_penalty := 0.0  # the self-knock-off penalty for the enemy being examined (0 inside a Bummer's aura)
 var _fast_slides := false  # skip the stepped simulation for secondary slides (explosion pushes, ally chains)
 var _slide_cache := {}  # (figure, from, velocity) -> slide ratio, cleared each decision
 
@@ -180,9 +187,16 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	var target = best.get("target")
 	if is_instance_valid(target):
 		error += deg_to_rad(target.ability.get_incoming_aim_error_degrees(target))
+	# An opposing Bummer's aura makes the flick reckless: extra aim error and extra power (the prediction
+	# above did not count on that, so the shot often overshoots).
+	var reckless := best_enemy.bummer_effect()
+	var power_boost := 1.0
+	if not reckless.is_empty():
+		error += deg_to_rad(reckless.aim_error_degrees)
+		power_boost = reckless.power
 	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
 	_record_debug(best_enemy, best, best_enemy.global_position + direction * best.distance)
-	var result := {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
+	var result := {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass * power_boost}
 	if best.has("pin"):  # a bank shot: the caller places this pin before the flick
 		result["pin"] = best.pin
 		result["pin_radius"] = best.pin_radius
@@ -250,6 +264,8 @@ func _power_levels(depth: int) -> Array[float]:
 func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
+	# Inside an opposing Bummer's aura the enemy is reckless: it stops caring about falling off.
+	_self_penalty = self_knock_off_penalty if enemy.bummer_effect().is_empty() else 0.0
 	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier()
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
@@ -340,13 +356,16 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score += combo * weight
 
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
-	score -= self_knock_off_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
+	score -= _self_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
 	# Aim error can make the shot miss, and a shooter that misses just keeps sliding. Count that risk.
 	var to_other := other.global_position - enemy.global_position
 	var miss_chance := 1.0 - _hit_chance(direction.angle_to(to_other), _aim_error(enemy),
 			asin(clampf((enemy.radius + other.radius) / to_other.length(), 0.0, 1.0)))
 	if miss_chance > 0.0:
-		score -= self_knock_off_penalty * miss_chance * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
+		score -= _self_penalty * miss_chance * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
+	# Ending up inside a player Bummer's aura is bad.
+	if not enemy.bummer_effect_at(contact).is_empty():
+		score -= bummer_aura_penalty * weight
 	# An enemy inside an ally's Crazy Man aura would rather stay there.
 	if enemy.would_be_in_aura(enemy.global_position) and not enemy.would_be_in_aura(contact):
 		score -= aura_leave_penalty * weight
@@ -536,7 +555,7 @@ func _path_affected(figure: Figure, from: Vector2, direction: Vector2, length: f
 		if source == figure:
 			continue
 		for i in samples + 1:
-			if source.ability.get_path_pull(source, from.lerp(to, float(i) / samples)) != Vector2.ZERO:
+			if source.ability.get_path_pull(source, from.lerp(to, float(i) / samples), figure.team) != Vector2.ZERO:
 				return true
 	return false
 
@@ -557,7 +576,7 @@ func _simulate_flight(figure: Figure, from: Vector2, velocity: Vector2) -> Dicti
 			vel = _arena.predict_floor_velocity(pos, vel, sim_step)
 		for source in _pull_sources:
 			if source != figure:
-				vel += source.ability.get_path_pull(source, pos) * sim_step
+				vel += source.ability.get_path_pull(source, pos, figure.team) * sim_step
 		vel *= damping
 		pos += vel * sim_step
 		length += vel.length() * sim_step
@@ -679,7 +698,7 @@ func _best_free_blast(enemy: Figure, shape: CircleShape2D, players: Array[Figure
 		if not table.grow(-enemy.radius).has_point(end):
 			continue
 		var score := _blast_value(end, blast, enemy, null, players, table) * weight
-		score -= self_knock_off_penalty * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
+		score -= _self_penalty * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
 		score -= overpower_penalty * speed / top_speed
 		if best.is_empty() or score > best.score:
 			best = {"kind": "attack", "score": score, "direction": direction, "speed": speed, "distance": distance}
@@ -785,7 +804,7 @@ func _bank_shot_via(enemy: Figure, shape: CircleShape2D, pin: Vector2, pin_radiu
 	var knocked_off := _leave_chance(other, other.global_position, outcome.target, table)
 	var pushed := _push_progress(other, other.global_position, outcome.target, table)
 	var score := hit_player_bonus + kill_bonus * knocked_off + edge_bonus * pushed
-	score -= self_knock_off_penalty * _leave_chance(enemy, contact, outcome.shooter, table)
+	score -= _self_penalty * _leave_chance(enemy, contact, outcome.shooter, table)
 	score -= bank_shot_penalty / _combo_weight(tier) + overpower_penalty * speed / top_speed
 	return {"kind": "attack", "score": score, "direction": direction, "speed": speed, "distance": leg1,
 			"pin": pin, "pin_radius": pin_radius, "target": other}
@@ -819,6 +838,13 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 		var score := -_nearest_distance(end, players)
 		if enemy.would_be_in_aura(end):
 			score += aura_stay_bonus  # stay close to (or move into) an allied Crazy Man's aura
+		# Get out of a player Bummer's aura, and do not move into one.
+		var bummed_now := not enemy.bummer_effect().is_empty()
+		var bummed_end := not enemy.bummer_effect_at(end).is_empty()
+		if bummed_now and not bummed_end:
+			score += bummer_exit_bonus
+		elif bummed_end:
+			score -= bummer_aura_penalty
 		if near_edge:
 			score += 2.0 * minf(end_margin, reposition_edge_margin)
 		if score > best_score:

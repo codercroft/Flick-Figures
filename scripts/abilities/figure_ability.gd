@@ -113,6 +113,12 @@ func get_aura_radius(_figure: Figure) -> float:
 	return 0.0
 
 
+## BUMMER AURA: {radius, power, aim_error_degrees, aim_line_scale} (see BummerAbility) or {} for none.
+## OPPOSING figures inside the radius flick recklessly.
+func get_bummer_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
 ## Aura: flick power multiplier for teammates inside the radius.
 func get_aura_flick_multiplier(_figure: Figure) -> float:
 	return 1.0
@@ -151,8 +157,9 @@ func has_path_pull(_figure: Figure) -> bool:
 	return false
 
 
-## The pull (px/s per second) this figure puts on a moving figure at `point` (Magnet).
-func get_path_pull(_figure: Figure, _point: Vector2) -> Vector2:
+## The pull (px/s per second) this figure puts on a moving figure of team `mover_team` at `point` (Magnet:
+## opposing figures only; -1 = any team).
+func get_path_pull(_figure: Figure, _point: Vector2, _mover_team := -1) -> Vector2:
 	return Vector2.ZERO
 
 

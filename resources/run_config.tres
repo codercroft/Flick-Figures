@@ -102,7 +102,7 @@
 [ext_resource type="Resource" path="res://resources/encounters/regular/fortress.tres" id="enc_fortress"]
 [ext_resource type="Resource" path="res://resources/encounters/regular/speed_trap.tres" id="enc_speed_trap"]
 [ext_resource type="Resource" path="res://resources/encounters/regular/demolition_crew.tres" id="enc_demolition_crew"]
-[ext_resource type="Resource" path="res://resources/encounters/regular/mirror_match.tres" id="enc_mirror_match"]
+[ext_resource type="Resource" path="res://resources/encounters/mirror_match.tres" id="enc_mirror_match"]
 
 [resource]
 script = ExtResource("1")
@@ -129,10 +129,10 @@ relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), 
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
-regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew"), ExtResource("enc_mirror_match")])
+regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew")])
 event_pool = Array[ExtResource("evt_script")]([ExtResource("evt_trader"), ExtResource("evt_bocce"), ExtResource("evt_curling"), ExtResource("evt_bowling"), ExtResource("evt_golf")])
 minigames = ExtResource("evt_minigames")
-elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])
+elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154"), ExtResource("enc_mirror_match")])
 rewards = ExtResource("142")
 enemy_gear = ExtResource("143")
 boss_arena = ExtResource("10")

@@ -8,4 +8,4 @@ script = ExtResource("1")
 figure = ExtResource("2")
 display_name = "Big Magnet"
 description = "Larger radius and a stronger curve on passing shots."
-ability_overrides = {"pull_radius": 700.0, "pull_acceleration": 1800.0}
+ability_overrides = {"pull_radius": 700.0, "pull_acceleration": 2300.0}

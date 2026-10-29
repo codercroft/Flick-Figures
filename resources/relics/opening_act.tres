@@ -12,5 +12,5 @@ display_name = "Opening Act"
 label = "OA"
 description = "The first flick of each combat has 2x power."
 color = Color(0.95, 0.75, 0.3, 1)
-rarity = 0
+rarity = 2
 effect = SubResource("Resource_1")

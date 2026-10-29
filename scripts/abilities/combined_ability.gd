@@ -92,6 +92,11 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
+func get_bummer_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_bummer_stats(figure)
+	return stats if not stats.is_empty() else second.get_bummer_stats(figure)
+
+
 func get_aura_flick_multiplier(figure: Figure) -> float:
 	return first.get_aura_flick_multiplier(figure) * second.get_aura_flick_multiplier(figure)
 
@@ -123,8 +128,8 @@ func has_path_pull(figure: Figure) -> bool:
 	return first.has_path_pull(figure) or second.has_path_pull(figure)
 
 
-func get_path_pull(figure: Figure, point: Vector2) -> Vector2:
-	return first.get_path_pull(figure, point) + second.get_path_pull(figure, point)
+func get_path_pull(figure: Figure, point: Vector2, mover_team := -1) -> Vector2:
+	return first.get_path_pull(figure, point, mover_team) + second.get_path_pull(figure, point, mover_team)
 
 
 func get_flick_bounce(figure: Figure) -> float:

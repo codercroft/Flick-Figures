@@ -249,6 +249,11 @@ func _draw() -> void:
 	if aura_radius > 0.0:
 		draw_circle(Vector2.ZERO, aura_radius, Color(data.color, 0.08))
 		draw_arc(Vector2.ZERO, aura_radius, 0.0, TAU, 72, Color(data.color, 0.3), 4.0, true)
+	# A Bummer's aura (faint, in a sour color) around the figure.
+	var bummer := ability.get_bummer_stats(self)
+	if not bummer.is_empty():
+		draw_circle(Vector2.ZERO, bummer.radius, Color(0.55, 0.25, 0.7, 0.09))
+		draw_arc(Vector2.ZERO, bummer.radius, 0.0, TAU, 72, Color(0.65, 0.35, 0.8, 0.35), 4.0, true)
 	var greyed := team == Team.PLAYER and not flickable
 	var fill := data.color.lerp(GREYED_OUT, 0.85) if greyed else data.color
 	# The body squashes/stretches along _squash_angle; the details on top only grow.
@@ -410,6 +415,28 @@ func would_be_in_aura(point: Vector2) -> bool:
 		if reach > 0.0 and other.global_position.distance_to(point) <= reach:
 			return true
 	return false
+
+
+## The reckless effect of an OPPOSING Bummer whose aura covers `point` ({} if none): {radius, power,
+## aim_error_degrees, aim_line_scale}. The strongest one wins if several overlap.
+func bummer_effect_at(point: Vector2) -> Dictionary:
+	var best := {}
+	if not is_inside_tree():
+		return best
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == self or other.knocked_off or other.team == team or other.ability == null:
+			continue
+		var stats := other.ability.get_bummer_stats(other)
+		if not stats.is_empty() and other.global_position.distance_to(point) <= stats.radius \
+				and (best.is_empty() or stats.power > best.power):
+			best = stats
+	return best
+
+
+## The reckless effect on this figure where it stands now ({} = not in an opposing Bummer's aura).
+func bummer_effect() -> Dictionary:
+	return bummer_effect_at(global_position)
 
 
 ## Teammates (not this figure) whose aura reaches this figure.

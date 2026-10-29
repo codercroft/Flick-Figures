@@ -314,6 +314,9 @@ func _update_aim(pos: Vector2) -> void:
 	# Roughly where the figure will come to rest (ignores bumping into things).
 	var speed := impulse.length() / _aim_figure.mass
 	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
+	var bummer := _aim_figure.bummer_effect()
+	if not bummer.is_empty():
+		distance *= bummer.aim_line_scale  # an enemy Bummer's aura: the aim line lies short
 	var direction := impulse.normalized()
 	var origin := _aim_figure.global_position + direction * _aim_figure.radius
 	var bounce := {}
@@ -427,6 +430,9 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost \
 			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure) * _aim_figure.aura_flick_multiplier() \
 			* RunManager.relic_flick_multiplier(self, _aim_figure)
+	var bummer := _aim_figure.bummer_effect()  # an enemy Bummer's aura: reckless, +power
+	if not bummer.is_empty():
+		full_force *= bummer.power
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
