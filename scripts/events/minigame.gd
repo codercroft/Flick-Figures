@@ -377,3 +377,21 @@ func make_data(display_name: String, short_label: String, color: Color, radius: 
 	data.bounce = 0.7
 	data.accuracy = 1.0
 	return data
+
+
+## Ends a contest against the AI. `outcome`: 1 = you win (money + a random item), -1 = you lose (the next
+## fight gets harder), 0 = draw (nothing). `lines` are the details shown under the heading.
+func conclude_contest(outcome: int, lines: Array[String]) -> void:
+	if outcome > 0:
+		var kinds := config().win_item_kinds
+		lines.append(give_reward(config().win_money, kinds.pick_random() if not kinds.is_empty() else ""))
+		show_result("You win!", Color(1.0, 0.82, 0.25), lines, not RunManager.reward_steps.is_empty())
+	elif outcome < 0:
+		RunManager.minigame_penalty = true
+		RunManager.event_reward_text = ""
+		lines.append("The next fight will be harder.")
+		show_result("You lose", Color(1.0, 0.4, 0.35), lines)
+	else:
+		RunManager.event_reward_text = ""
+		lines.append("A draw: no reward and no penalty.")
+		show_result("Draw", Color.WHITE, lines)

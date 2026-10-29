@@ -44,7 +44,7 @@ func _run() -> void:
 	_pool("regular encounters", config.regular_encounters, 12)
 	_pool("events", config.event_pool, 1)
 	_check(config.minigames != null, "RunConfig.minigames did not load")
-	_check(config.event_pool.size() >= 4, "event pool is missing the minigames (Bocce, Curling, Bowling)")
+	_check(config.event_pool.size() >= 5, "event pool is missing the minigames (Bocce, Curling, Bowling, Mini-Golf)")
 	for event in config.event_pool:
 		_check(event.scene != null and event.scene.instantiate() != null, "event %s has no scene" % event.display_name)
 	# Enemy gear rules: nothing that does nothing for the figure. (Loaded at run time: a typed GearRules

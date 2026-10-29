@@ -132,20 +132,8 @@ func _judge() -> void:
 	_closest_opponent = _nearest(Figure.Team.ENEMY)
 	overlay.queue_redraw()
 	var lines: Array[String] = ["Your closest: %s   Opponent's closest: %s" % [_dist_text(_closest_player), _dist_text(_closest_opponent)]]
-	if _closest_player < _closest_opponent:
-		var kinds := config().win_item_kinds
-		var reward := give_reward(config().win_money, kinds.pick_random() if not kinds.is_empty() else "")
-		lines.append(reward)
-		show_result("You win!", Color(1.0, 0.82, 0.25), lines, not RunManager.reward_steps.is_empty())
-	elif _closest_opponent < _closest_player:
-		RunManager.minigame_penalty = true
-		RunManager.event_reward_text = ""
-		lines.append("The next fight will be harder.")
-		show_result("You lose", Color(1.0, 0.4, 0.35), lines)
-	else:
-		RunManager.event_reward_text = ""
-		lines.append("A draw: no reward and no penalty.")
-		show_result("Draw", Color.WHITE, lines)
+	var outcome := 1 if _closest_player < _closest_opponent else (-1 if _closest_opponent < _closest_player else 0)
+	conclude_contest(outcome, lines)
 
 
 func _dist_text(distance: float) -> String:

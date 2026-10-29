@@ -1,0 +1,92 @@
+[gd_resource type="Resource" script_class="GolfCourse" load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://scripts/events/golf_course.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="5"]
+
+[sub_resource type="Resource" id="r1"]
+script = ExtResource("2")
+position = Vector2(450, 18)
+size = Vector2(900, 36)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="r2"]
+script = ExtResource("2")
+position = Vector2(450, 982)
+size = Vector2(900, 36)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="r3"]
+script = ExtResource("2")
+position = Vector2(18, 500)
+size = Vector2(36, 1000)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="r4"]
+script = ExtResource("2")
+position = Vector2(882, 500)
+size = Vector2(36, 1000)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="r5"]
+script = ExtResource("2")
+position = Vector2(190, 250)
+size = Vector2(300, 30)
+rotation_degrees = -35.0
+
+[sub_resource type="Resource" id="r6"]
+script = ExtResource("2")
+position = Vector2(710, 250)
+size = Vector2(300, 30)
+rotation_degrees = 35.0
+
+[sub_resource type="Resource" id="r7"]
+script = ExtResource("3")
+position = Vector2(330, 440)
+radius = 28.0
+
+[sub_resource type="Resource" id="r8"]
+script = ExtResource("3")
+position = Vector2(570, 440)
+radius = 28.0
+
+[sub_resource type="Resource" id="r9"]
+script = ExtResource("3")
+position = Vector2(450, 350)
+radius = 28.0
+
+[sub_resource type="Resource" id="r10"]
+script = ExtResource("4")
+kind = 1
+position = Vector2(450, 680)
+size = Vector2(300, 200)
+direction_degrees = -90.0
+turn = 1
+strength = 1.0
+
+[sub_resource type="Resource" id="r11"]
+script = ExtResource("4")
+kind = 0
+position = Vector2(450, 140)
+size = Vector2(230, 190)
+direction_degrees = -90.0
+turn = 1
+strength = 1.0
+
+[sub_resource type="Resource" id="layout"]
+script = ExtResource("5")
+display_name = "Pinball Alley"
+creeper_safe = false
+walls = Array[ExtResource("2")]([SubResource("r1"), SubResource("r2"), SubResource("r3"), SubResource("r4"), SubResource("r5"), SubResource("r6")])
+pins = Array[ExtResource("3")]([SubResource("r7"), SubResource("r8"), SubResource("r9")])
+patches = Array[ExtResource("4")]([SubResource("r10"), SubResource("r11")])
+
+[resource]
+script = ExtResource("1")
+display_name = "Pinball Alley"
+description = "A boost ramp, bumpers and a rough green around the hole."
+layout = SubResource("layout")
+tee = Vector2(450, 890)
+hole = Vector2(450, 120)

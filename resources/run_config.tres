@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=103 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=104 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -89,6 +89,7 @@
 [ext_resource type="Resource" path="res://resources/events/bocce.tres" id="evt_bocce"]
 [ext_resource type="Resource" path="res://resources/events/curling.tres" id="evt_curling"]
 [ext_resource type="Resource" path="res://resources/events/bowling.tres" id="evt_bowling"]
+[ext_resource type="Resource" path="res://resources/events/mini_golf.tres" id="evt_golf"]
 [ext_resource type="Resource" path="res://resources/minigame_config.tres" id="evt_minigames"]
 [ext_resource type="Resource" path="res://resources/encounters/regular/bodyguards.tres" id="enc_bodyguards"]
 [ext_resource type="Resource" path="res://resources/encounters/regular/bent_lane.tres" id="enc_bent_lane"]
@@ -129,7 +130,7 @@ acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
 regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew"), ExtResource("enc_mirror_match")])
-event_pool = Array[ExtResource("evt_script")]([ExtResource("evt_trader"), ExtResource("evt_bocce"), ExtResource("evt_curling"), ExtResource("evt_bowling")])
+event_pool = Array[ExtResource("evt_script")]([ExtResource("evt_trader"), ExtResource("evt_bocce"), ExtResource("evt_curling"), ExtResource("evt_bowling"), ExtResource("evt_golf")])
 minigames = ExtResource("evt_minigames")
 elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154")])
 rewards = ExtResource("142")
