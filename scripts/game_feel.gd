@@ -43,6 +43,7 @@ extends Node2D
 
 var _shake := 0.0
 var _last_vibrate_ms := 0
+var _web_vibrate := -1  # -1 = not asked yet, 0 = browser cannot vibrate, 1 = it can
 var _fade := Gradient.new()  # particle color over life: opaque to transparent
 
 @onready var camera: Camera2D = $Camera2D
@@ -115,9 +116,19 @@ func _burst(pos: Vector2, color: Color, count: int, speed: float) -> void:
 	get_tree().create_timer(particles.lifetime + 0.2).timeout.connect(particles.queue_free)
 
 
+## Browsers: only some (Android Chrome) have navigator.vibrate. Asked once.
+func _web_can_vibrate() -> bool:
+	if _web_vibrate < 0:
+		var supported = JavaScriptBridge.eval("typeof navigator.vibrate === 'function'")
+		_web_vibrate = 1 if supported == true else 0
+	return _web_vibrate == 1
+
+
 func _vibrate(duration_ms: int, amplitude: float) -> void:
-	if not haptics_enabled or not OS.has_feature("mobile"):
+	if not haptics_enabled or not (OS.has_feature("mobile") or OS.has_feature("web")):
 		return
+	if OS.has_feature("web") and not _web_can_vibrate():
+		return  # iPhone browsers have no vibration: do nothing, quietly
 	var now := Time.get_ticks_msec()
 	if now - _last_vibrate_ms < min_haptic_gap_ms:
 		return

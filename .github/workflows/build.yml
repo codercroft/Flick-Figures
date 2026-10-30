@@ -1,7 +1,8 @@
 name: Build
 
-# Every push to main builds an Android APK and a web build, and publishes both on the
-# "Latest build" release page. You can also run it by hand from the Actions tab.
+# Every push to main builds an Android APK and a web build, publishes both on the "Latest build"
+# release page, and deploys the web build to GitHub Pages (the stable link for iPhone players).
+# You can also run it by hand from the Actions tab.
 on:
   push:
     branches: [main]
@@ -85,12 +86,48 @@ jobs:
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
-          cd build/web && zip -r ../flick-figures-web.zip .
+
+      - name: Prepare the web build for Pages (icons, manifest, cache-busting, version check)
+        run: |
+          cd build/web
+          V=${{ github.run_number }}
+          # Every file gets this build's number in its name, so a new deploy is never served from an old cache.
+          for f in index.*; do
+            [ "$f" = "index.html" ] && continue
+            mv "$f" "index-$V.${f#index.}"
+          done
+          sed -i -E "s/\"executable\":\"index\"/\"executable\":\"index-$V\"/; s/index\.(js|wasm|pck|png|audio\.worklet\.js|audio\.position\.worklet\.js)/index-$V.\1/g; s/__BUILD__/$V/g" index.html
+          cp ../../web/manifest.webmanifest ../../web/icon-192.png ../../web/icon-512.png \
+            ../../web/icon-maskable-512.png ../../web/apple-touch-icon.png .
+          # version.json is what an open or cached page compares itself with.
+          echo "{\"build\": \"$V\", \"commit\": \"${GITHUB_SHA::7}\"}" > version.json
+          touch .nojekyll
+          grep -c "index-$V" index.html
+          ls -la
+          zip -r ../flick-figures-web.zip .
 
       - uses: actions/upload-artifact@v4
         with:
           name: web
           path: build/flick-figures-web.zip
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  pages:
+    # Needs "Settings > Pages > Source: GitHub Actions" turned on once (see README).
+    needs: [web]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 
   release:
     needs: [android, web]

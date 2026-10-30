@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<!-- viewport-fit=cover lets the game draw under the iPhone notch and home bar (the game keeps its UI clear of them). -->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+		<title>$GODOT_PROJECT_NAME</title>
+
+		<!-- "Add to Home Screen": a full-screen app with its own icon and no browser bars. -->
+		<link rel="manifest" href="manifest.webmanifest">
+		<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+		<link rel="apple-touch-icon" href="apple-touch-icon.png">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="Flick Figures">
+		<meta name="theme-color" content="#171a21">
+		<meta name="format-detection" content="telephone=no">
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+/* The page never scrolls, bounces or zooms: the canvas is the whole screen. */
+html, body {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
+	background-color: #171a21;
+	color: white;
+	touch-action: none;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+#canvas {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100vh;
+	height: 100dvh;
+	display: block;
+	touch-action: none;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+#status, #status-splash, #status-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+}
+
+#status, #status-splash {
+	top: 0;
+	bottom: 0;
+}
+
+#status {
+	background-color: #171a21;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	visibility: hidden;
+}
+
+#status-splash {
+	max-height: 100%;
+	max-width: 100%;
+	margin: auto;
+}
+
+#status-progress, #status-notice {
+	display: none;
+}
+
+#status-progress {
+	bottom: 10%;
+	width: 50%;
+	margin: 0 auto;
+}
+
+#status-notice {
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: -apple-system, 'Noto Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+}
+
+/* "A new version is out": a small bar under the notch. Tap it to reload. */
+#update-toast {
+	position: fixed;
+	left: 12px;
+	right: 12px;
+	top: calc(env(safe-area-inset-top, 0px) + 8px);
+	display: none;
+	z-index: 10;
+	padding: 12px 16px;
+	border-radius: 14px;
+	background: #2b6b3a;
+	border: 2px solid #8fe0a0;
+	color: white;
+	font: 600 16px/1.2 -apple-system, 'Noto Sans', Arial, sans-serif;
+	text-align: center;
+	touch-action: manipulation;
+}
+
+/* The game is portrait only: ask phones held sideways to turn back. */
+#rotate-hint {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 20;
+	background: #171a21;
+	color: white;
+	font: 600 20px/1.3 -apple-system, 'Noto Sans', Arial, sans-serif;
+	text-align: center;
+	align-items: center;
+	justify-content: center;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+	#rotate-hint {
+		display: flex;
+	}
+}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<img id="status-splash" src="$GODOT_SPLASH" alt="">
+			<progress id="status-progress"></progress>
+			<div id="status-notice"></div>
+		</div>
+
+		<div id="update-toast">A new version is ready. Tap here to update.</div>
+		<div id="rotate-hint">Please turn your phone upright<br>to play Flick Figures.</div>
+
+		<script>
+// The build number is filled in by the deploy workflow (it stays "__BUILD__" when run locally).
+const BUILD = '__BUILD__';
+const DEPLOYED = BUILD.indexOf('__') !== 0;
+
+// --- Safe areas -----------------------------------------------------------------------
+// The game asks for the notch / home bar insets in its own 1080-wide units (see scripts/safe_area.gd).
+(function () {
+	const probe = document.createElement('div');
+	probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;'
+			+ 'padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+	document.body.appendChild(probe);
+	window.flickSafeInsets = function () {
+		const style = getComputedStyle(probe);
+		const k = 1080 / Math.max(window.innerWidth, 1);
+		return JSON.stringify({
+			top: parseFloat(style.paddingTop) * k, right: parseFloat(style.paddingRight) * k,
+			bottom: parseFloat(style.paddingBottom) * k, left: parseFloat(style.paddingLeft) * k,
+		});
+	};
+}());
+
+// Portrait lock where the browser allows it (installed apps on Android; iOS ignores this and uses the hint above).
+try {
+	if (screen.orientation && screen.orientation.lock) {
+		screen.orientation.lock('portrait').catch(function () {});
+	}
+} catch (e) { /* not supported: fine */ }
+
+// --- New builds ------------------------------------------------------------------------
+// version.json is always fetched fresh. A page that was cached from an older build reloads (once) onto the
+// new one before the game starts; while playing, a bar offers the update instead of reloading mid-run.
+function fetchLatestBuild() {
+	return fetch('version.json?t=' + Date.now(), {cache: 'no-store'})
+		.then(function (r) { return r.ok ? r.json() : null; })
+		.then(function (j) { return j ? String(j.build) : null; })
+		.catch(function () { return null; });
+}
+
+function reloadToBuild(build) {
+	// A different URL gets past any cached copy of this page.
+	location.replace(location.pathname + '?v=' + encodeURIComponent(build));
+}
+
+function startup() {
+	if (!DEPLOYED) {
+		return Promise.resolve();
+	}
+	const timeout = new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 2500); });
+	return Promise.race([fetchLatestBuild(), timeout]).then(function (latest) {
+		if (latest && latest !== BUILD && sessionStorage.getItem('flickReloadedFor') !== latest) {
+			sessionStorage.setItem('flickReloadedFor', latest);
+			reloadToBuild(latest);
+			return new Promise(function () {});  // never continues: the page is reloading
+		}
+	});
+}
+
+function watchForUpdates() {
+	if (!DEPLOYED) {
+		return;
+	}
+	const toast = document.getElementById('update-toast');
+	function check() {
+		fetchLatestBuild().then(function (latest) {
+			if (latest && latest !== BUILD) {
+				toast.style.display = 'block';
+				toast.onclick = function () { reloadToBuild(latest); };
+			}
+		});
+	}
+	setInterval(check, 60000);
+	document.addEventListener('visibilitychange', function () {
+		if (!document.hidden) { check(); }
+	});
+}
+
+// --- Game ------------------------------------------------------------------------------
+function loadEngine() {
+	return new Promise(function (resolve, reject) {
+		const script = document.createElement('script');
+		script.src = '$GODOT_URL';
+		script.onload = resolve;
+		script.onerror = function () { reject(new Error('Could not load the game. Check your connection and reload.')); };
+		document.head.appendChild(script);
+	});
+}
+
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+
+const statusOverlay = document.getElementById('status');
+const statusProgress = document.getElementById('status-progress');
+const statusNotice = document.getElementById('status-notice');
+let initializing = true;
+let statusMode = '';
+
+function setStatusMode(mode) {
+	if (statusMode === mode || !initializing) {
+		return;
+	}
+	if (mode === 'hidden') {
+		statusOverlay.remove();
+		initializing = false;
+		return;
+	}
+	statusOverlay.style.visibility = 'visible';
+	statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+	statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+	statusMode = mode;
+}
+
+function setStatusNotice(text) {
+	while (statusNotice.lastChild) {
+		statusNotice.removeChild(statusNotice.lastChild);
+	}
+	text.split('\n').forEach(function (line) {
+		statusNotice.appendChild(document.createTextNode(line));
+		statusNotice.appendChild(document.createElement('br'));
+	});
+}
+
+function displayFailureNotice(err) {
+	console.error(err);
+	if (err instanceof Error) {
+		setStatusNotice(err.message);
+	} else if (typeof err === 'string') {
+		setStatusNotice(err);
+	} else {
+		setStatusNotice('An unknown error occurred');
+	}
+	setStatusMode('notice');
+	initializing = false;
+}
+
+setStatusMode('progress');
+startup().then(loadEngine).then(function () {
+	const engine = new Engine(GODOT_CONFIG);
+	const missing = Engine.getMissingFeatures({threads: GODOT_THREADS_ENABLED});
+	if (missing.length !== 0) {
+		displayFailureNotice('Error\nThe following features required to run Godot projects on the Web are missing:\n' + missing.join('\n'));
+		return;
+	}
+	watchForUpdates();
+	return engine.startGame({
+		'onProgress': function (current, total) {
+			if (current > 0 && total > 0) {
+				statusProgress.value = current;
+				statusProgress.max = total;
+			} else {
+				statusProgress.removeAttribute('value');
+				statusProgress.removeAttribute('max');
+			}
+		},
+	}).then(function () {
+		setStatusMode('hidden');
+	});
+}).catch(displayFailureNotice);
+		</script>
+	</body>
+</html>
