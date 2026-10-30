@@ -73,7 +73,7 @@ Mobile game built in Godot 4 with GDScript.
 - Which figures fight comes from the `RunManager` autoload (the player's deck and the current combat's enemy lineup), not from Main exports. Main's `figure_damping` is the base damping that each figure's `damping_multiplier` scales.
 - Abilities: `scripts/abilities/figure_ability.gd` (`FigureAbility` Resource) is the base class with no-op hooks `on_flicked`, `on_hit`, `on_stopped`, `on_exploded`. Subclass it (see `bombo_ability.gd`) and pick it in the FigureData's `ability` slot; ability tunables are `@export`s on the subclass. Each figure runs its own duplicate of the ability, so per-figure state is safe. To add a new event, call it from `figure.gd` (hooks are called deferred from physics callbacks).
 - `Figure.explode(radius, force, spared)` pushes nearby figures (except `spared`) (linear falloff) and fires `on_exploded` on them. `take_knockback()` and the collision handling in `_integrate_forces` apply `knockback_taken_multiplier`.
-- Bombo explodes on its first hit after each flick (resets on flick), and survives; its blast force is 900 (was 2000; NOTE `bombo.tres` overrides the script default, so change it there).
+- Bombo explodes on its first hit after each flick (resets on flick), and survives; its blast radius is 160 (was 320) and force 900 (was 2000; NOTE `bombo.tres` overrides the script default, so change both there).
 
 ### Figure roster, registry and icons
 
