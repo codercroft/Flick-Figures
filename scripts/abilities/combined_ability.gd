@@ -92,6 +92,15 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
+func detonate(figure: Figure) -> void:
+	first.detonate(figure)
+	second.detonate(figure)
+
+
+func sets_off_team_explosives(figure: Figure) -> bool:
+	return first.sets_off_team_explosives(figure) or second.sets_off_team_explosives(figure)
+
+
 func get_glue_chain_cap(figure: Figure) -> int:
 	return maxi(first.get_glue_chain_cap(figure), second.get_glue_chain_cap(figure))
 

@@ -11,6 +11,7 @@ script = ExtResource("1")
 display_name = "Spiked Helmet"
 label = "SH"
 description = "+40% knockback dealt."
+rarity = 1
 color = Color(0.7, 0.7, 0.75, 1)
 effect = SubResource("Resource_1")
 role_weights = {"power": 3.0, "heavy": 1.0}

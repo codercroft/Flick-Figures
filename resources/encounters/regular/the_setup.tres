@@ -3,15 +3,16 @@
 [ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="f0"]
-[ext_resource type="Resource" path="res://resources/figures/mr_potential.tres" id="f1"]
+[ext_resource type="Resource" path="res://resources/equipment/mr_potentials_skull.tres" id="skull"]
 [ext_resource type="Resource" path="res://resources/figures/rally.tres" id="f2"]
 [ext_resource type="Resource" path="res://resources/arenas/divider_gaps.tres" id="arena"]
 
 [sub_resource type="Resource" id="enemy_0"]
 script = ExtResource("1")
-figure = ExtResource("f1")
+figure = ExtResource("f0")
 count = 1
 positions = Array[Vector2]([Vector2(450, 420)])
+equipment = ExtResource("skull")
 
 [sub_resource type="Resource" id="enemy_1"]
 script = ExtResource("1")

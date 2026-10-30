@@ -11,6 +11,7 @@ script = ExtResource("1")
 display_name = "Short Fuse"
 label = "SF"
 description = "When knocked off, implodes: pulls nearby figures toward where it left."
+rarity = 1
 color = Color(0.95, 0.4, 0.2, 1)
 effect = SubResource("Resource_1")
 role_weights = {"explosive": 3.0}

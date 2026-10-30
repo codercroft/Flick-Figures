@@ -85,7 +85,7 @@ const TOUCH_MARGIN := 4.0
 @export var blast_hit_bonus := 50.0
 ## An explosion that pushes allies counts against it by this fraction of what it would score on them.
 @export var blast_ally_factor := 1.0
-## How sure the AI is that a shot through an ally (Mr Potential bonk, Firecracker) lands as predicted.
+## How sure the AI is that a shot through an ally (a bonk into a Skull wearer, Firecracker) lands as predicted.
 @export var chain_confidence := 0.8
 ## Pusher pushes without rebounding, so edge pushes with it are worth this much more.
 @export var shove_edge_multiplier := 1.6
@@ -102,6 +102,8 @@ const TOUCH_MARGIN := 4.0
 @export var bank_grid_spacing := 110.0
 ## How much harder a bank shot is than a direct one (it can miss more): subtracted from its score.
 @export var bank_shot_penalty := 30.0
+## Placing a pin uses up the Pinhead's whole turn: its value is this fraction of the best bank shot an ally could then take.
+@export var pin_setup_factor := 0.8
 ## The speed multiplier the AI expects from a pin's kick (the Arena's pin_kick).
 @export var bank_pin_kick := 1.3
 ## The shot must still arrive at the target at least this fast (px/s).
@@ -198,6 +200,8 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	if best.is_empty():
 		return {}
 	# Small random aim error: worse accuracy = bigger error.
+	if best.kind == "pin":  # Pinhead's whole action is placing the pin
+		return {"enemy": best_enemy, "pin": best.pin, "pin_radius": best.pin_radius, "pin_only": true}
 	var error := _aim_error(best_enemy)
 	var target = best.get("target")
 	if is_instance_valid(target):
@@ -299,11 +303,23 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	if not free_blast.is_empty() and free_blast.score >= min_attack_score and (best.is_empty() or free_blast.score > best.score):
 		best = free_blast
 
-	# Pinhead: a pin that sets up a bank shot may beat every direct shot (or there may be none).
+	# Bank shots off a pin the enemy side has already placed (by any figure's own pin).
+	if _arena != null:
+		for pin in _arena.temp_pins_of(enemy.team):
+			var bounce_radius: float = pin.radius + enemy.radius
+			for target in players:
+				var shot := _bank_shot_via(enemy, shape, pin.position, pin.radius, bounce_radius, target, table, top_speed, tier)
+				if not shot.is_empty() and shot.score >= min_attack_score and (best.is_empty() or shot.score > best.score):
+					shot.erase("pin")  # the pin is already there: nothing to place
+					shot.erase("pin_radius")
+					best = shot
+
+	# Pinhead: placing a pin uses up its whole turn (it cannot flick too), so it only does so when another
+	# enemy figure can bank a shot off that pin next.
 	if enemy.ability.get_pin_radius(enemy) > 0.0:
-		var bank := _best_bank_shot(enemy, shape, players, table, top_speed, tier)
-		if not bank.is_empty() and bank.score >= min_attack_score and (best.is_empty() or bank.score > best.score):
-			best = bank
+		var setup := _best_pin_setup(enemy, players, table, max_force, tier)
+		if not setup.is_empty() and setup.score >= min_attack_score and (best.is_empty() or setup.score > best.score):
+			best = setup
 
 	if best.is_empty() or best.score < min_attack_score:
 		var move := _choose_reposition(enemy, shape, players, table)
@@ -346,7 +362,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		var edge_weight := shove_edge_multiplier if enemy.ability.cancels_rebound(enemy) else 1.0
 		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * edge_weight * pushed_toward_edge
 	else:
-		# Hitting an ally can still pay: it may be shoved into a player figure (Mr Potential bonk), or it
+		# Hitting an ally can still pay: it may be shoved into a player figure (a bonk into a Mr Potential's Skull wearer), or it
 		# may be a Firecracker that goes off next to player figures.
 		var ally_value := 0.0
 		var behind := _player_behind_ally(enemy, other, contact - enemy.global_position, players)
@@ -365,6 +381,9 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		if ally_value > 0.0 or combo > 0.0:
 			kind = "ally"
 		score = ally_value if ally_value > 0.0 else -ally_hit_penalty
+	# A Firecracker that hits anything sets off the team's other explosive figures: count their blasts.
+	if enemy.ability.sets_off_team_explosives(enemy):
+		combo += _team_detonation_value(enemy, players, table)
 	score += combo * weight
 
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
@@ -658,7 +677,7 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 
 
 ## An ally that has just been hit and is sliding away at `velocity`: if it runs into a player figure, how
-## good is that? (Mr Potential takes double knockback from teammates, so bonking him is a strong chain.)
+## good is that? (a Mr Potential's Skull wearer takes double knockback from teammates, so bonking it is a strong chain.)
 func _ally_chain_value(ally: Figure, velocity: Vector2, players: Array[Figure], table: Rect2) -> float:
 	var speed := velocity.length()
 	if speed <= ally.stop_speed + 50.0:
@@ -720,32 +739,44 @@ func _best_free_blast(enemy: Figure, shape: CircleShape2D, players: Array[Figure
 
 # --- Pinhead bank shots -------------------------------------------------------
 
-## The best "place a pin, then bounce off it into a player figure" shot for a Pinhead, or {}. For every
-## pin spot on a grid and every player figure it works out where the flick must hit the pin so that
-## it bounces (like light off a mirror) toward the figure, checks both legs are clear, and scores the
-## hit like a normal attack minus bank_shot_penalty.
-func _best_bank_shot(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2,
-		top_speed: float, tier := 1) -> Dictionary:
-	var spacing := bank_grid_spacing / (1.0 + 0.4 * (_depth(tier) - 1))  # deeper search = finer grid
-	var pin_radius := enemy.ability.get_pin_radius(enemy)
-	var start := enemy.global_position
-	var bounce_radius := pin_radius + enemy.radius  # the shooter's center bounces at this distance
+## Where Pinhead should place its pin: the spot where another enemy figure's best bank shot off it (the
+## usual mirror-bounce maths, `_bank_shot_via`) is worth the most. The result is a "pin" action, scored
+## `pin_setup_factor` of that bank shot, since the shot itself only happens on a later flick.
+func _best_pin_setup(pinhead: Figure, players: Array[Figure], table: Rect2, max_force: float, tier := 1) -> Dictionary:
+	var shooters: Array[Figure] = []
+	for node in pinhead.get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other != pinhead and not other.knocked_off and other.team == pinhead.team and other.data.can_flick \
+				and not other.is_frozen() and not other.on_deck:
+			shooters.append(other)
+	if shooters.is_empty():
+		return {}
+	var spacing := bank_grid_spacing * 1.4 / (1.0 + 0.4 * (_depth(tier) - 1))
+	var pin_radius := pinhead.ability.get_pin_radius(pinhead)
 	var area := table.grow(-(pin_radius + 40.0))
-	var space := enemy.get_world_2d().direct_space_state
-	var everyone := enemy.get_tree().get_nodes_in_group("figures")
+	var space := pinhead.get_world_2d().direct_space_state
+	var everyone := pinhead.get_tree().get_nodes_in_group("figures")
 	var best := {}
+	var started := Time.get_ticks_msec()
 	var x := area.position.x
 	while x <= area.end.x:
 		var y := area.position.y
 		while y <= area.end.y:
 			var pin := Vector2(x, y)
 			y += spacing
+			if Time.get_ticks_msec() - started > think_budget_ms:
+				return best
 			if not _pin_spot_clear(pin, pin_radius, everyone):
 				continue
-			for target in players:
-				var shot := _bank_shot_via(enemy, shape, pin, pin_radius, bounce_radius, target, table, top_speed, tier)
-				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
-					best = shot
+			for shooter in shooters:
+				var shape := CircleShape2D.new()
+				shape.radius = shooter.radius
+				var power := shooter.data.flick_power_multiplier * shooter.aura_flick_multiplier()
+				var top_speed := minf(max_force * power / shooter.mass, reference_speed * power)
+				for target in players:
+					var shot := _bank_shot_via(shooter, shape, pin, pin_radius, pin_radius + shooter.radius, target, table, top_speed, tier)
+					if not shot.is_empty() and (best.is_empty() or shot.score * pin_setup_factor > best.score):
+						best = {"kind": "pin", "score": shot.score * pin_setup_factor, "pin": pin, "pin_radius": pin_radius}
 		x += spacing
 	# The spot must really be free of walls and other pins too (checked once, for the winner).
 	if not best.is_empty() and not Arena.is_spot_free(space, table, best.pin, pin_radius):
@@ -1116,3 +1147,21 @@ func _score_takeover(figure: Figure, shape: CircleShape2D, direction: Vector2, s
 			var pushed := _push_progress(other, other.global_position, outcome.target, table)
 			score += takeover_ally_hit_bonus + takeover_ally_kill_bonus * knocked_off + takeover_edge_bonus * pushed
 	return {"score": score, "direction": direction, "speed": speed}
+
+
+## The blasts of the other explosive figures on `enemy`'s team (set off by a Firecracker's hit), scored as usual.
+func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2) -> float:
+	var registry := RunManager.config.registry if RunManager.config != null else null
+	if registry == null:
+		return 0.0
+	var total := 0.0
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == enemy or other.knocked_off or other.team != enemy.team or other.on_deck:
+			continue
+		if not registry.is_explosive(other.base_data):
+			continue
+		var blast := other.ability.get_ai_blast(other)
+		if not blast.is_empty():
+			total += _blast_value(other.global_position, blast, other, null, players, table)
+	return total

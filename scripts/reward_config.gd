@@ -36,6 +36,12 @@ extends Resource
 ## Chance of a general finish (the player picks which figure gets it).
 @export_range(0.0, 1.0) var elite_finish_chance := 0.2
 
+@export_group("Harder fight (after a lost minigame)")
+## When a minigame loss made a fight harder, winning that fight also pays this much extra money...
+@export var harder_fight_bonus_money := 5
+## ...and gives one extra guaranteed item of one of these kinds ("power", "equipment" or "finish"), picked at random.
+@export var harder_fight_item_kinds: Array[String] = ["power", "equipment", "finish"]
+
 @export_group("Boss")
 @export var boss_bonus_money := 10
 ## Pick 1 of this many relics.

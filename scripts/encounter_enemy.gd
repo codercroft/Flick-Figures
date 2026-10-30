@@ -8,6 +8,8 @@ extends Resource
 ## Where each copy starts, in board space ((0, 0) = top-left of the board, y grows toward the player's
 ## deck, enemies live in the top half). Missing entries (or none) use the normal spread-out row.
 @export var positions: Array[Vector2] = []
+## Equipment every copy of this enemy always carries (on top of nothing else: it replaces the random roll).
+@export var equipment: EquipmentData
 @export_group("Boosts")
 @export var mass_multiplier := 1.0
 @export var flick_power_multiplier := 1.0

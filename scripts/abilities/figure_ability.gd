@@ -158,6 +158,17 @@ func get_ai_blast(_figure: Figure) -> Dictionary:
 	return {}
 
 
+## "Explosive" figures (Bombo, Sneaky Bomber, Firecracker) blow up on command when a teammate Firecracker
+## sets them off: explode now, using the normal blast numbers.
+func detonate(_figure: Figure) -> void:
+	pass
+
+
+## AI hint: hitting anything with this figure also sets off the team's other explosive figures (Firecracker).
+func sets_off_team_explosives(_figure: Figure) -> bool:
+	return false
+
+
 ## True if this figure bends the path of moving figures near it (Magnet).
 func has_path_pull(_figure: Figure) -> bool:
 	return false

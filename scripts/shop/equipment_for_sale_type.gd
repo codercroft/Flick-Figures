@@ -13,7 +13,7 @@ func create_offers(_registry: FigureRegistry) -> Array[ShopOffer]:
 	for i in mini(count, pool.size()):
 		var item: EquipmentData = pool[i]
 		var offer := ShopOffer.new()
-		offer.title = "Equipment: %s" % item.display_name
+		offer.title = "Equipment: %s (%s)" % [item.display_name, item.rarity_name()]
 		offer.description = item.description
 		offer.price = price
 		offer.on_buy = func(_slot: int) -> String:

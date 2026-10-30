@@ -49,15 +49,23 @@ var used_events: Array[EventData] = []
 ## The first combat of a run is always 4 Grunts (no encounter); this is set once it has been entered.
 var first_combat_played := false
 var minigame_penalty := false
+## True while the current combat is a penalty fight (harder after a lost minigame): its rewards are better.
+var harder_fight := false
+## The note the reward screen shows about that bonus ("" = none).
+var harder_note := ""
 ## What a minigame paid out, shown on the reward screen that follows it.
 var event_reward_text := ""
 var penalty_text := ""
 ## Finishes, equipment and upgrades each enemy carries (parallel to `enemies`): {finish, equipment, upgrade}.
 var enemy_gear: Array[Dictionary] = []
+## Equipment an encounter forces onto an enemy (parallel to `enemies`, null = roll as usual).
+var enemy_forced_equipment: Array[EquipmentData] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
 var enemy_flicks_per_turn := 1
+## Slime and Skull-o-tron fights: one enemy flick per unit on the table (see BossData.flick_per_unit).
+var enemy_flick_per_unit := false
 ## True when the enemies start in one straight row (The Wall).
 var enemies_in_row := false
 ## The arena layout for the current combat.
@@ -104,6 +112,8 @@ func start_new_run() -> void:
 	used_encounters.clear()
 	used_events.clear()
 	first_combat_played = false
+	harder_fight = false
+	harder_note = ""
 	minigame_penalty = false
 	event = null
 	_reset_powers()
@@ -311,6 +321,7 @@ func combat_won() -> bool:
 func build_rewards() -> void:
 	var rewards := config.rewards
 	reward_steps.clear()
+	_add_harder_fight_bonus()
 	match node.type:
 		MapNode.Type.ELITE:
 			for i in rewards.elite_guaranteed_relics:
@@ -333,6 +344,20 @@ func build_rewards() -> void:
 			_roll_drop("equipment", rewards.combat_equipment_chance)
 
 
+## A fight made harder by a lost minigame also pays extra money and one guaranteed extra item (RewardConfig).
+## (The item step is added first, so it comes before the normal rewards.)
+func _add_harder_fight_bonus() -> void:
+	if not harder_fight:
+		return
+	harder_fight = false
+	var rewards := config.rewards
+	money += rewards.harder_fight_bonus_money
+	var kinds := rewards.harder_fight_item_kinds
+	if not kinds.is_empty():
+		reward_steps.append({"kind": kinds.pick_random()})
+	harder_note = "Harder fight bonus: +$%d and an extra item" % rewards.harder_fight_bonus_money
+
+
 ## The act's bonus rewards after the figure draft: each a random power, equipment item or upgrade.
 func _add_bonus_items() -> void:
 	for i in config.rewards.bonus_items(act):
@@ -348,6 +373,7 @@ func _roll_drop(kind: String, chance: float) -> void:
 ## Called when the reward screens are done. After a boss the run moves on to the next act.
 func finish_rewards() -> void:
 	reward_steps.clear()
+	harder_note = ""
 	if node != null and node.type == MapNode.Type.BOSS:
 		act += 1
 		_start_act()
@@ -585,8 +611,12 @@ func _build_lineup() -> void:
 	enemy_boosts.clear()
 	enemy_positions.clear()
 	enemy_gear.clear()
+	enemy_forced_equipment.clear()
 	encounter_name = ""
 	encounter_arena = null
+	enemy_flick_per_unit = false
+	harder_fight = false
+	harder_note = ""
 	penalty_text = ""
 	var registry := config.registry
 	var difficulty := config.difficulty
@@ -604,6 +634,7 @@ func _build_lineup() -> void:
 		for i in enemies.size():
 			enemy_elite.append(false)
 		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
+		enemy_flick_per_unit = boss.flick_per_unit
 		enemies_in_row = boss.straight_row
 	else:
 		var count := difficulty.enemy_count(act)
@@ -631,8 +662,13 @@ func _build_lineup() -> void:
 		enemy_positions.append(Vector2.INF)
 	# Later acts: enemies may carry finishes, equipment and upgrades (elites and bosses roll a step higher).
 	var tougher := node.type == MapNode.Type.ELITE or node.type == MapNode.Type.BOSS
-	for figure in enemies:
-		enemy_gear.append(_roll_enemy_gear(figure, tougher))
+	while enemy_forced_equipment.size() < enemies.size():
+		enemy_forced_equipment.append(null)
+	for i in enemies.size():
+		var gear := _roll_enemy_gear(enemies[i], tougher)
+		if enemy_forced_equipment[i] != null:
+			gear.equipment = enemy_forced_equipment[i]
+		enemy_gear.append(gear)
 	_apply_minigame_penalty()
 	_pick_arena()
 
@@ -697,6 +733,7 @@ func _build_encounter(encounter: EncounterData) -> void:
 			enemies.append(entry.figure)
 			enemy_elite.append(false)
 			enemy_boosts.append(entry.boost())
+			enemy_forced_equipment.append(entry.equipment)
 			enemy_positions.append(entry.positions[i] if i < entry.positions.size() else Vector2.INF)
 	if encounter.mirror_deck:
 		_add_mirror_enemies(encounter)
@@ -762,6 +799,7 @@ func _apply_minigame_penalty() -> void:
 	if not minigame_penalty:
 		return
 	minigame_penalty = false
+	harder_fight = true  # (this fight pays better: see build_rewards)
 	var can_add_grunt := node.type != MapNode.Type.BOSS and not enemies_in_row
 	if can_add_grunt and (randf() < 0.5 or enemies.is_empty()):
 		# (_add_grunt appends to the gear list too, which the caller filled for the original enemies only)

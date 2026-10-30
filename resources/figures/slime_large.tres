@@ -6,7 +6,7 @@
 
 [sub_resource type="Resource" id="Resource_1"]
 script = ExtResource("2")
-split_speed = 700.0
+split_speed = 450.0
 piece = ExtResource("3")
 piece_count = 2
 burst_speed = 230.0

@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Firecracker"
-description = "Explodes when a teammate hits it, sparing that teammate. Chains off explosions."
+description = "Explodes when a teammate hits it. Its own flick hit sets off all your explosive figures."
 rarity = 1
 label = "FC"
 icon = 10

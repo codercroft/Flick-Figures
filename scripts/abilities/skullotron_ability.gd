@@ -25,10 +25,18 @@ extends FigureAbility
 @export var armless_mass_multiplier := 0.3
 ## At most one arm breaks per this many ms (a single smash can't strip all three).
 @export var break_cooldown_ms := 350
+## An arm pressed against a pin (an arena pin or a Pinhead pin) while the body moves or turns is JAMMED:
+## after this long (ms) the arm breaks off and releases its ball, like a hard hit.
+@export var jam_break_ms := 150
+## The body must be moving at least this fast (px/s) for a pin contact to count as a jam.
+@export var jam_min_speed := 40.0
+## How close (px) an arm must be to the pin's surface to count as touching it.
+@export var jam_contact_margin := 3.0
 
 var _arms: Array[Dictionary] = []  # {angle, arm_shape, ball_shape, attached}
 var _base_mass := 0.0
 var _last_break_ms := -100000
+var _jam_ms := {}  # arm angle -> how long (ms) it has been jammed against a pin
 
 
 func setup_body(figure: Figure) -> void:
@@ -56,12 +64,46 @@ func setup_body(figure: Figure) -> void:
 		_arms.append({"angle": angle, "arm": arm_node, "ball": ball_node, "attached": true})
 
 
-func on_physics_process(figure: Figure, _delta: float) -> void:
+func on_physics_process(figure: Figure, delta: float) -> void:
 	var speed := figure.linear_velocity.length()
 	if speed > figure.stop_speed:
 		figure.angular_velocity = minf(speed * spin_per_speed, max_spin)  # it spins while it moves
 	else:
 		figure.angular_velocity = 0.0
+	_check_jams(figure, delta)
+
+
+## An arm (or its ball) that stays pressed against a pin while the body moves is stuck: it breaks off.
+func _check_jams(figure: Figure, delta: float) -> void:
+	if figure.knocked_off or figure.linear_velocity.length() < jam_min_speed \
+			or not figure.is_inside_tree():
+		_jam_ms.clear()
+		return
+	var space := figure.get_world_2d().direct_space_state
+	for arm in _arms:
+		if not arm.attached:
+			continue
+		if _touches_pin(figure, space, arm.arm) or _touches_pin(figure, space, arm.ball):
+			_jam_ms[arm.angle] = _jam_ms.get(arm.angle, 0.0) + delta * 1000.0
+			if _jam_ms[arm.angle] >= jam_break_ms and Time.get_ticks_msec() - _last_break_ms >= break_cooldown_ms:
+				_jam_ms.erase(arm.angle)
+				_break_arm(figure, arm)
+				return
+		else:
+			_jam_ms.erase(arm.angle)
+
+
+func _touches_pin(figure: Figure, space: PhysicsDirectSpaceState2D, shape_node: CollisionShape2D) -> bool:
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape_node.shape
+	query.transform = figure.global_transform * shape_node.transform
+	query.collision_mask = Figure.LAYER_ARENA
+	query.margin = jam_contact_margin
+	for hit in space.intersect_shape(query, 8):
+		var body := hit.collider as Node
+		if body != null and body.is_in_group("pins"):
+			return true
+	return false
 
 
 func on_shape_hit(figure: Figure, _other: Figure, shape_node: Node, speed: float) -> void:

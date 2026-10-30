@@ -11,6 +11,10 @@ extends Resource
 @export var economy: Array[FigureData] = []
 
 
+## The "explosive" tag: figures that blow up (Bombo, Sneaky Bomber, Firecracker). A Firecracker that hits
+## something sets off every other explosive figure of its team (FirecrackerAbility).
+@export var explosive: Array[FigureData] = []
+
 ## Boss figures, one of which a run picks to end on.
 @export var bosses: Array[BossData] = []
 
@@ -120,3 +124,7 @@ func is_draftable(figure: FigureData) -> bool:
 
 func is_economy(figure: FigureData) -> bool:
 	return economy.has(figure)
+
+
+func is_explosive(figure: FigureData) -> bool:
+	return explosive.has(figure)

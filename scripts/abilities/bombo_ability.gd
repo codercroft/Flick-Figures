@@ -4,7 +4,7 @@ extends FigureAbility
 
 @export var explosion_radius := 320.0
 ## Push at the center of the blast; fades to zero at the edge. Like a flick force.
-@export var explosion_force := 2000.0
+@export var explosion_force := 1200.0
 ## Upgrade: explode on EVERY hit instead of only the first after a flick.
 @export var explode_every_hit := false
 
@@ -19,6 +19,10 @@ func on_hit(figure: Figure, _other: Figure) -> void:
 	if _exploded and not explode_every_hit:
 		return
 	_exploded = true
+	figure.explode(explosion_radius, explosion_force)
+
+
+func detonate(figure: Figure) -> void:
 	figure.explode(explosion_radius, explosion_force)
 
 

@@ -10,6 +10,8 @@ extends Resource
 @export var label := "?"
 @export_multiline var description := ""
 @export var color := Color(0.8, 0.8, 0.85)
+## 0 Common, 1 Uncommon, 2 Rare (same colors and names as relics and figures).
+@export_enum("Common", "Uncommon", "Rare") var rarity := 0
 ## Economy items pay money; they are never handed to enemies (enemies carry no equipment).
 @export var economy := false
 ## True for items that only make sense on the player's figures (Coin Purse pays the player, Lucky
@@ -38,3 +40,15 @@ extends Resource
 ## Enemies favor figures that match these roles ("heavy", "light", "power", "bouncy", "explosive", "slider"):
 ## the weight is added to 1 for each role the figure has. See GearRules.
 @export var role_weights := {}
+
+
+const RARITY_NAMES := ["Common", "Uncommon", "Rare"]
+const RARITY_COLORS := [Color(0.75, 0.78, 0.82), Color(0.4, 0.85, 0.45), Color(0.95, 0.75, 0.2)]
+
+
+func rarity_name() -> String:
+	return RARITY_NAMES[clampi(rarity, 0, 2)]
+
+
+func rarity_color() -> Color:
+	return RARITY_COLORS[clampi(rarity, 0, 2)]

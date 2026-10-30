@@ -1,7 +1,7 @@
-class_name MrPotentialAbility
+class_name SkullEffect
 extends FigureAbility
-## While on the board, takes extra knockback from figures on his own team,
-## so you can bonk him into the other side.
+## Mr Potential's Skull: while on the board, the figure takes extra knockback from its OWN team's figures,
+## so you can bonk it into the other side (and the enemy can too).
 
 @export var team_knockback_multiplier := 2.0
 

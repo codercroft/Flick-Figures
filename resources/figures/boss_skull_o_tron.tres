@@ -7,10 +7,11 @@
 [resource]
 script = ExtResource("1")
 display_name = "Skull-o-tron"
-description = "Big and slow, and it spins. Break off its arms and every ball joins the fight."
+description = "Big and slow, and it spins. Break off its arms: each ball adds a flick."
 map_label = "SK"
 map_color = Color(0.55, 0.58, 0.7, 1)
 map_icon = 22
 enemies = Array[ExtResource("2")]([ExtResource("3")])
 enemy_flicks_per_turn = 1
 back_wall = true
+flick_per_unit = true

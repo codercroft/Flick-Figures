@@ -29,6 +29,8 @@ func _ready() -> void:
 	earned_label = frame.subtitle
 	_steps = RunManager.reward_steps.duplicate()
 	earned_label.text = _earned_text()
+	if RunManager.harder_note != "" and RunManager.node != null and RunManager.node.type != MapNode.Type.EVENT:
+		earned_label.text += "\n" + RunManager.harder_note  # the harder fight's bonus
 	_next_step()
 
 
@@ -194,7 +196,7 @@ func _show_equipment(heading: String) -> void:
 	if item == null:
 		_next_step()
 		return
-	_show_item(heading, "%s\n%s" % [item.display_name, item.description], _take_equipment.bind(item))
+	_show_item(heading, "%s (%s)\n%s" % [item.display_name, item.rarity_name(), item.description], _take_equipment.bind(item))
 
 
 func _take_equipment(item: EquipmentData) -> void:

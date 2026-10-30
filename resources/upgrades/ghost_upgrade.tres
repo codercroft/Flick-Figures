@@ -6,6 +6,6 @@
 [resource]
 script = ExtResource("1")
 figure = ExtResource("2")
-display_name = "Double Haunt"
-description = "Wraps around twice per flick."
-ability_overrides = {"max_wraps_per_flick": 2}
+display_name = "Full Haunt"
+description = "Also wraps during the opponent's turn."
+ability_overrides = {"wraps_on_opponent_turn": true}

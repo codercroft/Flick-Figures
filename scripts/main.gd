@@ -35,9 +35,8 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export var takeover_delay := 0.9
 ## The same enemy can't flick twice in a row (unless it is the only one that can flick).
 @export var no_repeat_enemy := true
-## Splitting (Slime) adds this many flicks to the enemy side's flicks per turn...
-@export var flicks_per_split := 1
-## ...but never above this many flicks per turn.
+## Slime and Skull-o-tron fights: the enemy side flicks once per turn for each of its units on the table
+## (every slime piece; the core and each Skull Ball), but never more than this many.
 @export var max_enemy_flicks := 4
 
 @export_group("Turn")
@@ -65,7 +64,7 @@ var _players: Array[Figure] = []
 var _enemies: Array[Figure] = []
 var _last_player_flicker: Figure
 var _bonus_figure: Figure  # Speedo: the figure that may take its extra flick right now
-var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager, grows with splits)
+var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager; per-unit bosses: see _enemy_flicks_now)
 var _last_flicker: Figure  # the enemy that flicked last (for no_repeat_enemy)
 var _enemy_cycle := {}  # enemies that have flicked since the enemy side's flicks last reset (instance ids)
 var _aim_figure: Figure
@@ -77,7 +76,8 @@ var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
-## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn.
+## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn, and a
+## Ghost only wraps on its own side's.
 var turret_side := -1
 
 var _top_bar := TopBar.new()
@@ -428,6 +428,21 @@ func _has_flick_left(figure) -> bool:
 
 
 ## Gives up this drag. The figure stays selected, so you can drag again.
+## Pinhead placed its pin: that was its whole action. It counts as its flick for the cycle (greyed out), but
+## it does not flick, and the player's turn ends (the enemy goes next).
+func _use_up_turn_placing(figure: Figure) -> void:
+	_take_snapshot()
+	figure.flickable = false
+	figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+	figure.show_popup("Pin placed!", Color(0.75, 0.85, 0.95))
+	_last_player_flicker = figure
+	_bonus_figure = null
+	_cancel_aim()
+	_deselect()
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
 ## A tap on empty board with a figure selected: Pinhead places (or takes back) its temporary pin.
 func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
@@ -447,7 +462,7 @@ func _tap_empty_board(pos: Vector2) -> void:
 		return
 	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect):
 		"placed":
-			ui.show_your_turn("Pin placed. Drag anywhere to flick")
+			_use_up_turn_placing(_selected)
 		"removed":
 			ui.show_your_turn("Pin removed. Drag anywhere to flick")
 		_:
@@ -533,12 +548,13 @@ func _run_enemy_turn() -> void:
 		return
 	_place_enemy_turrets()
 	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
-	# _enemy_flicks is read every round because a split can raise it mid-turn.
+	# The total is read every round: in the per-unit boss fights it changes as pieces appear or fall off.
 	var flicks_taken := 0
-	while flicks_taken < _enemy_flicks:
+	while flicks_taken < _enemy_flicks_now():
 		flicks_taken += 1
-		if _enemy_flicks > 1:
-			ui.show_enemy_turn("Enemy flicks: %d/%d" % [flicks_taken, _enemy_flicks])
+		var total := _enemy_flicks_now()
+		if total > 1:
+			ui.show_enemy_turn("Enemy flicks: %d/%d" % [flicks_taken, total])
 		_refresh_enemy_cycle()
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		if serial != _turn_serial:
@@ -554,8 +570,15 @@ func _run_enemy_turn() -> void:
 		choice = await _takeover_choice(choice, serial)  # a Bummer's aura replaces the shot
 		if serial != _turn_serial or not _is_alive(choice.enemy):
 			return
-		if choice.has("pin"):  # an enemy Pinhead sets up a bank shot
+		if choice.has("pin_only"):
+			# An enemy Pinhead's whole action is placing a pin (for an ally's bank shot): no flick this time.
 			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
+			choice.enemy.show_popup("Pin!", Color(0.75, 0.85, 0.95))
+			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
+			await _wait_until_settled()
+			if serial != _turn_serial:
+				return
+			continue
 		choice.enemy.launch(choice.impulse)
 		await _wait_until_settled()
 		if serial != _turn_serial:
@@ -574,7 +597,7 @@ func _run_enemy_turn() -> void:
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
 				return
-			if extra.is_empty() or not _is_alive(shooter):
+			if extra.is_empty() or extra.has("pin_only") or not _is_alive(shooter):
 				break
 			extra = await _takeover_choice(extra, serial)
 			if serial != _turn_serial:
@@ -608,11 +631,23 @@ func _run_enemy_turn() -> void:
 	_start_player_turn()
 
 
+## How many flicks the enemy side takes this turn: the fight's fixed number, or (Slime, Skull-o-tron) one per
+## enemy unit currently on the table, capped at `max_enemy_flicks`.
+func _enemy_flicks_now() -> int:
+	if not RunManager.enemy_flick_per_unit:
+		return _enemy_flicks
+	var units := 0
+	for enemy in _enemies:
+		if _is_alive(enemy):
+			units += 1
+	return clampi(units, 1, max_enemy_flicks)
+
+
 ## An enemy figure touching a player Bummer's aura is taken over when the AI goes to flick it: "Bummed out!",
 ## then a shot that tries to knock itself off and hit its own teammates replaces the planned one.
 func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 	var enemy = choice.enemy  # untyped: it may fall off and be freed while we wait
-	if not _is_alive(enemy) or enemy.bummer_effect().is_empty():
+	if choice.has("pin_only") or not _is_alive(enemy) or enemy.bummer_effect().is_empty():
 		return choice
 	enemy.show_popup("Bummed out!", Color(0.8, 0.5, 1.0))
 	await get_tree().create_timer(takeover_delay).timeout
@@ -829,8 +864,6 @@ func _on_shed_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> v
 			spawned.flickable = false
 			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
-	if grants_flicks and parent.team == Figure.Team.ENEMY:
-		_enemy_flicks = mini(_enemy_flicks + flicks_per_split * pieces.size(), maxi(max_enemy_flicks, _enemy_flicks))
 
 
 ## A figure (a Slime) splits: spawn its pieces on its team, then remove it. The pieces are new
@@ -849,8 +882,6 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 			spawned.flickable = true
 			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
-	if grants_flicks and parent.team == Figure.Team.ENEMY:
-		_enemy_flicks = mini(_enemy_flicks + flicks_per_split, maxi(max_enemy_flicks, _enemy_flicks))
 	_players.erase(parent)
 	_enemies.erase(parent)
 	parent.knock_off(knock_off_fade_time, true)

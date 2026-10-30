@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=105 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=106 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -46,6 +46,7 @@
 [ext_resource type="Resource" path="res://resources/equipment/jet_pack.tres" id="70"]
 [ext_resource type="Resource" path="res://resources/equipment/wings.tres" id="71"]
 [ext_resource type="Resource" path="res://resources/equipment/lucky_charm.tres" id="72"]
+[ext_resource type="Resource" path="res://resources/equipment/mr_potentials_skull.tres" id="skull"]
 [ext_resource type="Script" path="res://scripts/finish_data.gd" id="80"]
 [ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="81"]
 [ext_resource type="Resource" path="res://resources/finishes/glitter.tres" id="90"]
@@ -120,7 +121,7 @@ starting_power_count = 2
 power_pool = Array[ExtResource("40")]([ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52")])
 start_with_equipment = false
 starting_equipment_count = 2
-equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72")])
+equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72"), ExtResource("skull")])
 show_upgrade_screen = false
 finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), ExtResource("92"), ExtResource("93"), ExtResource("94")])
 upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108"), ExtResource("up_glue")])

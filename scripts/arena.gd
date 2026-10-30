@@ -72,6 +72,7 @@ func _add_wall(wall: ArenaWall) -> void:
 
 func _add_pin(pin: ArenaPin) -> void:
 	var body := _make_static_body(pin_bounce)
+	body.add_to_group("pins")  # (Skull-o-tron's arms break when jammed against a pin)
 	body.position = _origin + pin.position
 	_add_pin_shapes(body, pin.radius)
 	add_child(body)
@@ -267,6 +268,7 @@ func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Re
 	material.friction = 0.0
 	pin.physics_material_override = material
 	pin.position = pos
+	pin.add_to_group("pins")
 	_add_pin_shapes(pin, radius)
 	add_child(pin)
 	_temp_pins.append(pin)
@@ -301,6 +303,15 @@ func prune_temp_pins() -> void:
 			remove_child(pin)
 			pin.queue_free()
 			_temp_pins.remove_at(i)
+
+
+## The temporary pins placed by figures of `team`: [{position, radius}] (for the enemy AI's bank shots).
+func temp_pins_of(team: int) -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for pin in _temp_pins:
+		if is_instance_valid(pin) and is_instance_valid(pin.owner_figure) and pin.owner_figure.team == team:
+			list.append({"position": pin.position, "radius": pin.radius})
+	return list
 
 
 func has_temp_pin(owner_figure: Figure) -> bool:

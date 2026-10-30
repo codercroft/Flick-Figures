@@ -11,6 +11,7 @@ script = ExtResource("1")
 display_name = "Lucky Charm"
 label = "LC"
 description = "Enemy shots aimed at it are less accurate."
+rarity = 1
 color = Color(0.4, 0.85, 0.4, 1)
 effect = SubResource("Resource_1")
 player_only = true

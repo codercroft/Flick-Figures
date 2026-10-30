@@ -13,6 +13,7 @@ script = ExtResource("1")
 display_name = "Wings"
 label = "WG"
 description = "Once per combat, wraps around the table edge like a Ghost."
+rarity = 2
 color = Color(0.95, 0.95, 0.85, 1)
 effect = SubResource("Resource_1")
 role_weights = {"light": 2.0}
