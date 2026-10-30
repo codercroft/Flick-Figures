@@ -109,6 +109,14 @@ const TOUCH_MARGIN := 4.0
 ## The shot must still arrive at the target at least this fast (px/s).
 @export var bank_min_hit_speed := 400.0
 
+@export_group("Duwall shell")
+## Cracking a player Duwall's shell is worth this x the share of its shell the hit would take off (0 to 1)...
+@export var shell_crack_bonus := 80.0
+## ...plus this if the hit breaks it (it becomes a plain Grunt).
+@export var shell_break_bonus := 60.0
+## An intact shell is part of the target's toughness: hits on it lose this x the share of shell left.
+@export var shell_toughness_penalty := 40.0
+
 @export_group("Bummer auras")
 ## Score lost by a shot whose shooter would end up inside a player Bummer's aura (its next flick would be taken over)...
 @export var bummer_aura_penalty := 120.0
@@ -361,6 +369,14 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
 		var edge_weight := shove_edge_multiplier if enemy.ability.cancels_rebound(enemy) else 1.0
 		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * edge_weight * pushed_toward_edge
+		# A shelled Duwall: cracking the shell is progress, and what is left of it is toughness.
+		var shell := other.ability.get_shell_state(other)
+		if not shell.is_empty():
+			var shell_damage := other.ability.predict_shell_damage(other, enemy, hit.velocity.length())
+			score += shell_crack_bonus * clampf(shell_damage / shell.remaining, 0.0, 1.0)
+			if shell_damage >= shell.remaining:
+				score += shell_break_bonus
+			score -= shell_toughness_penalty * shell.remaining / shell.max
 	else:
 		# Hitting an ally can still pay: it may be shoved into a player figure (a bonk into a Mr Potential's Skull wearer), or it
 		# may be a Firecracker that goes off next to player figures.
@@ -669,6 +685,9 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 				+ kill_bonus * _leave_chance(figure, figure.global_position, change, table) \
 				+ edge_bonus * _push_progress(figure, figure.global_position, change, table)
 		if figure.team == Figure.Team.PLAYER:
+			var shell := figure.ability.get_shell_state(figure)
+			if not shell.is_empty():
+				value += shell_crack_bonus * clampf(push.length() * figure.ability.get_explosion_multiplier(figure, source) / shell.remaining, 0.0, 1.0)
 			total += value
 		else:
 			total -= value * blast_ally_factor

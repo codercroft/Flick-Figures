@@ -28,7 +28,7 @@ extends Resource
 
 @export_group("Elite")
 ## Extra money on top of the per-figure income.
-@export var elite_bonus_money := 3
+@export var elite_bonus_money := 2
 ## Guaranteed random relics.
 @export var elite_guaranteed_relics := 1
 @export_range(0.0, 1.0) var elite_power_chance := 0.4
@@ -43,7 +43,7 @@ extends Resource
 @export var harder_fight_item_kinds: Array[String] = ["power", "equipment", "finish"]
 
 @export_group("Boss")
-@export var boss_bonus_money := 10
+@export var boss_bonus_money := 5
 ## Pick 1 of this many relics.
 @export var boss_relic_choices := 3
 ## One finish or figure-specific upgrade for a figure of the player's choice: chance that it is a

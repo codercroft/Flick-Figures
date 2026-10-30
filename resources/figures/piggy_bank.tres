@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Piggy Bank"
-description = "Hits harder the more money you hold."
+description = "Bigger, heavier and harder-hitting the more money you hold (2x at $20)."
 rarity = 1
 label = "PB"
 icon = 18

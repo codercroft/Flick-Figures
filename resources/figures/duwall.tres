@@ -1,11 +1,17 @@
-[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="FigureData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/duwall_ability.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="3"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+broken_form = ExtResource("3")
 
 [resource]
 script = ExtResource("1")
 display_name = "Duwall"
-description = "Heavy. Takes half knockback."
+description = "Heavy and tough, until about 3 big hits break its shell: then it is a Grunt."
 rarity = 0
 icon = 2
 color = Color(0.3, 0.6, 0.4, 1)
@@ -15,3 +21,4 @@ bounce = 0.5
 damping_multiplier = 1.0
 flick_power_multiplier = 1.5
 knockback_taken_multiplier = 0.5
+ability = SubResource("Resource_1")

@@ -150,6 +150,26 @@ func get_turret_stats(_figure: Figure) -> Dictionary:
 	return {}
 
 
+## Duwall: called when an explosion's push reaches this figure (`impulse` is what it delivers).
+func on_took_explosion(_figure: Figure, _impulse: Vector2) -> void:
+	pass
+
+
+## Drawn on top of the figure (Duwall's cracks and shell bits).
+func draw_overlay(_figure: Figure) -> void:
+	pass
+
+
+## Duwall, for the enemy AI: {remaining, max} shell strength while the shell is intact, else {}.
+func get_shell_state(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## Duwall: the shell damage a hit by `shooter` at `closing_speed` would deal to `figure`.
+func predict_shell_damage(_figure: Figure, _shooter: Figure, _closing_speed: float) -> float:
+	return 0.0
+
+
 ## ENEMY AI HINTS (the AI reads these to plan shots that use abilities; they change nothing in play).
 
 ## The explosion this figure is expected to set off, or {}: {"radius", "force", "when"} where when is

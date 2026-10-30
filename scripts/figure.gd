@@ -73,6 +73,9 @@ var glue_joints: Array[PinJoint2D] = []
 var frozen_rounds := 0
 var bubble_rounds := 0
 var shrunk := false
+## Duwall: true once its shell has burst and it has become a Grunt.
+var shell_broken := false
+var _base_damping := 1.5  # the Main node's damping before this figure's own multipliers
 
 # Player figures: highlighted ring while chosen for aiming.
 var selected := false:
@@ -131,6 +134,7 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 			data.flick_power_multiplier *= stat_scale.get("power", 1.0)
 			data.mass *= stat_scale.get("mass", 1.0)
 			data.bounce = clampf(data.bounce + stat_scale.get("bounce", 0.0), 0.0, 1.0)
+	_base_damping = base_damping
 	radius = data.radius
 	mass = data.mass
 	linear_damp = base_damping * data.damping_multiplier
@@ -297,6 +301,7 @@ func _draw() -> void:
 		var badge_size := int(badge_radius * (1.05 if equipment.label.length() <= 1 else 0.85))
 		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-badge_radius, badge_size * 0.33), equipment.label,
 				HORIZONTAL_ALIGNMENT_CENTER, badge_radius * 2.0, badge_size, Color(0.1, 0.1, 0.12))
+	ability.draw_overlay(self)
 	if frozen_rounds > 0:
 		draw_circle(Vector2.ZERO, radius, Color(0.6, 0.9, 1.0, 0.55))
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(0.85, 1.0, 1.0), 6.0, true)
@@ -515,6 +520,7 @@ func take_explosion(impulse: Vector2, source: Figure) -> void:
 	unglue()
 	var multiplier := ability.get_explosion_multiplier(self, source)
 	if multiplier > 0.0:
+		ability.on_took_explosion(self, impulse * multiplier)  # (Duwall's shell)
 		take_knockback(impulse * multiplier, source)
 
 
@@ -700,6 +706,31 @@ func set_bubble(rounds: int) -> void:
 func shrink(size_factor: float, mass_factor: float) -> void:
 	shrunk = true
 	set_size(radius * size_factor, mass * mass_factor)
+
+
+## Duwall's shell burst: this figure becomes `new_data` (a Grunt) for the rest of the combat: its stats and
+## look, with the same equipment, finish and difficulty scaling (the upgrade of the old form is dropped).
+func transform_into(new_data: FigureData) -> void:
+	data = new_data.duplicate() as FigureData
+	if finish != null:
+		data.knockback_taken_multiplier *= finish.knockback_taken_multiplier
+	if not scale_factors.is_empty():
+		data.accuracy = minf(data.accuracy * scale_factors.get("accuracy", 1.0), 1.0)
+		data.flick_power_multiplier *= scale_factors.get("power", 1.0)
+		data.mass *= scale_factors.get("mass", 1.0)
+		data.bounce = clampf(data.bounce + scale_factors.get("bounce", 0.0), 0.0, 1.0)
+	var new_mass := data.mass
+	linear_damp = _base_damping * data.damping_multiplier
+	if equipment != null:
+		new_mass *= equipment.mass_multiplier
+		linear_damp *= equipment.damping_multiplier
+	if finish != null:
+		new_mass *= finish.mass_multiplier
+	set_size(data.radius, new_mass)
+	if physics_material_override != null:
+		physics_material_override.bounce = clampf(data.bounce + (equipment.bounce_bonus if equipment != null else 0.0), 0.0, 1.0)
+	upgrade = null
+	queue_redraw()
 
 
 ## Changes the figure's radius and mass (the collision shape and the picture follow).

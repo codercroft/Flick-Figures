@@ -92,6 +92,25 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
+func on_took_explosion(figure: Figure, impulse: Vector2) -> void:
+	first.on_took_explosion(figure, impulse)
+	second.on_took_explosion(figure, impulse)
+
+
+func draw_overlay(figure: Figure) -> void:
+	first.draw_overlay(figure)
+	second.draw_overlay(figure)
+
+
+func get_shell_state(figure: Figure) -> Dictionary:
+	var state := first.get_shell_state(figure)
+	return state if not state.is_empty() else second.get_shell_state(figure)
+
+
+func predict_shell_damage(figure: Figure, shooter: Figure, closing_speed: float) -> float:
+	return first.predict_shell_damage(figure, shooter, closing_speed) + second.predict_shell_damage(figure, shooter, closing_speed)
+
+
 func detonate(figure: Figure) -> void:
 	first.detonate(figure)
 	second.detonate(figure)

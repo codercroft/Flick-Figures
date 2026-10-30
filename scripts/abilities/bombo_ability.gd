@@ -4,7 +4,7 @@ extends FigureAbility
 
 @export var explosion_radius := 320.0
 ## Push at the center of the blast; fades to zero at the edge. Like a flick force.
-@export var explosion_force := 1200.0
+@export var explosion_force := 900.0
 ## Upgrade: explode on EVERY hit instead of only the first after a flick.
 @export var explode_every_hit := false
 

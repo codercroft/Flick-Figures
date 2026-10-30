@@ -6,8 +6,8 @@ extends FigureAbility
 ## way (see EnemyAI.choose_takeover). The takeover counts as that figure's flick for the cycle.
 ## A figure counts as inside when its body touches the aura circle.
 
-## Radius (px) of the aura from the Bummer's center (about 1.5x its own radius of 60).
-@export var aura_radius := 90.0
+## Radius (px) of the aura from the Bummer's center (180: about 3x its own radius of 60).
+@export var aura_radius := 180.0
 
 
 func get_bummer_stats(_figure: Figure) -> Dictionary:
