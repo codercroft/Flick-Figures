@@ -41,7 +41,7 @@ func _run() -> void:
 	_pool("finishes", config.finish_pool, 5)
 	_pool("upgrades", config.upgrade_pool, 5)
 	_pool("relics", config.relic_pool, 10)
-	_pool("regular encounters", config.regular_encounters, 12)
+	_pool("regular encounters", config.regular_encounters, 11)
 	_pool("events", config.event_pool, 1)
 	_check(config.minigames != null, "RunConfig.minigames did not load")
 	_check(config.event_pool.size() >= 5, "event pool is missing the minigames (Bocce, Curling, Bowling, Mini-Golf)")
@@ -67,7 +67,7 @@ func _run() -> void:
 	for relic in config.relic_pool:
 		rarities[relic.rarity] = true
 	_check(rarities.size() == 4, "relic rarities missing (need Common, Uncommon, Rare and Boss relics)")
-	_pool("elite encounters", config.elite_encounters, 5)
+	_pool("elite encounters", config.elite_encounters, 6)
 	_check(config.shop != null, "shop config did not load")
 	if config.shop != null:
 		_pool("shop item types", config.shop.item_types, 6)

@@ -19,6 +19,8 @@ Notes:
 - **Vibration:** iPhones do not allow web pages to vibrate, so there is no haptic feedback there (Android phones with the APK do get it).
 - **Chrome on iPhone** can add it to the Home Screen too (Share, then Add to Home Screen), but Safari gives the best full-screen result.
 
+Short instructions to send to friends: [INSTRUCTIONS.md](INSTRUCTIONS.md).
+
 ## Play it on Android
 Install the APK from the **Releases** page: see [BUILDING.md](BUILDING.md).
 
