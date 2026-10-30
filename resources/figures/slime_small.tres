@@ -16,3 +16,4 @@ damping_multiplier = 1.0
 flick_power_multiplier = 1.0
 knockback_taken_multiplier = 1.25
 accuracy = 0.8
+uneatable = true

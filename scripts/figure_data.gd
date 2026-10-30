@@ -23,6 +23,8 @@ extends Resource
 ## Enemy aim quality: 1 = perfect, 0 = the widest aim error (set on the EnemyAI node).
 @export_range(0.0, 1.0) var accuracy := 0.8
 ## Enemy AI: false means this figure never flicks.
+## Bosses and boss pieces (Slime pieces, Skull Balls) can never be eaten by an Eater.
+@export var uneatable := false
 @export var can_flick := true
 ## After every enemy turn this figure slides this far (px) toward the player's deck. 0 = it never does.
 ## If it reaches the deck line, the player loses.

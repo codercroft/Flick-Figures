@@ -76,6 +76,8 @@ var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
+var _flicker: Figure  # the figure whose flick is in progress (Bloodluster counts the kills it causes)
+var _flick_kills := 0  # opposing figures knocked off since that flick started
 ## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn, and a
 ## Ghost only wraps on its own side's.
 var turret_side := -1
@@ -235,6 +237,7 @@ func _start_player_turn(new_round := true) -> void:
 	for figure in _players:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
+			figure.bonus_flicks_used = 0
 	_bonus_figure = null
 	arena.prune_temp_pins()
 	arena.prune_turrets()
@@ -319,6 +322,9 @@ func _update_aim(pos: Vector2) -> void:
 	# Roughly where the figure will come to rest (ignores bumping into things).
 	var speed := impulse.length() / _aim_figure.mass
 	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
+	var range_override := _aim_figure.ability.get_aim_range(_aim_figure, impulse)  # Blastoid: the shot's range
+	if range_override >= 0.0:
+		distance = range_override
 	var direction := impulse.normalized()
 	var origin := _aim_figure.global_position + direction * _aim_figure.radius
 	var bounce := {}
@@ -399,13 +405,17 @@ func _takeover_player_flick(figure: Figure) -> void:
 ## Speedo: after its flick settles, the player may flick it again (or tap to skip).
 func _offer_bonus_flick(figure: Figure) -> void:
 	_bonus_figure = figure
+	var bloodlust := _bloodlust_ready(figure)
+	if bloodlust:
+		figure.bonus_flicks_used += 1
+		figure.show_popup("Bloodlust!", Color(1.0, 0.25, 0.3))
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
 	_aim_figure = null
 	aim_line.clear()
 	_select(figure)
-	ui.show_your_turn("%s: flick again, or tap to skip" % figure.data.display_name)
+	ui.show_your_turn(("Bloodlust! " if bloodlust else "") + "%s: flick again, or tap to skip" % figure.data.display_name)
 
 
 func _skip_bonus_flick() -> void:
@@ -415,6 +425,7 @@ func _skip_bonus_flick() -> void:
 	_aim_figure = null
 	_touch_index = -1
 	_deselect()
+	_flick_kills = 0  # (a skipped Bloodlust bonus is not offered again)
 	if is_instance_valid(figure):
 		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
 	_state = State.SETTLING
@@ -422,6 +433,18 @@ func _skip_bonus_flick() -> void:
 
 
 ## True if this figure still has a flick left this turn.
+## A bonus flick: a Speedo-style extra flick, or a Bloodluster whose flick just knocked an opposing figure off.
+func _bonus_available(figure) -> bool:
+	return _has_flick_left(figure) or _bloodlust_ready(figure)
+
+
+func _bloodlust_ready(figure) -> bool:
+	if not _is_alive(figure) or not figure.data.can_flick or figure != _flicker:
+		return false
+	var cap: int = figure.ability.get_bloodlust_cap(figure)
+	return cap > 0 and _flick_kills > 0 and figure.bonus_flicks_used < cap
+
+
 func _has_flick_left(figure) -> bool:
 	return _is_alive(figure) and figure.data.can_flick \
 			and figure.turn_flicks < figure.ability.get_flicks_per_turn(figure)
@@ -430,11 +453,11 @@ func _has_flick_left(figure) -> bool:
 ## Gives up this drag. The figure stays selected, so you can drag again.
 ## Pinhead placed its pin: that was its whole action. It counts as its flick for the cycle (greyed out), but
 ## it does not flick, and the player's turn ends (the enemy goes next).
-func _use_up_turn_placing(figure: Figure) -> void:
+func _use_up_turn_placing(figure: Figure, text := "Pin placed!") -> void:
 	_take_snapshot()
 	figure.flickable = false
 	figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
-	figure.show_popup("Pin placed!", Color(0.75, 0.85, 0.95))
+	figure.show_popup(text, Color(0.75, 0.85, 0.95))
 	_last_player_flicker = figure
 	_bonus_figure = null
 	_cancel_aim()
@@ -456,6 +479,13 @@ func _tap_empty_board(pos: Vector2) -> void:
 				ui.show_your_turn("Turret removed. Drag anywhere to flick")
 			_:
 				ui.show_your_turn("Can't place a turret there")
+		return
+	var zone := _selected.ability.get_zone_stats(_selected)
+	if not zone.is_empty():  # Alchemist: placing the zone is its whole action
+		if arena.place_zone(_selected, pos, zone, board.board_rect):
+			_use_up_turn_placing(_selected, "Zone placed!")
+		else:
+			ui.show_your_turn("Can't place a zone there")
 		return
 	var radius := _selected.ability.get_pin_radius(_selected)
 	if radius <= 0.0:
@@ -518,7 +548,7 @@ func _finish_player_turn() -> void:
 		return
 	if _check_game_over():
 		return
-	if _has_flick_left(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
+	if _bonus_available(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
 		_offer_bonus_flick(_last_player_flicker)
 		return
 	if extra_turns > 0:
@@ -543,6 +573,7 @@ func _run_enemy_turn() -> void:
 	for enemy in _enemies:
 		if _is_alive(enemy):
 			enemy.turn_flicks = 0
+			enemy.bonus_flicks_used = 0
 	await get_tree().physics_frame  # turret spots are checked in the physics space
 	if serial != _turn_serial:
 		return
@@ -570,6 +601,15 @@ func _run_enemy_turn() -> void:
 		choice = await _takeover_choice(choice, serial)  # a Bummer's aura replaces the shot
 		if serial != _turn_serial or not _is_alive(choice.enemy):
 			return
+		if choice.has("zone_only"):
+			# An enemy Alchemist's whole action is placing its debuff zone.
+			arena.place_zone(choice.enemy, choice.zone, choice.zone_stats, board.board_rect)
+			choice.enemy.show_popup("Zone!", Color(0.8, 0.6, 1.0))
+			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
+			await _wait_until_settled()
+			if serial != _turn_serial:
+				return
+			continue
 		if choice.has("pin_only"):
 			# An enemy Pinhead's whole action is placing a pin (for an ally's bank shot): no flick this time.
 			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
@@ -587,18 +627,22 @@ func _run_enemy_turn() -> void:
 			return
 		# Speedo-style extra flicks: only taken when the shot scores well.
 		var shooter = choice.enemy  # untyped on purpose: it may have split or fallen off and been freed
-		while _has_flick_left(shooter):
+		while _bonus_available(shooter):
 			await get_tree().physics_frame
 			if serial != _turn_serial:
 				return
 			if not _is_alive(shooter):
 				break
+			var bloodlust := _bloodlust_ready(shooter)
 			var extra := ai.choose_flick([shooter], _players, board.get_table_rect(), max_flick_force, ai.bonus_flick_min_score)
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
 				return
-			if extra.is_empty() or extra.has("pin_only") or not _is_alive(shooter):
+			if extra.is_empty() or extra.has("pin_only") or extra.has("zone_only") or not _is_alive(shooter):
 				break
+			if bloodlust:
+				shooter.bonus_flicks_used += 1
+				shooter.show_popup("Bloodlust!", Color(1.0, 0.25, 0.3))
 			extra = await _takeover_choice(extra, serial)
 			if serial != _turn_serial:
 				return
@@ -647,7 +691,7 @@ func _enemy_flicks_now() -> int:
 ## then a shot that tries to knock itself off and hit its own teammates replaces the planned one.
 func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 	var enemy = choice.enemy  # untyped: it may fall off and be freed while we wait
-	if choice.has("pin_only") or not _is_alive(enemy) or enemy.bummer_effect().is_empty():
+	if choice.has("pin_only") or choice.has("zone_only") or not _is_alive(enemy) or enemy.bummer_effect().is_empty():
 		return choice
 	enemy.show_popup("Bummed out!", Color(0.8, 0.5, 1.0))
 	await get_tree().create_timer(takeover_delay).timeout
@@ -761,6 +805,8 @@ func _moving_report() -> String:
 
 
 func _all_figures_resting() -> bool:
+	if not get_tree().get_nodes_in_group("projectiles").is_empty():
+		return false  # a Blastoid shot is still flying
 	for figure in _all_figures():
 		if not figure.is_resting():
 			return false
@@ -840,6 +886,7 @@ func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: Equi
 	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else 1.0)
 	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade, scale, elite)
 	figure.flicked.connect(game_feel.on_flicked)
+	figure.flicked.connect(_on_any_flick)
 	figure.impacted.connect(game_feel.on_impact)
 	figure.fell_off.connect(game_feel.on_fell_off)
 	figure.split_requested.connect(_on_split_requested)
@@ -908,6 +955,7 @@ func _knock_off_fallen_figures() -> void:
 				continue  # saved by a relic (Second Wind)
 			if figure.team == Figure.Team.PLAYER:
 				_figures_lost += 1
+			_count_kill(figure)
 			_players.erase(figure)
 			_enemies.erase(figure)
 			figure.knock_off(knock_off_fade_time)
@@ -918,6 +966,44 @@ func _knock_off_fallen_figures() -> void:
 		for player in _players:
 			if _is_alive(player):
 				player.ability.on_opponent_knocked_off(player, victim)
+
+
+## A flick started (any figure): Bloodluster counts the opposing figures knocked off from now on.
+func _on_any_flick(figure: Figure, _impulse: Vector2) -> void:
+	_flicker = figure
+	_flick_kills = 0
+
+
+func _count_kill(fallen: Figure) -> void:
+	if is_instance_valid(_flicker) and fallen.team != _flicker.team:
+		_flick_kills += 1
+
+
+## Eater: removes a figure outright, with the same bookkeeping as falling off the table (it counts as knocked off).
+func force_knock_off(figure: Figure) -> void:
+	if not _is_alive(figure):
+		return
+	if figure.team == Figure.Team.PLAYER:
+		_figures_lost += 1
+	_count_kill(figure)
+	_players.erase(figure)
+	_enemies.erase(figure)
+	figure.knock_off(knock_off_fade_time)
+	if figure.team == Figure.Team.ENEMY:
+		for player in _players:
+			if _is_alive(player):
+				player.ability.on_opponent_knocked_off(player, figure)
+
+
+## Energizer: the figure can be flicked again this cycle.
+func recharge_figure(figure: Figure) -> void:
+	if not _is_alive(figure):
+		return
+	figure.turn_flicks = 0
+	if figure.team == Figure.Team.PLAYER:
+		figure.flickable = true
+	else:
+		_enemy_cycle.erase(figure.get_instance_id())
 
 
 ## Bubble Shield: the figure stops right at the table edge instead of falling off.

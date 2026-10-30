@@ -75,6 +75,8 @@ var bubble_rounds := 0
 var shrunk := false
 ## Duwall: true once its shell has burst and it has become a Grunt.
 var shell_broken := false
+## Bloodluster: bonus flicks taken this turn (main.gd resets it with turn_flicks).
+var bonus_flicks_used := 0
 var _base_damping := 1.5  # the Main node's damping before this figure's own multipliers
 
 # Player figures: highlighted ring while chosen for aiming.
@@ -322,7 +324,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 	elif state.get_contact_count() > 0:
 		var hitter := _hardest_hitter(state)
 		var multiplier := data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, hitter) \
-				* RunManager.relic_knockback_taken(self, hitter) * aura_knockback_multiplier()
+				* RunManager.relic_knockback_taken(self, hitter) * aura_knockback_multiplier() * zone_knockback_multiplier()
 		if hitter != null:
 			var impact := maxf((_last_velocity - hitter._last_velocity).length(),
 					(_prev_velocity - hitter._prev_velocity).length())
@@ -444,6 +446,14 @@ func bummer_effect() -> Dictionary:
 	return bummer_effect_at(global_position)
 
 
+## Alchemist: the knockback multiplier of an enemy debuff zone this figure stands in (1 = none).
+func zone_knockback_multiplier() -> float:
+	var combat = RunManager.combat  # the Main node (untyped: Main is not a named class)
+	if combat == null or not is_inside_tree():
+		return 1.0
+	return combat.arena.zone_multiplier_at(global_position, team)
+
+
 ## Teammates (not this figure) whose aura reaches this figure.
 func _aura_sources() -> Array[Figure]:
 	var sources: Array[Figure] = []
@@ -499,7 +509,10 @@ func launch(impulse: Vector2) -> void:
 	touched_since_flick = false
 	_skip_knockback_frames = 2
 	_slow_frames = 0
-	apply_central_impulse(impulse)
+	if ability.replaces_flick(self):
+		ability.fire_instead_of_flick(self, impulse)  # Blastoid fires a projectile and stays put
+	else:
+		apply_central_impulse(impulse)
 	ability.on_flicked(self, impulse)
 	flicked.emit(self, impulse)
 
@@ -511,7 +524,7 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 		return
 	_skip_knockback_frames = 2
 	apply_central_impulse(impulse * data.knockback_taken_multiplier * ability.get_knockback_multiplier(self, source)
-			* RunManager.relic_knockback_taken(self, source) * aura_knockback_multiplier())
+			* RunManager.relic_knockback_taken(self, source) * aura_knockback_multiplier() * zone_knockback_multiplier())
 
 
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's

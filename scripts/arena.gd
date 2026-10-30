@@ -30,6 +30,8 @@ var _origin := Vector2.ZERO
 var _bricks: Array[Dictionary] = []  # {body, rounds}
 var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
 var _temp_pins: Array[TempPin] = []  # Pinhead's pins
+var _shield_walls: Array[ShieldWall] = []  # Shieldon Ooper's walls
+var _alchemy_zones: Array[AlchemyZone] = []  # Alchemist's debuff zones (the power-placed _zones below are different)
 var _turrets: Array[Turret] = []  # Engineer's turrets
 var _trail: Array[Dictionary] = []  # Juicer's boost pieces: {owner, ability, center, direction, rounds, node}
 
@@ -285,8 +287,15 @@ func remove_temp_pins(owner_figure: Figure = null) -> void:
 			_temp_pins.remove_at(i)
 
 
-## Removes every temporary pin that belongs to a figure of `team` (that side's flick cycle reset).
+## Removes every temporary pin (and Alchemist zone) that belongs to a figure of `team` (that side's flick cycle reset).
 func remove_team_pins(team: int) -> void:
+	for i in range(_alchemy_zones.size() - 1, -1, -1):
+		var zone := _alchemy_zones[i]
+		if not is_instance_valid(zone) or not is_instance_valid(zone.owner_figure) or zone.owner_figure.team == team:
+			if is_instance_valid(zone):
+				remove_child(zone)
+				zone.queue_free()
+			_alchemy_zones.remove_at(i)
 	for i in range(_temp_pins.size() - 1, -1, -1):
 		var pin := _temp_pins[i]
 		if not is_instance_valid(pin.owner_figure) or pin.owner_figure.team == team:
@@ -295,8 +304,21 @@ func remove_team_pins(team: int) -> void:
 			_temp_pins.remove_at(i)
 
 
-## Removes pins whose Pinhead is gone (knocked off).
+## Removes pins whose Pinhead is gone (knocked off), and zones and walls whose owner is gone.
 func prune_temp_pins() -> void:
+	for i in range(_alchemy_zones.size() - 1, -1, -1):
+		if not is_instance_valid(_alchemy_zones[i]) or not is_instance_valid(_alchemy_zones[i].owner_figure) or _alchemy_zones[i].owner_figure.knocked_off:
+			if is_instance_valid(_alchemy_zones[i]):
+				remove_child(_alchemy_zones[i])
+				_alchemy_zones[i].queue_free()
+			_alchemy_zones.remove_at(i)
+	for i in range(_shield_walls.size() - 1, -1, -1):
+		if not is_instance_valid(_shield_walls[i]) or not is_instance_valid(_shield_walls[i].owner_figure) \
+				or _shield_walls[i].owner_figure.knocked_off:
+			if is_instance_valid(_shield_walls[i]):
+				remove_child(_shield_walls[i])
+				_shield_walls[i].queue_free()
+			_shield_walls.remove_at(i)
 	for i in range(_temp_pins.size() - 1, -1, -1):
 		var pin := _temp_pins[i]
 		if not is_instance_valid(pin.owner_figure) or pin.owner_figure.knocked_off:
@@ -319,6 +341,103 @@ func has_temp_pin(owner_figure: Figure) -> bool:
 		if pin.owner_figure == owner_figure:
 			return true
 	return false
+
+
+# --- Shieldon Ooper's walls and the Alchemist's zones -----------------------------------
+
+## Props up a wall for `owner_figure` (replacing its old one). Fails (false) if a figure is in the way.
+func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float) -> bool:
+	remove_shield_wall(owner_figure)
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = rect
+	query.transform = Transform2D(wall_rotation, center)
+	query.collision_mask = Figure.LAYER_ON_DECK | Figure.LAYER_FLICKED | Figure.LAYER_ENEMY | Figure.LAYER_ARENA
+	query.exclude = [owner_figure.get_rid()]
+	if not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty():
+		return false
+	var wall := ShieldWall.new()
+	wall.size = size
+	wall.owner_figure = owner_figure
+	wall.collision_layer = Figure.LAYER_ARENA
+	wall.collision_mask = 0
+	var material := PhysicsMaterial.new()
+	material.bounce = wall_bounce
+	material.friction = 0.0
+	wall.physics_material_override = material
+	var shape := CollisionShape2D.new()
+	shape.shape = rect
+	wall.add_child(shape)
+	wall.position = center
+	wall.rotation = wall_rotation
+	add_child(wall)
+	_shield_walls.append(wall)
+	return true
+
+
+func shield_wall_of(owner_figure: Figure) -> ShieldWall:
+	for wall in _shield_walls:
+		if is_instance_valid(wall) and wall.owner_figure == owner_figure:
+			return wall
+	return null
+
+
+func remove_shield_wall(owner_figure: Figure) -> void:
+	for i in range(_shield_walls.size() - 1, -1, -1):
+		var wall := _shield_walls[i]
+		if not is_instance_valid(wall):
+			_shield_walls.remove_at(i)
+		elif wall.owner_figure == owner_figure:
+			remove_child(wall)  # out of the physics space right away
+			wall.queue_free()
+			_shield_walls.remove_at(i)
+
+
+## Places the Alchemist's zone at `pos` (its old one goes) if the spot is empty. Returns whether it was placed.
+func place_zone(owner_figure: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> bool:
+	remove_zone(owner_figure)
+	if not is_spot_free(get_world_2d().direct_space_state, board, pos, 30.0):
+		return false
+	var zone := AlchemyZone.new()
+	zone.radius = stats.radius
+	zone.knockback = stats.knockback
+	zone.owner_figure = owner_figure
+	zone.position = pos
+	zone.z_index = 0
+	add_child(zone)
+	_alchemy_zones.append(zone)
+	return true
+
+
+func remove_zone(owner_figure: Figure) -> void:
+	for i in range(_alchemy_zones.size() - 1, -1, -1):
+		var zone := _alchemy_zones[i]
+		if not is_instance_valid(zone):
+			_alchemy_zones.remove_at(i)
+		elif zone.owner_figure == owner_figure:
+			remove_child(zone)
+			zone.queue_free()
+			_alchemy_zones.remove_at(i)
+
+
+## The strongest knockback multiplier of an Alchemist zone of the OTHER team at `pos` (1 = none).
+func zone_multiplier_at(pos: Vector2, team: int) -> float:
+	var best := 1.0
+	for zone in _alchemy_zones:
+		if is_instance_valid(zone) and is_instance_valid(zone.owner_figure) and zone.owner_figure.team != team \
+				and pos.distance_to(zone.position) <= zone.radius:
+			best = maxf(best, zone.knockback)
+	return best
+
+
+## Zones of `team` (the enemy AI counts figures inside them): [{position, radius}].
+func zones_of(team: int) -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for zone in _alchemy_zones:
+		if is_instance_valid(zone) and is_instance_valid(zone.owner_figure) and zone.owner_figure.team == team:
+			list.append({"position": zone.position, "radius": zone.radius})
+	return list
 
 
 # --- Engineer's turrets ---------------------------------------------------------------

@@ -150,6 +150,50 @@ func get_turret_stats(_figure: Figure) -> Dictionary:
 	return {}
 
 
+## BLASTOID: when true, flicking this figure does not move it: `fire_instead_of_flick` is called instead.
+func replaces_flick(_figure: Figure) -> bool:
+	return false
+
+
+func fire_instead_of_flick(_figure: Figure, _impulse: Vector2) -> void:
+	pass
+
+
+## The distance (px) the aim line should show for this flick, or -1 for the usual slide distance.
+func get_aim_range(_figure: Figure, _impulse: Vector2) -> float:
+	return -1.0
+
+
+## Blastoid, for the enemy AI: {speed_min, speed_max, range_min, range_max, radius, blast_radius, blast_force}.
+func get_ai_projectile(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## ALCHEMIST: the debuff zone this figure may place instead of flicking ({radius, knockback}); {} = none.
+func get_zone_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## Energizer, for the AI: the first allied figure it hits during its flick becomes flickable again.
+func recharges_first_ally(_figure: Figure) -> bool:
+	return false
+
+
+## Eater, for the AI: eats any figure it touches that is smaller than it.
+func eats_smaller(_figure: Figure) -> bool:
+	return false
+
+
+## Bloodluster: how many bonus flicks a turn it may earn by knocking opposing figures off (0 = none).
+func get_bloodlust_cap(_figure: Figure) -> int:
+	return 0
+
+
+## Shieldon, for the AI: this figure currently has a wall standing (moving it makes the wall vanish).
+func has_active_wall(_figure: Figure) -> bool:
+	return false
+
+
 ## Duwall: called when an explosion's push reaches this figure (`impulse` is what it delivers).
 func on_took_explosion(_figure: Figure, _impulse: Vector2) -> void:
 	pass

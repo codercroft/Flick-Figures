@@ -23,4 +23,5 @@ flick_power_multiplier = 4.0
 knockback_taken_multiplier = 1.0
 accuracy = 0.7
 spawn_margin = 270.0
+uneatable = true
 ability = SubResource("Resource_1")

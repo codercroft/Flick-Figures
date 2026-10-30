@@ -92,6 +92,46 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
+func replaces_flick(figure: Figure) -> bool:
+	return first.replaces_flick(figure) or second.replaces_flick(figure)
+
+
+func fire_instead_of_flick(figure: Figure, impulse: Vector2) -> void:
+	first.fire_instead_of_flick(figure, impulse)
+	second.fire_instead_of_flick(figure, impulse)
+
+
+func get_aim_range(figure: Figure, impulse: Vector2) -> float:
+	var distance := first.get_aim_range(figure, impulse)
+	return distance if distance >= 0.0 else second.get_aim_range(figure, impulse)
+
+
+func get_ai_projectile(figure: Figure) -> Dictionary:
+	var stats := first.get_ai_projectile(figure)
+	return stats if not stats.is_empty() else second.get_ai_projectile(figure)
+
+
+func get_zone_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_zone_stats(figure)
+	return stats if not stats.is_empty() else second.get_zone_stats(figure)
+
+
+func recharges_first_ally(figure: Figure) -> bool:
+	return first.recharges_first_ally(figure) or second.recharges_first_ally(figure)
+
+
+func eats_smaller(figure: Figure) -> bool:
+	return first.eats_smaller(figure) or second.eats_smaller(figure)
+
+
+func get_bloodlust_cap(figure: Figure) -> int:
+	return maxi(first.get_bloodlust_cap(figure), second.get_bloodlust_cap(figure))
+
+
+func has_active_wall(figure: Figure) -> bool:
+	return first.has_active_wall(figure) or second.has_active_wall(figure)
+
+
 func on_took_explosion(figure: Figure, impulse: Vector2) -> void:
 	first.on_took_explosion(figure, impulse)
 	second.on_took_explosion(figure, impulse)

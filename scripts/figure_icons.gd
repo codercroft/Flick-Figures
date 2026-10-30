@@ -4,7 +4,7 @@ extends RefCounted
 ## entry to the enum and a new case in draw() to make another icon.
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
-		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN }
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -109,6 +109,27 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_arc(center + Vector2(s * 0.2, s * 0.2), s * 0.6, 0.0, TAU, 20, color, w)
 			canvas.draw_line(center + Vector2(s * 0.2, -s * 0.4), center + Vector2(s * 0.2, -s * 0.95), color, w)
 			canvas.draw_line(center + Vector2(-s, s * 0.2), center + Vector2(-s * 0.6, s * 0.2), color, w)
+		Icon.WALL:  # a short wall with two feet
+			canvas.draw_line(center + Vector2(-s, -s * 0.2), center + Vector2(s, -s * 0.2), color, w * 2.2)
+			canvas.draw_line(center + Vector2(-s * 0.7, s * 0.1), center + Vector2(-s * 0.7, s * 0.9), color, w)
+			canvas.draw_line(center + Vector2(s * 0.7, s * 0.1), center + Vector2(s * 0.7, s * 0.9), color, w)
+		Icon.FLASK:  # a round flask with a neck
+			canvas.draw_arc(center + Vector2(0, s * 0.35), s * 0.6, 0.0, TAU, 16, color, w)
+			canvas.draw_line(center + Vector2(0, -s * 0.25), center + Vector2(0, -s), color, w)
+			canvas.draw_line(center + Vector2(-s * 0.3, -s), center + Vector2(s * 0.3, -s), color, w)
+		Icon.ROCKET:  # a small rocket pointing up
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(0, -s), center + Vector2(s * 0.45, s * 0.3), center + Vector2(-s * 0.45, s * 0.3), center + Vector2(0, -s)]), color, w)
+			canvas.draw_line(center + Vector2(0, s * 0.45), center + Vector2(0, s), color, w)
+		Icon.BOLT:  # a lightning bolt
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(s * 0.3, -s), center + Vector2(-s * 0.4, s * 0.1), center + Vector2(s * 0.2, s * 0.1), center + Vector2(-s * 0.3, s)]), color, w)
+		Icon.JAWS:  # open jaws with teeth
+			canvas.draw_arc(center + Vector2(0, -s * 0.1), s * 0.8, PI, TAU, 12, color, w)
+			canvas.draw_arc(center + Vector2(0, s * 0.1), s * 0.8, 0.0, PI, 12, color, w)
+			for i in 3:
+				canvas.draw_line(center + Vector2(-s * 0.4 + i * s * 0.4, -s * 0.1), center + Vector2(-s * 0.4 + i * s * 0.4, s * 0.15), color, w * 0.6)
+		Icon.FANG:  # two fangs
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(-s * 0.6, -s * 0.6), center + Vector2(-s * 0.4, s * 0.8), center + Vector2(-s * 0.1, -s * 0.6)]), color, w)
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(s * 0.1, -s * 0.6), center + Vector2(s * 0.4, s * 0.8), center + Vector2(s * 0.6, -s * 0.6)]), color, w)
 		Icon.FROWN:  # a round face with a downturned mouth
 			canvas.draw_arc(center, s * 0.9, 0.0, TAU, 20, color, w)
 			canvas.draw_circle(center + Vector2(-s * 0.3, -s * 0.2), w * 0.8, color)

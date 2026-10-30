@@ -109,6 +109,23 @@ const TOUCH_MARGIN := 4.0
 ## The shot must still arrive at the target at least this fast (px/s).
 @export var bank_min_hit_speed := 400.0
 
+@export_group("New figures")
+## Bloodluster: its kill shots count this much more (the bonus flick is worth chasing), plus a flat bonus per kill chance.
+@export var bloodluster_kill_multiplier := 1.6
+@export var bloodluster_kill_bonus := 50.0
+## Energizer: hitting a friend that can flick again is worth this.
+@export var recharge_bonus := 70.0
+## Eater: hitting a smaller figure eats it (worth about a knock-off); the same figure on our own side is a loss.
+@export var eater_eat_bonus := 150.0
+@export var eater_ally_penalty := 180.0
+## Shieldon: hitting a Shieldon with a wall up moves it and drops the wall.
+@export var shield_break_bonus := 40.0
+## Blastoid: extra value of a projectile that hits a player figure directly (on top of its blast).
+@export var blastoid_hit_bonus := 40.0
+## Alchemist: value of each player figure caught in a new debuff zone (nearer the middle counts more).
+@export var zone_value_per_figure := 70.0
+@export var zone_grid_spacing := 90.0
+
 @export_group("Duwall shell")
 ## Cracking a player Duwall's shell is worth this x the share of its shell the hit would take off (0 to 1)...
 @export var shell_crack_bonus := 80.0
@@ -208,6 +225,8 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	if best.is_empty():
 		return {}
 	# Small random aim error: worse accuracy = bigger error.
+	if best.kind == "zone":  # Alchemist's whole action is placing its zone
+		return {"enemy": best_enemy, "zone": best.zone, "zone_stats": best.zone_stats, "zone_only": true}
 	if best.kind == "pin":  # Pinhead's whole action is placing the pin
 		return {"enemy": best_enemy, "pin": best.pin, "pin_radius": best.pin_radius, "pin_only": true}
 	var error := _aim_error(best_enemy)
@@ -293,6 +312,11 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var offsets := _angle_offsets(depth)
 	var levels := _power_levels(depth)
 
+	# Blastoid never moves: it fires a projectile (see _best_projectile_shot).
+	if not enemy.ability.get_ai_projectile(enemy).is_empty():
+		var shot := _best_projectile_shot(enemy, players, table, top_speed)
+		return shot if not shot.is_empty() and shot.score >= min_attack_score else {"kind": "pass", "score": 0.0}
+
 	var best := {}
 	for target in players:
 		var to_target := target.global_position - enemy.global_position
@@ -328,6 +352,12 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 		var setup := _best_pin_setup(enemy, players, table, max_force, tier)
 		if not setup.is_empty() and setup.score >= min_attack_score and (best.is_empty() or setup.score > best.score):
 			best = setup
+
+	# Alchemist: spending the turn on a debuff zone that catches player figures.
+	if not enemy.ability.get_zone_stats(enemy).is_empty():
+		var zone := _best_zone_setup(enemy, players)
+		if not zone.is_empty() and (best.is_empty() or zone.score > best.score):
+			best = zone
 
 	if best.is_empty() or best.score < min_attack_score:
 		var move := _choose_reposition(enemy, shape, players, table)
@@ -368,7 +398,12 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		var knocked_off := _leave_chance(other, other.global_position, target_velocity, table)
 		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
 		var edge_weight := shove_edge_multiplier if enemy.ability.cancels_rebound(enemy) else 1.0
-		score = hit_player_bonus + kill_bonus * knocked_off + edge_bonus * edge_weight * pushed_toward_edge
+		var kill_weight := bloodluster_kill_multiplier if enemy.ability.get_bloodlust_cap(enemy) > 0 else 1.0
+		score = hit_player_bonus + kill_bonus * knocked_off * kill_weight + edge_bonus * edge_weight * pushed_toward_edge
+		if kill_weight > 1.0:
+			score += bloodluster_kill_bonus * knocked_off  # a kill earns a bonus flick
+		if other.ability.has_active_wall(other):
+			score += shield_break_bonus  # moving a Shieldon drops its wall
 		# A shelled Duwall: cracking the shell is progress, and what is left of it is toughness.
 		var shell := other.ability.get_shell_state(other)
 		if not shell.is_empty():
@@ -386,6 +421,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			ally_value = ally_strategic_factor * (hit_player_bonus \
 					+ edge_bonus * _edge_factor(behind.global_position, hit.velocity.normalized(), table))
 		ally_value = maxf(ally_value, _ally_chain_value(other, target_velocity, players, table) * weight)
+		if enemy.ability.recharges_first_ally(enemy) and other.data.can_flick:
+			ally_value += recharge_bonus  # Energizer: the friend can flick again
 		# Shoving an ally out of a player Bummer's aura frees it (a flick of it would be taken over).
 		if not other.bummer_effect().is_empty() and target_velocity.length() > other.stop_speed:
 			var ally_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
@@ -401,6 +438,9 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if enemy.ability.sets_off_team_explosives(enemy):
 		combo += _team_detonation_value(enemy, players, table)
 	score += combo * weight
+	# Eater: touching a smaller figure eats it.
+	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
+		score += eater_eat_bonus if other.team == Figure.Team.PLAYER else -eater_ally_penalty
 
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
 	score -= _self_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
@@ -454,9 +494,9 @@ func _predict_collision(shooter: Figure, target: Figure, velocity: Vector2, cont
 	var shooter_change := -(1.0 + bounce) * target.mass / total_mass * closing * normal
 	var target_change := (1.0 + bounce) * shooter_mass / total_mass * closing * normal
 	shooter_change *= shooter.data.knockback_taken_multiplier * shooter.ability.get_knockback_multiplier(shooter, target) \
-			* shooter.aura_knockback_multiplier()
+			* shooter.aura_knockback_multiplier() * shooter.zone_knockback_multiplier()
 	target_change *= target.data.knockback_taken_multiplier * target.ability.get_knockback_multiplier(target, shooter) \
-			* target.aura_knockback_multiplier()
+			* target.aura_knockback_multiplier() * target.zone_knockback_multiplier()
 	var shooter_after := velocity + shooter_change
 	if shooter.ability.cancels_rebound(shooter):
 		var along := shooter_after.dot(normal)
@@ -680,7 +720,7 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 		var push := (offset.normalized() if distance > 0.01 else Vector2.UP) * force * (1.0 - distance / radius)
 		var change := push / figure.mass * figure.data.knockback_taken_multiplier \
 				* figure.ability.get_explosion_multiplier(figure, source) \
-				* figure.ability.get_knockback_multiplier(figure, source) * figure.aura_knockback_multiplier()
+				* figure.ability.get_knockback_multiplier(figure, source) * figure.aura_knockback_multiplier() * figure.zone_knockback_multiplier()
 		var value := blast_hit_bonus * clampf(change.length() / 300.0, 0.0, 1.0) \
 				+ kill_bonus * _leave_chance(figure, figure.global_position, change, table) \
 				+ edge_bonus * _push_progress(figure, figure.global_position, change, table)
@@ -1183,4 +1223,81 @@ func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2)
 		var blast := other.ability.get_ai_blast(other)
 		if not blast.is_empty():
 			total += _blast_value(other.global_position, blast, other, null, players, table)
+	return total
+
+
+# --- Blastoid and Alchemist ----------------------------------------------------------------
+
+## Blastoid: for each player figure, the projectile aimed at it (a few small angle offsets), with the least power
+## that still reaches the first thing in the way; scored by the blast it would make there (pushes, knock-offs,
+## our own figures hurt) plus a bonus for a direct hit.
+func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2, top_speed: float) -> Dictionary:
+	var proj := enemy.ability.get_ai_projectile(enemy)
+	var shape := CircleShape2D.new()
+	shape.radius = proj.radius
+	var blast := {"radius": proj.blast_radius, "force": proj.blast_force}
+	var start_gap: float = enemy.radius + proj.radius + 4.0  # where the projectile appears
+	var best := {}
+	for target in players:
+		var to_target := target.global_position - enemy.global_position
+		if to_target.length() < 1.0:
+			continue
+		for offset in [0.0, -4.0, 4.0]:
+			var direction := to_target.normalized().rotated(deg_to_rad(offset))
+			var hit := _first_hit(enemy, shape, direction, proj.range_max + start_gap)
+			if hit.is_empty() or hit.collider == null:
+				continue  # nothing to blow up on the way, or a wall
+			var travel: float = maxf(hit.distance - start_gap, 0.0) + 10.0
+			if travel > proj.range_max:
+				continue
+			var power := clampf((travel - proj.range_min) / (proj.range_max - proj.range_min), 0.0, 1.0)
+			var center: Vector2 = enemy.global_position + direction * hit.distance
+			var score := _blast_value(center, blast, enemy, null, players, table)
+			if hit.collider.team == Figure.Team.PLAYER:
+				score += blastoid_hit_bonus
+			if best.is_empty() or score > best.score:
+				best = {"kind": "attack", "score": score, "direction": direction, "speed": power * top_speed,
+						"distance": travel, "target": target}
+	return best
+
+
+## Alchemist: the empty spot where a debuff zone would catch the most player figures (nearer its middle counts
+## more). Only worth it if clearly better than what our existing zone already covers.
+func _best_zone_setup(enemy: Figure, players: Array[Figure]) -> Dictionary:
+	var stats := enemy.ability.get_zone_stats(enemy)
+	var combat = RunManager.combat
+	if combat == null:
+		return {}
+	var board_rect: Rect2 = combat.board.board_rect
+	var space := enemy.get_world_2d().direct_space_state
+	var current := 0.0
+	for zone in _arena.zones_of(enemy.team) if _arena != null else []:
+		current = maxf(current, _zone_coverage(zone.position, zone.radius, players))
+	var best := {}
+	var area := board_rect.grow(-40.0)
+	var x := area.position.x
+	while x <= area.end.x:
+		var y := area.position.y
+		while y <= area.end.y:
+			var spot := Vector2(x, y)
+			y += zone_grid_spacing
+			var coverage := _zone_coverage(spot, stats.radius, players)
+			if coverage <= current * 1.3 or coverage <= 0.0:
+				continue
+			if not Arena.is_spot_free(space, board_rect, spot, 30.0):
+				continue
+			if best.is_empty() or coverage > best.coverage:
+				best = {"kind": "zone", "score": coverage * zone_value_per_figure, "coverage": coverage,
+						"zone": spot, "zone_stats": stats}
+		x += zone_grid_spacing
+	return best
+
+
+func _zone_coverage(center: Vector2, radius: float, players: Array[Figure]) -> float:
+	var total := 0.0
+	for player in players:
+		if is_instance_valid(player) and not player.knocked_off:
+			var distance := center.distance_to(player.global_position)
+			if distance <= radius:
+				total += 1.0 - 0.3 * distance / radius
 	return total

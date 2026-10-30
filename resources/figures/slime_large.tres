@@ -26,4 +26,5 @@ damping_multiplier = 1.0
 flick_power_multiplier = 2.0
 knockback_taken_multiplier = 1.0
 accuracy = 0.7
+uneatable = true
 ability = SubResource("Resource_1")
