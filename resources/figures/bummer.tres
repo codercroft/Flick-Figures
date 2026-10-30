@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Bummer"
-description = "Foes in its aura flick recklessly: +40% power, shaky aim, and your aim line lies."
+description = "A foe touching its small aura loses control: its flick sends it off the table into its own friends."
 rarity = 1
 label = "BM"
 icon = 24

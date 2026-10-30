@@ -108,10 +108,23 @@ const TOUCH_MARGIN := 4.0
 @export var bank_min_hit_speed := 400.0
 
 @export_group("Bummer auras")
-## Score lost by a shot whose shooter would end up inside a player Bummer's aura (it would flick recklessly)...
+## Score lost by a shot whose shooter would end up inside a player Bummer's aura (its next flick would be taken over)...
 @export var bummer_aura_penalty := 120.0
-## ...and gained by a reposition flick that gets a figure out of one.
+## ...and gained by shoving an ally of ours out of one (hitting it away).
 @export var bummer_exit_bonus := 100.0
+## A figure inside a player Bummer's aura is only flicked when nothing else is worth it: its score loses this.
+@export var bummer_flick_penalty := 150.0
+## Our own Bummer likes ending a shot with this bonus per player figure its aura touches.
+@export var bummer_near_bonus := 40.0
+## Taken-over figures (inside a Bummer's aura): the shot tries to knock the figure itself off...
+@export var takeover_self_bonus := 300.0
+## ...and to hit its own teammates, knock them off, and shove them toward the edge.
+@export var takeover_ally_hit_bonus := 120.0
+@export var takeover_ally_kill_bonus := 200.0
+@export var takeover_edge_bonus := 60.0
+## Power levels tried for a takeover shot (fractions of the top speed) and extra directions around the circle.
+@export var takeover_power_levels: Array[float] = [0.3, 0.5, 0.7, 0.85, 1.0]
+@export var takeover_extra_directions := 24
 
 @export_group("Turrets")
 ## Engineer turret spots are tried on this grid (px).
@@ -146,7 +159,7 @@ var _arena: Arena
 var _floor_on := false
 var _bends := false
 var _pull_sources: Array[Figure] = []
-var _self_penalty := 0.0  # the self-knock-off penalty for the enemy being examined (0 inside a Bummer's aura)
+var _self_penalty := 0.0  # the self-knock-off penalty for the enemy being examined
 var _fast_slides := false  # skip the stepped simulation for secondary slides (explosion pushes, ally chains)
 var _slide_cache := {}  # (figure, from, velocity) -> slide ratio, cleared each decision
 
@@ -175,6 +188,8 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 		var shot := _best_shot_for(enemy, players, table, max_force)
 		if shot.kind == "pass":
 			continue
+		if not enemy.bummer_effect().is_empty():
+			shot.score -= bummer_flick_penalty  # a flick would be taken over: only when nothing else is worth it
 		if min_score > -INF and (shot.kind == "reposition" or shot.score < min_score):
 			continue
 		if best.is_empty() or _shot_rank(shot) > _shot_rank(best):
@@ -187,16 +202,9 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	var target = best.get("target")
 	if is_instance_valid(target):
 		error += deg_to_rad(target.ability.get_incoming_aim_error_degrees(target))
-	# An opposing Bummer's aura makes the flick reckless: extra aim error and extra power (the prediction
-	# above did not count on that, so the shot often overshoots).
-	var reckless := best_enemy.bummer_effect()
-	var power_boost := 1.0
-	if not reckless.is_empty():
-		error += deg_to_rad(reckless.aim_error_degrees)
-		power_boost = reckless.power
 	var direction: Vector2 = best.direction.rotated(randf_range(-error, error))
 	_record_debug(best_enemy, best, best_enemy.global_position + direction * best.distance)
-	var result := {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass * power_boost}
+	var result := {"enemy": best_enemy, "impulse": direction * best.speed * best_enemy.mass}
 	if best.has("pin"):  # a bank shot: the caller places this pin before the flick
 		result["pin"] = best.pin
 		result["pin_radius"] = best.pin_radius
@@ -264,8 +272,7 @@ func _power_levels(depth: int) -> Array[float]:
 func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
-	# Inside an opposing Bummer's aura the enemy is reckless: it stops caring about falling off.
-	_self_penalty = self_knock_off_penalty if enemy.bummer_effect().is_empty() else 0.0
+	_self_penalty = self_knock_off_penalty
 	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier()
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
@@ -347,6 +354,11 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			ally_value = ally_strategic_factor * (hit_player_bonus \
 					+ edge_bonus * _edge_factor(behind.global_position, hit.velocity.normalized(), table))
 		ally_value = maxf(ally_value, _ally_chain_value(other, target_velocity, players, table) * weight)
+		# Shoving an ally out of a player Bummer's aura frees it (a flick of it would be taken over).
+		if not other.bummer_effect().is_empty() and target_velocity.length() > other.stop_speed:
+			var ally_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
+			if other.bummer_effect_at(ally_end).is_empty():
+				ally_value += bummer_exit_bonus
 		var ally_blast := other.ability.get_ai_blast(other)
 		if not ally_blast.is_empty() and ally_blast.when == "ally_hit":
 			combo += _blast_value(other.global_position, ally_blast, other, enemy, players, table)
@@ -363,9 +375,10 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			asin(clampf((enemy.radius + other.radius) / to_other.length(), 0.0, 1.0)))
 	if miss_chance > 0.0:
 		score -= _self_penalty * miss_chance * _flight_leave_chance(enemy, enemy.global_position, direction * speed, table)
-	# Ending up inside a player Bummer's aura is bad.
+	# Ending up inside a player Bummer's aura is bad; our own Bummer likes ending next to player figures.
 	if not enemy.bummer_effect_at(contact).is_empty():
 		score -= bummer_aura_penalty * weight
+	score += bummer_near_bonus * _bummer_reach_count(enemy, contact, players)
 	# An enemy inside an ally's Crazy Man aura would rather stay there.
 	if enemy.would_be_in_aura(enemy.global_position) and not enemy.would_be_in_aura(contact):
 		score -= aura_leave_penalty * weight
@@ -838,13 +851,10 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 		var score := -_nearest_distance(end, players)
 		if enemy.would_be_in_aura(end):
 			score += aura_stay_bonus  # stay close to (or move into) an allied Crazy Man's aura
-		# Get out of a player Bummer's aura, and do not move into one.
-		var bummed_now := not enemy.bummer_effect().is_empty()
-		var bummed_end := not enemy.bummer_effect_at(end).is_empty()
-		if bummed_now and not bummed_end:
-			score += bummer_exit_bonus
-		elif bummed_end:
+		# Do not move into a player Bummer's aura; our own Bummer likes ending next to player figures.
+		if not enemy.bummer_effect_at(end).is_empty():
 			score -= bummer_aura_penalty
+		score += bummer_near_bonus * _bummer_reach_count(enemy, end, players)
 		if near_edge:
 			score += 2.0 * minf(end_margin, reposition_edge_margin)
 		if score > best_score:
@@ -1039,3 +1049,70 @@ func _turret_score(spot: Vector2, lanes: Array[PackedVector2Array], players: Arr
 		if is_instance_valid(player) and not player.knocked_off and not player.on_deck:
 			score += turret_near_player_weight * maxf(1.0 - spot.distance_to(player.global_position) / reach, 0.0)
 	return score
+
+
+# --- Bummer ---------------------------------------------------------------------------
+
+## How many player figures an enemy Bummer standing at `point` would have in its aura (0 if `enemy` is no Bummer).
+func _bummer_reach_count(enemy: Figure, point: Vector2, players: Array[Figure]) -> int:
+	var stats := enemy.ability.get_bummer_stats(enemy)
+	if stats.is_empty():
+		return 0
+	var count := 0
+	for player in players:
+		if is_instance_valid(player) and not player.knocked_off \
+				and point.distance_to(player.global_position) <= stats.radius + player.radius:
+			count += 1
+	return count
+
+
+## A taken-over figure (inside an opposing Bummer's aura) flicks with INVERTED goals: the same shot
+## evaluation, but a big score for knocking ITSELF off the table and for hitting, knocking off and shoving
+## its own `allies`. Returns {enemy, impulse} (with the usual aim error), or {} if nothing can be tried.
+func choose_takeover(figure: Figure, allies: Array[Figure], table: Rect2, max_force: float) -> Dictionary:
+	_prepare()
+	var shape := CircleShape2D.new()
+	shape.radius = figure.radius
+	var power := figure.data.flick_power_multiplier * figure.aura_flick_multiplier()
+	var max_speed := max_force * power / figure.mass
+	var top_speed := minf(max_speed, reference_speed * power)
+	var directions: Array[Vector2] = []
+	for ally in allies:
+		var to_ally := ally.global_position - figure.global_position
+		if to_ally.is_zero_approx():
+			continue
+		for offset in angle_offsets_degrees:
+			directions.append(to_ally.normalized().rotated(deg_to_rad(offset)))
+	for i in takeover_extra_directions:  # straight at the table edge, no allies needed
+		directions.append(Vector2.from_angle(TAU * i / takeover_extra_directions))
+	var best := {}
+	for direction in directions:
+		for level in takeover_power_levels:
+			var shot := _score_takeover(figure, shape, direction, level * top_speed, allies, table)
+			if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
+				best = shot
+	if best.is_empty():
+		return {}
+	var error := _aim_error(figure)
+	var aimed: Vector2 = best.direction.rotated(randf_range(-error, error))
+	return {"enemy": figure, "impulse": aimed * best.speed * figure.mass, "score": best.score}
+
+
+func _score_takeover(figure: Figure, shape: CircleShape2D, direction: Vector2, speed: float,
+		allies: Array[Figure], table: Rect2) -> Dictionary:
+	if _travel_distance(figure, speed) < 1.0:
+		return {}
+	var hit := _shot_path(figure, shape, direction, speed)
+	var score := 0.0
+	if hit.is_empty() or hit.collider == null:
+		# Nothing in the way: does the flight itself carry it off the table?
+		score = takeover_self_bonus * _flight_leave_chance(figure, figure.global_position, direction * speed, table)
+	else:
+		var other: Figure = hit.collider
+		var outcome := _predict_collision(figure, other, hit.velocity, hit.position)
+		score = takeover_self_bonus * _leave_chance(figure, hit.position, outcome.shooter, table)
+		if allies.has(other):
+			var knocked_off := _leave_chance(other, other.global_position, outcome.target, table)
+			var pushed := _push_progress(other, other.global_position, outcome.target, table)
+			score += takeover_ally_hit_bonus + takeover_ally_kill_bonus * knocked_off + takeover_edge_bonus * pushed
+	return {"score": score, "direction": direction, "speed": speed}

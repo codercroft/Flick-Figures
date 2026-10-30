@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/figures/glue_guy.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+figure = ExtResource("2")
+display_name = "Goo Chain"
+description = "Sticks to several figures; stuck figures turn sticky too (chains of up to 5)."
+ability_overrides = {"chain_sticky": true}

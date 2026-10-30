@@ -113,6 +113,12 @@ func get_aura_radius(_figure: Figure) -> float:
 	return 0.0
 
 
+## Glue Guy's upgrade: the biggest glue chain (figures stuck together) in which stuck figures also become
+## sticky. 0 = this ability does not make glue chains.
+func get_glue_chain_cap(_figure: Figure) -> int:
+	return 0
+
+
 ## BUMMER AURA: {radius, power, aim_error_degrees, aim_line_scale} (see BummerAbility) or {} for none.
 ## OPPOSING figures inside the radius flick recklessly.
 func get_bummer_stats(_figure: Figure) -> Dictionary:

@@ -92,6 +92,10 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
+func get_glue_chain_cap(figure: Figure) -> int:
+	return maxi(first.get_glue_chain_cap(figure), second.get_glue_chain_cap(figure))
+
+
 func get_bummer_stats(figure: Figure) -> Dictionary:
 	var stats := first.get_bummer_stats(figure)
 	return stats if not stats.is_empty() else second.get_bummer_stats(figure)

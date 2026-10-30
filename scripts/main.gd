@@ -31,6 +31,8 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export_group("Enemy")
 ## Pause (seconds) before each enemy flicks.
 @export var enemy_think_time := 0.6
+## Pause (seconds) after "Bummed out!" before a figure inside a Bummer's aura flicks itself.
+@export var takeover_delay := 0.9
 ## The same enemy can't flick twice in a row (unless it is the only one that can flick).
 @export var no_repeat_enemy := true
 ## Splitting (Slime) adds this many flicks to the enemy side's flicks per turn...
@@ -281,6 +283,9 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 		_select(figure)
 	elif _selected == null:
 		return  # nothing selected yet: tap a figure first
+	if not _selected.bummer_effect().is_empty():
+		_takeover_player_flick(_selected)  # an enemy Bummer's aura: control is taken away
+		return
 	_press_was_empty = figure == null
 	_state = State.AIMING
 	_touch_index = index
@@ -314,9 +319,6 @@ func _update_aim(pos: Vector2) -> void:
 	# Roughly where the figure will come to rest (ignores bumping into things).
 	var speed := impulse.length() / _aim_figure.mass
 	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
-	var bummer := _aim_figure.bummer_effect()
-	if not bummer.is_empty():
-		distance *= bummer.aim_line_scale  # an enemy Bummer's aura: the aim line lies short
 	var direction := impulse.normalized()
 	var origin := _aim_figure.global_position + direction * _aim_figure.radius
 	var bounce := {}
@@ -349,6 +351,47 @@ func _release_aim(pos: Vector2) -> void:
 	_last_player_flicker = flicked_figure
 	_deselect()
 	_touch_index = -1
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
+## A player figure touching an enemy Bummer's aura when you go to flick it: "Bummed out!", then it flicks
+## itself with an AI-chosen shot that tries to knock itself off and hit your other figures. It counts as
+## that figure's flick (and as a player flick for relics and Rewind).
+func _takeover_player_flick(figure: Figure) -> void:
+	var serial := _turn_serial
+	_state = State.SETTLING  # input is off while it happens
+	_touch_index = -1
+	_aim_figure = null
+	aim_line.clear()
+	ui.show_your_turn("Bummed out!")
+	figure.show_popup("Bummed out!", Color(0.8, 0.5, 1.0))
+	await get_tree().create_timer(takeover_delay).timeout
+	if serial != _turn_serial:
+		return
+	if not _is_alive(figure):
+		_start_player_turn()
+		return
+	await get_tree().physics_frame  # the AI shape-casts in the physics space
+	if serial != _turn_serial:
+		return
+	if not _is_alive(figure):
+		_start_player_turn()
+		return
+	var allies: Array[Figure] = []
+	for other in _players:
+		if other != figure and _is_alive(other):
+			allies.append(other)
+	var shot := ai.choose_takeover(figure, allies, board.get_table_rect(), max_flick_force)
+	var impulse: Vector2 = shot.impulse if not shot.is_empty() else Vector2.from_angle(randf() * TAU) * figure.mass * 900.0
+	_bonus_figure = null
+	_take_snapshot()
+	player_flicks += 1
+	flick_boost = 1.0
+	_update_status()
+	figure.launch(impulse)
+	_last_player_flicker = figure
+	_deselect()
 	_state = State.SETTLING
 	_finish_player_turn()
 
@@ -430,9 +473,6 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	var full_force := max_flick_force * _aim_figure.data.flick_power_multiplier * flick_boost \
 			* _aim_figure.ability.get_flick_power_multiplier(_aim_figure) * _aim_figure.aura_flick_multiplier() \
 			* RunManager.relic_flick_multiplier(self, _aim_figure)
-	var bummer := _aim_figure.bummer_effect()  # an enemy Bummer's aura: reckless, +power
-	if not bummer.is_empty():
-		full_force *= bummer.power
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
@@ -511,6 +551,9 @@ func _run_enemy_turn() -> void:
 			break  # nothing good and nothing safe: the enemy side passes
 		_last_flicker = choice.enemy
 		_enemy_cycle[choice.enemy.get_instance_id()] = true
+		choice = await _takeover_choice(choice, serial)  # a Bummer's aura replaces the shot
+		if serial != _turn_serial or not _is_alive(choice.enemy):
+			return
 		if choice.has("pin"):  # an enemy Pinhead sets up a bank shot
 			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
 		choice.enemy.launch(choice.impulse)
@@ -532,6 +575,11 @@ func _run_enemy_turn() -> void:
 			if serial != _turn_serial:
 				return
 			if extra.is_empty() or not _is_alive(shooter):
+				break
+			extra = await _takeover_choice(extra, serial)
+			if serial != _turn_serial:
+				return
+			if not _is_alive(shooter):
 				break
 			shooter.launch(extra.impulse)
 			await _wait_until_settled()
@@ -558,6 +606,26 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 	_start_player_turn()
+
+
+## An enemy figure touching a player Bummer's aura is taken over when the AI goes to flick it: "Bummed out!",
+## then a shot that tries to knock itself off and hit its own teammates replaces the planned one.
+func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
+	var enemy = choice.enemy  # untyped: it may fall off and be freed while we wait
+	if not _is_alive(enemy) or enemy.bummer_effect().is_empty():
+		return choice
+	enemy.show_popup("Bummed out!", Color(0.8, 0.5, 1.0))
+	await get_tree().create_timer(takeover_delay).timeout
+	if serial != _turn_serial or not _is_alive(enemy):
+		return choice
+	var allies: Array[Figure] = []
+	for other in _enemies:
+		if other != enemy and _is_alive(other):
+			allies.append(other)
+	var shot := ai.choose_takeover(enemy, allies, board.get_table_rect(), max_flick_force)
+	if shot.is_empty():
+		return choice
+	return {"enemy": enemy, "impulse": shot.impulse}
 
 
 ## Enemy Engineers put their turret where it covers the player's flick lanes (before the flicks).

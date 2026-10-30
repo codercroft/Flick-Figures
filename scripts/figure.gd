@@ -374,6 +374,7 @@ func _on_body_entered(body: Node) -> void:
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
+		_chain_glue.call_deferred(body)
 		var other: Figure = body
 		# Velocities change in the same step as the collision, so look at the step before too.
 		var speed := maxf((_last_velocity - other._last_velocity).length(),
@@ -417,8 +418,8 @@ func would_be_in_aura(point: Vector2) -> bool:
 	return false
 
 
-## The reckless effect of an OPPOSING Bummer whose aura covers `point` ({} if none): {radius, power,
-## aim_error_degrees, aim_line_scale}. The strongest one wins if several overlap.
+## The OPPOSING Bummer whose small aura this figure's body touches when standing at `point` ({} if none):
+## its stats ({radius}). Such a figure is taken over when its side goes to flick it.
 func bummer_effect_at(point: Vector2) -> Dictionary:
 	var best := {}
 	if not is_inside_tree():
@@ -428,13 +429,12 @@ func bummer_effect_at(point: Vector2) -> Dictionary:
 		if other == self or other.knocked_off or other.team == team or other.ability == null:
 			continue
 		var stats := other.ability.get_bummer_stats(other)
-		if not stats.is_empty() and other.global_position.distance_to(point) <= stats.radius \
-				and (best.is_empty() or stats.power > best.power):
+		if not stats.is_empty() and other.global_position.distance_to(point) <= stats.radius + radius:
 			best = stats
 	return best
 
 
-## The reckless effect on this figure where it stands now ({} = not in an opposing Bummer's aura).
+## The Bummer effect on this figure where it stands now ({} = not in an opposing Bummer's aura).
 func bummer_effect() -> Dictionary:
 	return bummer_effect_at(global_position)
 
@@ -531,12 +531,17 @@ func nudge(velocity_change: Vector2) -> void:
 func glue_to(other: Figure) -> void:
 	if knocked_off or other.knocked_off or get_parent() == null:
 		return
-	var joint := PinJoint2D.new()
+	var joint := GlueLink.new()
+	joint.figure_a = self
+	joint.figure_b = other
+	joint.z_index = 3
 	get_parent().add_child(joint)
 	joint.global_position = (global_position + other.global_position) / 2.0
 	joint.node_a = joint.get_path_to(self)
 	joint.node_b = joint.get_path_to(other)
 	joint.softness = 0.0
+	_prune_glue()
+	other._prune_glue()
 	glue_joints.append(joint)
 	other.glue_joints.append(joint)
 
@@ -548,7 +553,59 @@ func is_glued() -> bool:
 	return false
 
 
-## Breaks every glue joint on this figure.
+## Drops joints that are gone from the list.
+func _prune_glue() -> void:
+	for i in range(glue_joints.size() - 1, -1, -1):
+		if not is_instance_valid(glue_joints[i]) or glue_joints[i].is_queued_for_deletion():
+			glue_joints.remove_at(i)
+
+
+## The figures glued to this one, directly.
+func glue_partners() -> Array[Figure]:
+	var partners: Array[Figure] = []
+	for joint in glue_joints:
+		if not is_instance_valid(joint) or joint.is_queued_for_deletion():
+			continue
+		var link := joint as GlueLink
+		if link == null:
+			continue
+		var partner: Figure = link.figure_b if link.figure_a == self else link.figure_a
+		if is_instance_valid(partner) and not partner.knocked_off and not partners.has(partner):
+			partners.append(partner)
+	return partners
+
+
+## This figure and everything glued to it, directly or through others (a chain of goo).
+func glue_cluster() -> Array[Figure]:
+	var cluster: Array[Figure] = [self]
+	var i := 0
+	while i < cluster.size():
+		for partner in cluster[i].glue_partners():
+			if not cluster.has(partner):
+				cluster.append(partner)
+		i += 1
+	return cluster
+
+
+## Glue Guy's upgrade: a figure in a glue cluster with a chain-sticky Glue Guy sticks to whatever it hits,
+## as long as the whole chain stays within the cap.
+func _chain_glue(other: Figure) -> void:
+	if knocked_off or other.knocked_off or not is_glued():
+		return
+	var cluster := glue_cluster()
+	if cluster.has(other):
+		return
+	var cap := 0
+	for member in cluster:
+		cap = maxi(cap, member.ability.get_glue_chain_cap(member))
+	if cap <= 0:
+		return
+	var merged := cluster.duplicate()
+	for member in other.glue_cluster():
+		if not merged.has(member):
+			merged.append(member)
+	if merged.size() <= cap:
+		glue_to(other)
 func unglue() -> void:
 	for joint in glue_joints:
 		if is_instance_valid(joint):
