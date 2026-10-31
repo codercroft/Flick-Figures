@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=107 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=108 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -76,6 +76,7 @@
 [ext_resource type="Resource" path="res://resources/relics/underdog.tres" id="129"]
 [ext_resource type="Resource" path="res://resources/relics/last_one_standing.tres" id="130"]
 [ext_resource type="Resource" path="res://resources/relics/second_wind.tres" id="131"]
+[ext_resource type="Resource" path="res://resources/relics/starter_walls.tres" id="relic_sw"]
 [ext_resource type="Resource" path="res://resources/relics/lucky_coin.tres" id="132"]
 [ext_resource type="Resource" path="res://resources/relics/trophy_case.tres" id="133"]
 [ext_resource type="Resource" path="res://resources/relics/gravity_well.tres" id="134"]
@@ -128,7 +129,7 @@ finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), Ex
 upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108"), ExtResource("up_glue"), ExtResource("up_agg")])
 start_with_relics = false
 starting_relic_count = 3
-relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135")])
+relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135"), ExtResource("relic_sw")])
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")

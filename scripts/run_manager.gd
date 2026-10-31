@@ -206,6 +206,15 @@ func relic_pull_multiplier() -> float:
 	return _relic_product(&"get_pull_multiplier")
 
 
+## Tells the relics the enemy's first turn of a combat is starting. Returns how long (seconds) the enemy should wait.
+func relic_first_enemy_turn(main) -> float:
+	var wait := 0.0
+	for relic in relics:
+		if relic.effect != null:
+			wait = maxf(wait, relic.effect.on_first_enemy_turn(main))
+	return wait
+
+
 func relic_enables_reload() -> bool:
 	for relic in relics:
 		if relic.effect != null and relic.effect.enables_reload():

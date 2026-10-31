@@ -89,6 +89,7 @@ var _top_bar := TopBar.new()
 var player_flicks := 0
 ## Second Wind: set once it has brought a figure back this combat.
 var second_wind_used := false
+var _enemy_turns_taken := 0  # enemy turns started this combat (relics act on the first)
 var _figures_lost := 0  # player figures knocked off for good (Clean Sheet)
 
 # Powers (see "Powers API" below).
@@ -235,6 +236,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 ## doesn't advance.
 func _start_player_turn(new_round := true) -> void:
 	_end_turn_for_all()  # (the enemy's turn is over)
+	arena.remove_starter_walls()  # Starter Walls: they only last through the enemy turn
 	_cancel_power()
 	if new_round:
 		for figure in _all_figures():
@@ -609,6 +611,13 @@ func _run_enemy_turn() -> void:
 	if serial != _turn_serial:
 		return
 	_place_enemy_turrets()
+	if _enemy_turns_taken == 0:
+		var wait := RunManager.relic_first_enemy_turn(self)  # Starter Walls: walls pop up before the first shot
+		if wait > 0.0:
+			await get_tree().create_timer(wait).timeout
+			if serial != _turn_serial:
+				return
+	_enemy_turns_taken += 1
 	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
 	# The total is read every round: in the per-unit boss fights it changes as pieces appear or fall off.
 	var flicks_taken := 0

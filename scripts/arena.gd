@@ -31,6 +31,7 @@ var _bricks: Array[Dictionary] = []  # {body, rounds}
 var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
 var _temp_pins: Array[TempPin] = []  # Pinhead's pins
 var _shield_walls: Array[ShieldWall] = []  # Shieldon Ooper's walls
+var _starter_walls: Array[ShieldWall] = []  # the Starter Walls relic's walls (one enemy turn)
 var _alchemy_zones: Array[AlchemyZone] = []  # Alchemist's debuff zones (the power-placed _zones below are different)
 var _turrets: Array[Turret] = []  # Engineer's turrets
 var _trail: Array[Dictionary] = []  # Juicer's boost pieces: {owner, ability, center, direction, rounds, node}
@@ -350,6 +351,34 @@ func has_temp_pin(owner_figure: Figure) -> bool:
 ## Props up a wall for `owner_figure` (replacing its old one). Fails (false) if a figure is in the way.
 func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float) -> bool:
 	remove_shield_wall(owner_figure)
+	var wall := _make_shield_wall(owner_figure, center, size, wall_rotation)
+	if wall == null:
+		return false
+	_shield_walls.append(wall)
+	return true
+
+
+## Starter Walls (relic): a wall in front of `owner_figure` that pops up and stays until remove_starter_walls().
+## It is the same ShieldWall as Shieldon Ooper's (so the enemy AI's shape casts see it). Fails (false) if blocked.
+func place_starter_wall(owner_figure: Figure, center: Vector2, size: Vector2) -> bool:
+	var wall := _make_shield_wall(owner_figure, center, size, 0.0)
+	if wall == null:
+		return false
+	wall.pop_up()
+	_starter_walls.append(wall)
+	return true
+
+
+func remove_starter_walls() -> void:
+	for wall in _starter_walls:
+		if is_instance_valid(wall):
+			remove_child(wall)  # out of the physics space right away
+			wall.queue_free()
+	_starter_walls.clear()
+
+
+## Builds a ShieldWall and adds it to the arena, or returns null if a figure or wall is in the way.
+func _make_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float) -> ShieldWall:
 	var rect := RectangleShape2D.new()
 	rect.size = size
 	var query := PhysicsShapeQueryParameters2D.new()
@@ -358,7 +387,7 @@ func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wal
 	query.collision_mask = Figure.LAYER_ON_DECK | Figure.LAYER_FLICKED | Figure.LAYER_ENEMY | Figure.LAYER_ARENA
 	query.exclude = [owner_figure.get_rid()]
 	if not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty():
-		return false
+		return null
 	var wall := ShieldWall.new()
 	wall.size = size
 	wall.owner_figure = owner_figure
@@ -374,8 +403,7 @@ func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wal
 	wall.position = center
 	wall.rotation = wall_rotation
 	add_child(wall)
-	_shield_walls.append(wall)
-	return true
+	return wall
 
 
 func shield_wall_of(owner_figure: Figure) -> ShieldWall:

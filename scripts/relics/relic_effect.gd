@@ -49,6 +49,12 @@ func shows_aim_bounce() -> bool:
 	return false
 
 
+## The enemy's first turn of a combat is about to start (before its first shot). Return how many seconds the
+## enemy should wait (for an animation), 0 for none.
+func on_first_enemy_turn(_main) -> float:
+	return 0.0
+
+
 ## One of the player's figures is about to be knocked off. Return true to save it.
 func on_player_figure_falling(_main, _figure: Figure) -> bool:
 	return false
