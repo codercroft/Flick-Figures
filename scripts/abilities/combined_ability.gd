@@ -224,6 +224,10 @@ func get_hit_mass_multiplier(figure: Figure) -> float:
 	return first.get_hit_mass_multiplier(figure) * second.get_hit_mass_multiplier(figure)
 
 
+func draws_own_body(figure: Figure) -> bool:
+	return first.draws_own_body(figure) or second.draws_own_body(figure)
+
+
 func on_turn_ended(figure: Figure) -> void:
 	first.on_turn_ended(figure)
 	second.on_turn_ended(figure)

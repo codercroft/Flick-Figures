@@ -100,6 +100,8 @@ var _power_slot := -1  # the power waiting for a target (-1 = none)
 var _power_targets: Array = []
 var _snapshot := {}  # every figure as it was before the player's last flick (for Rewind)
 
+var _creator_box: CreatorBox  # the Mad Creator's box (only in that boss fight)
+
 @onready var board := $Board
 @onready var arena: Arena = $Arena
 @onready var figures_root := $Figures
@@ -136,6 +138,11 @@ func _ready() -> void:
 	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom)
 	_spawn_players()
 	_spawn_enemies()
+	if RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS and RunManager.boss != null \
+			and RunManager.boss.creator_box and not _enemies.is_empty():
+		_creator_box = CreatorBox.new()
+		arena.add_child(_creator_box)
+		_creator_box.build(board.board_rect, RunManager.boss, _enemies[0])
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
@@ -611,6 +618,10 @@ func _run_enemy_turn() -> void:
 		if total > 1:
 			ui.show_enemy_turn("Enemy flicks: %d/%d" % [flicks_taken, total])
 		_refresh_enemy_cycle()
+		if _creator_box != null and flicks_taken == 1 and _creator_box.creator_inside():
+			if await _creator_turn(serial):  # the Mad Creator's summon flick is the first flick of the turn
+				return
+			continue
 		await get_tree().physics_frame  # the AI shape-casts in the physics space
 		if serial != _turn_serial:
 			return
@@ -703,6 +714,46 @@ func _run_enemy_turn() -> void:
 	_start_player_turn()
 
 
+## The Mad Creator's flick: it flicks itself around inside its box (random direction and distance), and the floor
+## space it comes to rest on summons that figure in front of the box (if fewer than the cap are on the table).
+## Returns true if the turn (or the fight) is over and the caller should stop.
+func _creator_turn(serial: int) -> bool:
+	var creator: Figure = _creator_box.creator
+	await get_tree().create_timer(enemy_think_time).timeout
+	if serial != _turn_serial:
+		return true
+	if not _is_alive(creator):
+		return _check_game_over()
+	_last_flicker = creator
+	var distance := randf_range(_creator_box.min_travel, _creator_box.max_travel)
+	var speed := distance * creator.linear_damp + creator.stop_speed
+	creator.launch(Vector2.from_angle(randf() * TAU) * speed * creator.mass)
+	await _wait_until_settled()
+	if serial != _turn_serial:
+		return true
+	if _check_game_over():
+		return true
+	if not _is_alive(creator) or not _creator_box.creator_inside():
+		return false  # it got out of the box: no floor under it, no summon
+	var summoned: FigureData = _creator_box.summon_for(creator.global_position)
+	if summoned == null:
+		return false
+	var count := 0
+	for enemy in _enemies:
+		if _is_alive(enemy) and enemy != creator:
+			count += 1
+	if count >= RunManager.boss.max_summons:
+		creator.show_popup("Too many!", Color(0.8, 0.8, 0.9))
+		return false
+	var spot := _creator_box.free_spot_in_front(board.board_rect, summoned.radius, _all_figures())
+	if spot == Vector2.INF:
+		return false
+	creator.show_popup("Summon: %s!" % summoned.display_name, Color(0.85, 0.6, 1.0))
+	_enemies.append(_spawn_figure(Figure.Team.ENEMY, summoned, spot, null, null, null, RunManager.enemy_scale(0)))
+	await get_tree().create_timer(enemy_think_time).timeout
+	return serial != _turn_serial
+
+
 ## How many flicks the enemy side takes this turn: the fight's fixed number, or (Slime, Skull-o-tron) one per
 ## enemy unit currently on the table, capped at `max_enemy_flicks`.
 func _enemy_flicks_now() -> int:
@@ -766,6 +817,8 @@ func _flick_candidates() -> Array:
 	var able: Array = []
 	for enemy in _enemies:
 		if _is_alive(enemy) and enemy.data.can_flick and not enemy.is_frozen():
+			if _creator_box != null and enemy == _creator_box.creator and _creator_box.creator_inside():
+				continue  # the Creator in its box only makes its own summon flick (_creator_turn)
 			able.append(enemy)
 	if no_repeat_enemy and able.size() > 1 and _is_alive(_last_flicker):
 		able.erase(_last_flicker)
@@ -842,6 +895,12 @@ func _all_figures_resting() -> bool:
 
 
 func _check_game_over() -> bool:
+	if _creator_box != null and not _is_alive(_creator_box.creator):
+		# The Mad Creator is off the table: everything it summoned vanishes.
+		for enemy in _enemies:
+			if _is_alive(enemy):
+				enemy.knock_off(knock_off_fade_time, true)
+		_enemies.clear()
 	if _enemies.is_empty():
 		_end_game(true)
 		return true

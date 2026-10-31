@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Mad Creator"
+description = "Hides in a box and flicks itself around on a floor of four spaces. Where it stops, a figure appears."
+label = "MC"
+icon = 32
+color = Color(0.62, 0.3, 0.82, 1)
+radius = 60.0
+mass = 3.0
+bounce = 0.9
+damping_multiplier = 1.0
+flick_power_multiplier = 1.0
+knockback_taken_multiplier = 1.0
+accuracy = 0.8
+uneatable = true

@@ -175,6 +175,11 @@ func eats_smaller(_figure: Figure) -> bool:
 	return false
 
 
+## Trangle: true if the ability draws the whole body itself (draw_body), so the usual circle is not drawn.
+func draws_own_body(_figure: Figure) -> bool:
+	return false
+
+
 ## Called on every figure when a turn ends (the player's, and the enemy's): per-turn counters reset here.
 func on_turn_ended(_figure: Figure) -> void:
 	pass

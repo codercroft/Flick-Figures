@@ -129,7 +129,7 @@ func start_new_run() -> void:
 	_reset_powers()
 	_reset_relics()
 	act = 0
-	act_bosses = config.registry.random_bosses(config.acts)
+	act_bosses = config.registry.bosses_for_acts(config.acts)
 	_start_act()
 
 

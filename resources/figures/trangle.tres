@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/trangle_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Trangle"
+description = "A heavy triangle with curved-in sides. It spins when it flicks and sweeps figures out of its hollows."
+label = "TR"
+icon = 31
+color = Color(0.92, 0.55, 0.15, 1)
+radius = 120.0
+mass = 8.0
+bounce = 0.5
+damping_multiplier = 1.0
+flick_power_multiplier = 2.8
+knockback_taken_multiplier = 1.0
+accuracy = 0.75
+spawn_margin = 200.0
+uneatable = true
+ability = SubResource("Resource_1")

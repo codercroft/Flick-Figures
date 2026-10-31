@@ -23,3 +23,10 @@ extends Resource
 ## A solid wall along the whole top edge of the table, behind the boss, so it cannot be knocked straight
 ## off the back in one shot (Slime, Skull-o-tron).
 @export var back_wall := false
+## The Mad Creator's setup: a box of four breakable walls at the top with the boss inside (see CreatorBox), the four
+## figures its floor spaces summon (top-left, top-right, bottom-left, bottom-right), each wall's health, and the most
+## summoned figures that may be on the table at once.
+@export var creator_box := false
+@export var summons: Array[FigureData] = []
+@export var box_wall_health := 8000.0
+@export var max_summons := 5

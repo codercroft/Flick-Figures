@@ -17,6 +17,11 @@ extends Resource
 
 ## Boss figures, one of which a run picks to end on.
 @export var bosses: Array[BossData] = []
+## Each act draws its boss from its own pool (one at random): act 1, act 2, act 3. A later act than these
+## uses the last pool.
+@export var bosses_act1: Array[BossData] = []
+@export var bosses_act2: Array[BossData] = []
+@export var bosses_act3: Array[BossData] = []
 
 
 func random_grunt() -> FigureData:
@@ -34,6 +39,18 @@ func random_bosses(count: int) -> Array[BossData]:
 		picked.append(pool.pop_back())
 	while picked.size() < count and not bosses.is_empty():
 		picked.append(bosses.pick_random())
+	return picked
+
+
+## One boss for each of `count` acts, each drawn at random from that act's own pool.
+func bosses_for_acts(count: int) -> Array[BossData]:
+	var picked: Array[BossData] = []
+	for act in count:
+		var pool: Array = [bosses_act1, bosses_act2, bosses_act3][mini(act, 2)]
+		if pool.is_empty():
+			pool = bosses
+		if not pool.is_empty():
+			picked.append(pool.pick_random())
 	return picked
 
 

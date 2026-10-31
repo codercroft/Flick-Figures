@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="BossData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/mad_creator.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/figures/speedo.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/figures/bumper.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/figures/powerhouse.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Mad Creator"
+description = "Locked in a box of breakable walls, it summons figures. Break in and knock it off."
+map_label = "MC"
+map_color = Color(0.62, 0.3, 0.82, 1)
+map_icon = 32
+enemies = Array[ExtResource("2")]([ExtResource("3")])
+enemy_flicks_per_turn = 2
+creator_box = true
+summons = Array[ExtResource("2")]([ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+box_wall_health = 8000.0
+max_summons = 5

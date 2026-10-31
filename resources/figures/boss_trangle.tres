@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BossData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/trangle.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Trangle"
+description = "A heavy spinning triangle. It flicks twice a turn; its curved sides sweep figures away."
+map_label = "TR"
+map_color = Color(0.92, 0.55, 0.15, 1)
+map_icon = 31
+enemies = Array[ExtResource("2")]([ExtResource("3")])
+enemy_flicks_per_turn = 2

@@ -4,7 +4,8 @@ extends RefCounted
 ## entry to the enum and a new case in draw() to make another icon.
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
-		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG }
+		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG,
+		TRIANGLE, BOX }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -139,6 +140,21 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_arc(center + Vector2(0, s * 0.35), s * 0.55, 0.0, TAU, 16, color, w)
 			canvas.draw_line(center + Vector2(0, s * 0.1), center + Vector2(0, -s * 0.95), color, w * 1.5)
 			canvas.draw_line(center + Vector2(-s * 0.8, s * 0.95), center + Vector2(s * 0.8, s * 0.95), color, w)
+		Icon.TRIANGLE:  # a triangle with curved-in sides (Trangle)
+			var tips := [Vector2(0, -s), Vector2(s * 0.95, s * 0.8), Vector2(-s * 0.95, s * 0.8)]
+			var outline := PackedVector2Array()
+			for i in 3:
+				var a: Vector2 = tips[i]
+				var b: Vector2 = tips[(i + 1) % 3]
+				var control := (a + b) * 0.5 * 0.15
+				for step in 7:
+					var t := step / 7.0
+					outline.append(center + a * (1.0 - t) * (1.0 - t) + control * 2.0 * t * (1.0 - t) + b * t * t)
+			outline.append(outline[0])
+			canvas.draw_polyline(outline, color, w)
+		Icon.BOX:  # a square box with a diamond inside (Mad Creator)
+			canvas.draw_rect(Rect2(center - Vector2(s, s) * 0.85, Vector2(s, s) * 1.7), color, false, w)
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(0, -s * 0.45), center + Vector2(s * 0.45, 0), center + Vector2(0, s * 0.45), center + Vector2(-s * 0.45, 0), center + Vector2(0, -s * 0.45)]), color, w * 0.8)
 		Icon.SKULL:  # a skull: round head, two eyes, jaw
 			canvas.draw_arc(center + Vector2(0, -s * 0.15), s * 0.75, 0.0, TAU, 20, color, w)
 			canvas.draw_circle(center + Vector2(-s * 0.3, -s * 0.2), w * 0.9, color)

@@ -265,13 +265,16 @@ func _draw() -> void:
 	# The body squashes/stretches along _squash_angle; the details on top only grow.
 	var stretch := maxf(1.0 + _squash_amount, 0.2)
 	draw_set_transform(Vector2.ZERO, _squash_angle - rotation, Vector2(stretch, 1.0 / stretch) * (1.0 + _pop))
-	draw_circle(Vector2.ZERO, radius, fill)
-	# The ring shows which side the figure is on (any figure can be on either side).
-	draw_arc(Vector2.ZERO, radius - 4.0, 0.0, TAU, 48, ENEMY_RING if team == Team.ENEMY else PLAYER_RING, 8.0, true)
+	var own_body := ability.draws_own_body(self)  # (Trangle draws its triangle in draw_body)
+	if not own_body:
+		draw_circle(Vector2.ZERO, radius, fill)
+		# The ring shows which side the figure is on (any figure can be on either side).
+		draw_arc(Vector2.ZERO, radius - 4.0, 0.0, TAU, 48, ENEMY_RING if team == Team.ENEMY else PLAYER_RING, 8.0, true)
 	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE * (1.0 + _pop))
 	if selected:
 		draw_arc(Vector2.ZERO, radius + 10.0, 0.0, TAU, 48, Color(1.0, 0.9, 0.3), 8.0, true)
-	draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
+	if not own_body:
+		draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
 	_draw_finish()
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	var label := data.label if data.label != "" else data.display_name.left(1)
@@ -395,6 +398,8 @@ func _on_body_entered(body: Node) -> void:
 	else:
 		ability.on_hit_wall.call_deferred(self, body)
 		AudioManager.play_wall(_last_velocity.length())
+		if body is BreakableWall and team == Team.PLAYER:  # the Mad Creator's box: only the player's hits damage it
+			body.hit_by(self, _last_velocity if _last_velocity.length() >= _prev_velocity.length() else _prev_velocity)
 
 
 ## Flick power multiplier from teammates' auras (Crazy Man) that this figure stands inside.
@@ -676,6 +681,8 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 		source: Figure = null, spared: Figure = null) -> void:
 	force *= RunManager.explosion_force_multiplier()
 	AudioManager.play_boom(blast_radius)
+	for wall in tree.get_nodes_in_group("breakable_walls"):
+		wall.take_explosion(center, blast_radius, force)
 	for node in tree.get_nodes_in_group("figures"):
 		var other := node as Figure
 		if other == source or other == spared or other.knocked_off:
