@@ -19,6 +19,10 @@ var _high_picks: Array[int] = []  # deck slots chosen for the high trade
 func start() -> void:
 	_medium_offer = _random_figure(medium_rarities)
 	_high_offers = {1: _roll_high_offer(1), 2: _roll_high_offer(2)}
+	RunHistory.mark_seen(_medium_offer)
+	for offer in _high_offers.values():
+		if offer != null:
+			RunHistory.mark_seen(offer.figure)
 	_show_menu()
 
 

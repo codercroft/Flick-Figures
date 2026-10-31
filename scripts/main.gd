@@ -864,7 +864,7 @@ func _end_game(won: bool) -> void:
 			await get_tree().create_timer(reward_delay).timeout
 			get_tree().change_scene_to_file(REWARD_SCENE)
 			return
-	RunManager.end_run()  # the run is over: its save is deleted
+	RunManager.end_run(won)  # the run is over: it goes into the history and its save is deleted
 	ui.show_result(RunManager.run_over_text(won))
 	await get_tree().create_timer(restart_tap_delay).timeout
 	_can_restart = true

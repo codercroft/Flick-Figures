@@ -38,6 +38,7 @@ static func save(run, pending_node := -1) -> void:
 		"harder_fight": run.harder_fight,
 		"penalty_text": run.penalty_text,
 		"deck": _paths(run.deck),
+		"picked": _paths(run.picked_figures),
 		"deck_equipment": _paths(run.deck_equipment),
 		"deck_finish": _paths(run.deck_finish),
 		"deck_upgrade": _paths(run.deck_upgrade),
@@ -93,6 +94,11 @@ static func load_into(run) -> int:
 		run.deck_equipment.append(_item(data, "deck_equipment", i, EquipmentData))
 		run.deck_finish.append(_item(data, "deck_finish", i, FinishData))
 		run.deck_upgrade.append(_item(data, "deck_upgrade", i, UpgradeData))
+	run.picked_figures.clear()
+	for path in data.get("picked", []):
+		var picked = _load(path)
+		if picked is FigureData:
+			run.picked_figures.append(picked)
 	run.equipment_inventory.clear()
 	for path in data.get("equipment_inventory", []):
 		var item = _load(path)

@@ -1,7 +1,7 @@
 extends Control
 ## The first screen: the title and the buttons Continue (only with a saved run), New Run (asks first if it
 ## would replace a saved run), Compendium, Run History and Settings. Built in code like the other screens.
-## Placeholder styling: a dark background and plain colored buttons.
+## Compendium and Run History are their own scenes. Placeholder styling: a dark background and plain colored buttons.
 
 const BACKGROUND := Color(0.07, 0.08, 0.12)
 const TITLE_COLOR := Color(1.0, 0.82, 0.25)
@@ -56,8 +56,8 @@ func _show_main() -> void:
 	if RunManager.has_saved_run():
 		_button("Continue", Color(0.25, 0.65, 0.4), _on_continue)
 	_button("New Run", Color(0.25, 0.5, 0.85), _on_new_run)
-	_button("Compendium", Color(0.55, 0.4, 0.8), _show_placeholder.bind("Compendium", "Every figure, relic and power you have found will be listed here."))
-	_button("Run History", Color(0.8, 0.5, 0.25), _show_placeholder.bind("Run History", "Your past runs will be listed here."))
+	_button("Compendium", Color(0.55, 0.4, 0.8), _open_scene.bind("res://scenes/compendium.tscn"))
+	_button("Run History", Color(0.8, 0.5, 0.25), _open_scene.bind("res://scenes/run_history.tscn"))
 	_button("Settings", Color(0.45, 0.48, 0.58), _show_settings)
 
 
@@ -118,6 +118,10 @@ func _on_continue() -> void:
 		NodeScenes.open_current_node(get_tree())  # quit inside a node: it starts again from the beginning
 	else:
 		get_tree().change_scene_to_file(NodeScenes.MAP_SCENE)
+
+
+func _open_scene(path: String) -> void:
+	get_tree().change_scene_to_file(path)
 
 
 func _on_new_run() -> void:

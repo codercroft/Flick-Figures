@@ -85,6 +85,9 @@ var powers: Array[PowerData] = []
 ## The run's random seed: the act maps come from it, and each map node's lineup/shop/event is rolled from
 ## a seed made of it, so Continue re-enters a node with the same enemies (see enter_node).
 var run_seed := 0
+## Every figure the player took during this run (drafted, bought, traded for), in order. Saved with the run
+## and recorded in the run history when the run ends.
+var picked_figures: Array[FigureData] = []
 
 
 func _ready() -> void:
@@ -100,6 +103,8 @@ func start_new_run() -> void:
 	deck_finish.clear()
 	deck_upgrade.clear()
 	equipment_inventory.clear()
+	picked_figures.clear()
+	RunHistory.mark_seen(config.starting_figure)
 	for i in config.deck_size:
 		deck.append(config.starting_figure)
 		deck_equipment.append(null)
@@ -300,12 +305,15 @@ func load_saved_run() -> int:
 	relic_notes.clear()
 	harder_note = ""
 	event_reward_text = ""
+	for figure in deck:
+		RunHistory.mark_seen(figure)
 	seed(hash([run_seed, act, current_node, 1]))
 	return pending
 
 
-## The run is over (won or lost): the save is deleted.
-func end_run() -> void:
+## The run is over (won or lost): it is added to the run history and the save is deleted.
+func end_run(won: bool) -> void:
+	RunHistory.record_run(self, won)
 	RunSave.delete()
 
 
@@ -336,6 +344,7 @@ func enter_node(id: int) -> bool:
 	match node.type:
 		MapNode.Type.COMBAT, MapNode.Type.ELITE, MapNode.Type.BOSS:
 			_build_lineup()
+			RunHistory.mark_seen_all(enemies)  # (faced as an enemy: unlocks it in the Compendium)
 		MapNode.Type.SHOP:
 			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
 		MapNode.Type.TREASURE:
@@ -537,12 +546,16 @@ func offer_rewards(boss := false) -> Array[FigureData]:
 		# Boss rewards: Rare figures you don't own (Uncommon, then Common, only if there are not enough).
 		var owned: Array[FigureData] = []
 		owned.append_array(deck)
-		return config.registry.random_draftable_top(count, owned)
+		var offered := config.registry.random_draftable_top(count, owned)
+		RunHistory.mark_seen_all(offered)
+		return offered
 	return draft_figures(count)
 
 
 func draft_figures(count: int) -> Array[FigureData]:
-	return config.registry.random_draftable_weighted(count, config.rewards.rarity_weights(act))
+	var offered := config.registry.random_draftable_weighted(count, config.rewards.rarity_weights(act))
+	RunHistory.mark_seen_all(offered)  # (offered = met: unlocks it in the Compendium)
+	return offered
 
 
 ## Puts a new figure in a deck slot. Equipment the old figure held goes back to the inventory.
@@ -553,6 +566,8 @@ func replace_figure(slot: int, new_figure: FigureData) -> void:
 	deck_finish[slot] = null
 	deck_upgrade[slot] = null
 	deck[slot] = new_figure
+	picked_figures.append(new_figure)
+	RunHistory.mark_seen(new_figure)
 
 
 ## The figure-specific upgrades in the pool that fit this figure.
