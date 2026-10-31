@@ -40,6 +40,9 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if body == owner_figure:
 		return
+	var other := body as Figure
+	if other != null and other.team == owner_figure.team and other.on_deck:
+		return  # passes through its own side's figures on the deck, like their flicks do
 	_explode()
 
 

@@ -227,6 +227,10 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	# Small random aim error: worse accuracy = bigger error.
 	if best.kind == "zone":  # Alchemist's whole action is placing its zone
 		return {"enemy": best_enemy, "zone": best.zone, "zone_stats": best.zone_stats, "zone_only": true}
+	if best.kind == "shot":  # Blastoid fires at a point (aim error moves the point)
+		var spread := randf_range(-_aim_error(best_enemy), _aim_error(best_enemy))
+		var offset: Vector2 = (best.point - best_enemy.global_position).rotated(spread)
+		return {"enemy": best_enemy, "shot_point": best_enemy.global_position + offset}
 	if best.kind == "pin":  # Pinhead's whole action is placing the pin
 		return {"enemy": best_enemy, "pin": best.pin, "pin_radius": best.pin_radius, "pin_only": true}
 	var error := _aim_error(best_enemy)
@@ -312,11 +316,6 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var offsets := _angle_offsets(depth)
 	var levels := _power_levels(depth)
 
-	# Blastoid never moves: it fires a projectile (see _best_projectile_shot).
-	if not enemy.ability.get_ai_projectile(enemy).is_empty():
-		var shot := _best_projectile_shot(enemy, players, table, top_speed)
-		return shot if not shot.is_empty() and shot.score >= min_attack_score else {"kind": "pass", "score": 0.0}
-
 	var best := {}
 	for target in players:
 		var to_target := target.global_position - enemy.global_position
@@ -352,6 +351,13 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 		var setup := _best_pin_setup(enemy, players, table, max_force, tier)
 		if not setup.is_empty() and setup.score >= min_attack_score and (best.is_empty() or setup.score > best.score):
 			best = setup
+
+	# Blastoid: its best tap-shot competes with its best flick, whichever scores higher is taken.
+	if not enemy.ability.get_shot_stats(enemy).is_empty():
+		var projectile := _best_projectile_shot(enemy, players, table)
+		if not projectile.is_empty() and projectile.score >= min_attack_score \
+				and (best.is_empty() or projectile.score > best.score):
+			best = projectile
 
 	# Alchemist: spending the turn on a debuff zone that catches player figures.
 	if not enemy.ability.get_zone_stats(enemy).is_empty():
@@ -1228,37 +1234,57 @@ func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2)
 
 # --- Blastoid and Alchemist ----------------------------------------------------------------
 
-## Blastoid: for each player figure, the projectile aimed at it (a few small angle offsets), with the least power
-## that still reaches the first thing in the way; scored by the blast it would make there (pushes, knock-offs,
-## our own figures hurt) plus a bonus for a direct hit.
-func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2, top_speed: float) -> Dictionary:
-	var proj := enemy.ability.get_ai_projectile(enemy)
+## Blastoid: the best spot to tap. Aim points are every player figure plus the middle of each close pair (a blast
+## there catches both). The projectile is cast to see what it hits first (it bursts there) or, if nothing is in the
+## way, at the aim point (capped at its range). Scored by the blast (pushes, knock-offs, our own figures hurt), a
+## bonus for a direct hit and the blasts of allied Firecrackers the explosion would set off.
+func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2) -> Dictionary:
+	var proj := enemy.ability.get_shot_stats(enemy)
 	var shape := CircleShape2D.new()
 	shape.radius = proj.radius
 	var blast := {"radius": proj.blast_radius, "force": proj.blast_force}
 	var start_gap: float = enemy.radius + proj.radius + 4.0  # where the projectile appears
+	var aim_points: Array[Vector2] = []
+	for i in players.size():
+		aim_points.append(players[i].global_position)
+		for j in range(i + 1, players.size()):
+			if players[i].global_position.distance_to(players[j].global_position) < proj.blast_radius * 1.6:
+				aim_points.append((players[i].global_position + players[j].global_position) * 0.5)
 	var best := {}
-	for target in players:
-		var to_target := target.global_position - enemy.global_position
-		if to_target.length() < 1.0:
+	for point in aim_points:
+		var offset := point - enemy.global_position
+		var wanted := minf(offset.length(), proj.range)
+		if wanted < start_gap:
 			continue
-		for offset in [0.0, -4.0, 4.0]:
-			var direction := to_target.normalized().rotated(deg_to_rad(offset))
-			var hit := _first_hit(enemy, shape, direction, proj.range_max + start_gap)
-			if hit.is_empty() or hit.collider == null:
-				continue  # nothing to blow up on the way, or a wall
-			var travel: float = maxf(hit.distance - start_gap, 0.0) + 10.0
-			if travel > proj.range_max:
-				continue
-			var power := clampf((travel - proj.range_min) / (proj.range_max - proj.range_min), 0.0, 1.0)
-			var center: Vector2 = enemy.global_position + direction * hit.distance
-			var score := _blast_value(center, blast, enemy, null, players, table)
-			if hit.collider.team == Figure.Team.PLAYER:
-				score += blastoid_hit_bonus
-			if best.is_empty() or score > best.score:
-				best = {"kind": "attack", "score": score, "direction": direction, "speed": power * top_speed,
-						"distance": travel, "target": target}
+		var direction := offset.normalized()
+		var hit := _first_hit(enemy, shape, direction, wanted + start_gap, Vector2.INF, false)
+		var reach := wanted
+		var direct := false
+		if not hit.is_empty():
+			reach = clampf(hit.distance, start_gap, wanted)
+			direct = hit.collider != null and hit.collider.team == Figure.Team.PLAYER
+		var center: Vector2 = enemy.global_position + direction * reach
+		var score := _blast_value(center, blast, enemy, null, players, table) + _chain_blast_value(enemy, center, blast.radius, players, table)
+		if direct:
+			score += blastoid_hit_bonus
+		if best.is_empty() or score > best.score:
+			best = {"kind": "shot", "score": score, "point": enemy.global_position + direction * reach}
 	return best
+
+
+## Allied Firecrackers caught in a blast go off too: their own blasts count.
+func _chain_blast_value(source: Figure, center: Vector2, radius: float, players: Array[Figure], table: Rect2) -> float:
+	var total := 0.0
+	for node in get_tree().get_nodes_in_group("figures"):
+		var ally := node as Figure
+		if ally == source or ally.knocked_off or ally.team != source.team:
+			continue
+		if ally.global_position.distance_to(center) > radius + ally.radius:
+			continue
+		var chain := ally.ability.get_ai_blast(ally)
+		if not chain.is_empty() and chain.get("when", "") == "ally_hit":
+			total += _blast_value(ally.global_position, chain, ally, null, players, table)
+	return total
 
 
 ## Alchemist: the empty spot where a debuff zone would catch the most player figures (nearer its middle counts

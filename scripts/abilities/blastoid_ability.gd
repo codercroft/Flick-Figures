@@ -1,54 +1,45 @@
 class_name BlastoidAbility
 extends FigureAbility
-## Flicking Blastoid does not move it: it fires a small projectile in the aimed direction instead. The pull
-## strength sets the projectile's speed and range. The projectile makes a minor explosion on contact or at its
-## max range (through the shared Figure.blast, so Firecracker, Duwall's shell and other explosion effects react).
-## Blastoid carries the registry's "explosive" tag: a Firecracker's hit sets it off (a minor blast on the spot).
+## Blastoid has two actions and each turn it takes ONE of them: flick it (drag, it moves like an average figure
+## and does not fire) or TAP a spot on the board (a quick tap with no drag): it stays where it is and fires a
+## small projectile at that spot. The projectile makes a minor explosion on contact with a figure, wall or pin,
+## or when it reaches the tapped spot (through the shared Figure.blast, so Firecracker, Duwall's shell and other
+## explosion effects react). Shot range is capped at `max_range`; a faint circle shows it while Blastoid is
+## selected. Blastoid carries the registry's "explosive" tag: a Firecracker's hit sets it off.
 
-@export var speed_min := 700.0
-@export var speed_max := 1500.0
-@export var range_min := 250.0
-@export var range_max := 900.0
+## How fast the projectile flies (px/s).
+@export var projectile_speed := 1200.0
+## The furthest it can fly. A tap beyond this still fires, but the shot bursts at this distance.
+@export var max_range := 700.0
 @export var projectile_radius := 14.0
-## The minor explosion (a Bombo's is 320 / 900).
+## The minor explosion (a Bombo's is 224 / 900).
 @export var blast_radius := 170.0
 @export var blast_force := 800.0
 
 
-## 0 to 1: how hard the flick was pulled.
-func _power(figure: Figure, impulse: Vector2) -> float:
-	var combat = RunManager.combat
-	var max_force: float = combat.max_flick_force if combat != null else 2400.0
-	return clampf(impulse.length() / maxf(max_force * figure.data.flick_power_multiplier, 1.0), 0.0, 1.0)
+## Tap-to-fire stats ({} = none); the enemy AI reads the same dictionary.
+func get_shot_stats(_figure: Figure) -> Dictionary:
+	return {"speed": projectile_speed, "range": max_range, "radius": projectile_radius,
+			"blast_radius": blast_radius, "blast_force": blast_force}
 
 
-func replaces_flick(_figure: Figure) -> bool:
-	return true
-
-
-func fire_instead_of_flick(figure: Figure, impulse: Vector2) -> void:
-	if impulse.is_zero_approx() or figure.get_parent() == null:
+func fire_shot_at(figure: Figure, point: Vector2) -> void:
+	if figure.get_parent() == null:
 		return
-	var power := _power(figure, impulse)
+	var offset := point - figure.global_position
+	if offset.length() < 1.0:
+		return
+	var start_gap := figure.radius + projectile_radius + 4.0
 	var projectile := Projectile.new()
 	projectile.owner_figure = figure
-	projectile.direction = impulse.normalized()
-	projectile.speed = lerpf(speed_min, speed_max, power)
-	projectile.range_left = lerpf(range_min, range_max, power)
+	projectile.direction = offset.normalized()
+	projectile.speed = projectile_speed
+	projectile.range_left = maxf(minf(offset.length(), max_range) - start_gap, 0.0)
 	projectile.radius = projectile_radius
 	projectile.blast_radius = blast_radius
 	projectile.blast_force = blast_force
-	projectile.position = figure.position + projectile.direction * (figure.radius + projectile_radius + 4.0)
+	projectile.position = figure.position + projectile.direction * start_gap
 	figure.get_parent().add_child(projectile)
-
-
-func get_aim_range(figure: Figure, impulse: Vector2) -> float:
-	return lerpf(range_min, range_max, _power(figure, impulse))
-
-
-func get_ai_projectile(_figure: Figure) -> Dictionary:
-	return {"speed_min": speed_min, "speed_max": speed_max, "range_min": range_min, "range_max": range_max,
-			"radius": projectile_radius, "blast_radius": blast_radius, "blast_force": blast_force}
 
 
 func get_ai_blast(_figure: Figure) -> Dictionary:
@@ -58,3 +49,11 @@ func get_ai_blast(_figure: Figure) -> Dictionary:
 ## Set off by a teammate Firecracker: a minor blast right here.
 func detonate(figure: Figure) -> void:
 	figure.explode(blast_radius, blast_force)
+
+
+## While selected (and still able to act): a faint circle showing how far a shot can reach.
+func draw_overlay(figure: Figure) -> void:
+	if not figure.selected or not figure.flickable:
+		return
+	figure.draw_circle(Vector2.ZERO, max_range, Color(1.0, 0.6, 0.25, 0.05))
+	figure.draw_arc(Vector2.ZERO, max_range, 0.0, TAU, 96, Color(1.0, 0.6, 0.25, 0.3), 4.0, true)

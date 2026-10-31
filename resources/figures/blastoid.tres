@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Blastoid"
-description = "Fires a small exploding shot instead of moving. Counts as explosive."
+description = "Flick to move, or tap the board to fire an exploding shot. Explosive."
 rarity = 1
 label = "BT"
 icon = 27

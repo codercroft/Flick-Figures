@@ -509,12 +509,18 @@ func launch(impulse: Vector2) -> void:
 	touched_since_flick = false
 	_skip_knockback_frames = 2
 	_slow_frames = 0
-	if ability.replaces_flick(self):
-		ability.fire_instead_of_flick(self, impulse)  # Blastoid fires a projectile and stays put
-	else:
-		apply_central_impulse(impulse)
+	apply_central_impulse(impulse)
 	ability.on_flicked(self, impulse)
 	flicked.emit(self, impulse)
+
+
+## Blastoid's other action: fire its projectile at `point` and stay put. Uses up its action like a flick.
+func shoot_at(point: Vector2) -> void:
+	flickable = false
+	turn_flicks += 1
+	touched_since_flick = false
+	ability.fire_shot_at(self, point)
+	ability.on_flicked(self, Vector2.ZERO)
 
 
 ## Pushed by a hit-like effect (an explosion or bump). `source` is the figure that caused it.

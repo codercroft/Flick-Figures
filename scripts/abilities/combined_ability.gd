@@ -92,23 +92,14 @@ func get_aura_radius(figure: Figure) -> float:
 	return maxf(first.get_aura_radius(figure), second.get_aura_radius(figure))
 
 
-func replaces_flick(figure: Figure) -> bool:
-	return first.replaces_flick(figure) or second.replaces_flick(figure)
+func get_shot_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_shot_stats(figure)
+	return stats if not stats.is_empty() else second.get_shot_stats(figure)
 
 
-func fire_instead_of_flick(figure: Figure, impulse: Vector2) -> void:
-	first.fire_instead_of_flick(figure, impulse)
-	second.fire_instead_of_flick(figure, impulse)
-
-
-func get_aim_range(figure: Figure, impulse: Vector2) -> float:
-	var distance := first.get_aim_range(figure, impulse)
-	return distance if distance >= 0.0 else second.get_aim_range(figure, impulse)
-
-
-func get_ai_projectile(figure: Figure) -> Dictionary:
-	var stats := first.get_ai_projectile(figure)
-	return stats if not stats.is_empty() else second.get_ai_projectile(figure)
+func fire_shot_at(figure: Figure, point: Vector2) -> void:
+	first.fire_shot_at(figure, point)
+	second.fire_shot_at(figure, point)
 
 
 func get_zone_stats(figure: Figure) -> Dictionary:

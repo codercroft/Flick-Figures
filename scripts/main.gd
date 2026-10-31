@@ -289,7 +289,8 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 	if not _selected.bummer_effect().is_empty():
 		_takeover_player_flick(_selected)  # an enemy Bummer's aura: control is taken away
 		return
-	_press_was_empty = figure == null
+	# A press on ANY of your figures (even one that already went) is not "empty board": it never places or fires.
+	_press_was_empty = figure == null and _player_figure_at(pos, false) == null
 	_state = State.AIMING
 	_touch_index = index
 	_aim_figure = _selected
@@ -322,9 +323,6 @@ func _update_aim(pos: Vector2) -> void:
 	# Roughly where the figure will come to rest (ignores bumping into things).
 	var speed := impulse.length() / _aim_figure.mass
 	var distance := maxf(speed - stop_speed, 0.0) / _aim_figure.linear_damp
-	var range_override := _aim_figure.ability.get_aim_range(_aim_figure, impulse)  # Blastoid: the shot's range
-	if range_override >= 0.0:
-		distance = range_override
 	var direction := impulse.normalized()
 	var origin := _aim_figure.global_position + direction * _aim_figure.radius
 	var bounce := {}
@@ -466,6 +464,21 @@ func _use_up_turn_placing(figure: Figure, text := "Zone placed!") -> void:
 	_finish_player_turn()
 
 
+## Blastoid fires at the tapped spot instead of moving. Like a flick, that is its action for the cycle.
+func _fire_shot(figure: Figure, pos: Vector2) -> void:
+	_take_snapshot()
+	player_flicks += 1
+	flick_boost = 1.0
+	_update_status()
+	figure.shoot_at(pos)
+	_on_any_flick(figure, Vector2.ZERO)
+	_last_player_flicker = figure
+	_bonus_figure = null
+	_deselect()
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
 ## A tap on empty board with a figure selected: Pinhead places (or takes back) its temporary pin.
 func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
@@ -479,6 +492,9 @@ func _tap_empty_board(pos: Vector2) -> void:
 				ui.show_your_turn("Turret removed. Drag anywhere to flick")
 			_:
 				ui.show_your_turn("Can't place a turret there")
+		return
+	if not _selected.ability.get_shot_stats(_selected).is_empty():  # Blastoid: tap = fire at that spot
+		_fire_shot(_selected, pos)
 		return
 	var zone := _selected.ability.get_zone_stats(_selected)
 	if not zone.is_empty():  # Alchemist: placing the zone is its whole action
@@ -619,7 +635,11 @@ func _run_enemy_turn() -> void:
 			if serial != _turn_serial:
 				return
 			continue
-		choice.enemy.launch(choice.impulse)
+		if choice.has("shot_point"):  # an enemy Blastoid fires instead of moving
+			choice.enemy.shoot_at(choice.shot_point)
+			_on_any_flick(choice.enemy, Vector2.ZERO)
+		else:
+			choice.enemy.launch(choice.impulse)
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
@@ -638,7 +658,7 @@ func _run_enemy_turn() -> void:
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
 				return
-			if extra.is_empty() or extra.has("pin_only") or extra.has("zone_only") or not _is_alive(shooter):
+			if extra.is_empty() or extra.has("pin_only") or extra.has("zone_only") or extra.has("shot_point") or not _is_alive(shooter):
 				break
 			if bloodlust:
 				shooter.bonus_flicks_used += 1
