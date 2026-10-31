@@ -136,6 +136,8 @@ func _physics_process(delta: float) -> void:
 					_apply_patch(patch, figure, delta)
 	for zone in _zones:
 		_apply_zone(zone, figures)
+	if not _alchemy_zones.is_empty():
+		_douse_figures_in_zones(figures)
 	for piece in _trail:
 		_apply_trail_piece(piece, figures)
 
@@ -402,6 +404,7 @@ func place_zone(owner_figure: Figure, pos: Vector2, stats: Dictionary, board: Re
 	var zone := AlchemyZone.new()
 	zone.radius = stats.radius
 	zone.knockback = stats.knockback
+	zone.douse_rounds = stats.get("douse_rounds", 2)
 	zone.owner_figure = owner_figure
 	zone.position = pos
 	zone.z_index = 0
@@ -419,6 +422,18 @@ func remove_zone(owner_figure: Figure) -> void:
 			remove_child(zone)
 			zone.queue_free()
 			_alchemy_zones.remove_at(i)
+
+
+## Figures that touch an Alchemist's zone (inside it or just brushing it) get Doused (called every physics frame).
+func _douse_figures_in_zones(figures: Array) -> void:
+	for node in figures:
+		var figure := node as Figure
+		if figure.knocked_off:
+			continue
+		for zone in _alchemy_zones:
+			if is_instance_valid(zone) and is_instance_valid(zone.owner_figure) and zone.owner_figure.team != figure.team \
+					and figure.global_position.distance_to(zone.position) <= zone.radius + figure.radius:
+				figure.douse(zone.douse_rounds, zone.knockback)
 
 
 ## The strongest knockback multiplier of an Alchemist zone of the OTHER team at `pos` (1 = none).

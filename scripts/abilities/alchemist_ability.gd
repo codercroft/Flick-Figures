@@ -4,6 +4,8 @@ extends FigureAbility
 ## debuff zone there: opposing figures inside it take extra knockback. The zone lasts until the Alchemist's side's
 ## flick cycle resets, and placing it counts as the Alchemist's action for the cycle. One zone per Alchemist
 ## (a new one replaces the old). It can still flick normally instead.
+## Any opposing figure that touches or passes through the zone is "Doused": it keeps the extra knockback for
+## `douse_rounds` rounds even after it leaves the zone. Touching a zone again refreshes the time (no stacking).
 
 ## Size of the zone (px radius).
 @export var zone_radius := 150.0
@@ -11,5 +13,9 @@ extends FigureAbility
 @export var knockback_multiplier := 1.5
 
 
+## How many rounds a figure stays Doused (a round = one player turn plus one enemy turn).
+@export var douse_rounds := 2
+
+
 func get_zone_stats(_figure: Figure) -> Dictionary:
-	return {"radius": zone_radius, "knockback": knockback_multiplier}
+	return {"radius": zone_radius, "knockback": knockback_multiplier, "douse_rounds": douse_rounds}

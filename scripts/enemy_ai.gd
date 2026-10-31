@@ -124,6 +124,10 @@ const TOUCH_MARGIN := 4.0
 @export var blastoid_hit_bonus := 40.0
 ## Alchemist: value of each player figure caught in a new debuff zone (nearer the middle counts more).
 @export var zone_value_per_figure := 70.0
+## Doused (an Alchemist zone's lingering debuff) player figures are better targets: extra score for hitting one.
+@export var doused_target_bonus := 30.0
+## Flicking one of our own figures through (or into) a player Alchemist's zone Douses it: penalty per zone crossed.
+@export var zone_path_penalty := 70.0
 @export var zone_grid_spacing := 90.0
 
 @export_group("Duwall shell")
@@ -411,6 +415,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			score += bloodluster_kill_bonus * knocked_off  # a kill earns a bonus flick
 		if other.ability.has_active_wall(other):
 			score += shield_break_bonus  # moving a Shieldon drops its wall
+		if other.is_doused():
+			score += doused_target_bonus  # it takes extra knockback for a while
 		# A shelled Duwall: cracking the shell is progress, and what is left of it is toughness.
 		var shell := other.ability.get_shell_state(other)
 		if not shell.is_empty():
@@ -449,6 +455,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
 		score += eater_eat_bonus if other.team == Figure.Team.PLAYER else -eater_ally_penalty
 
+	# Passing through a player Alchemist's zone Douses our own figure.
+	score -= zone_path_penalty * _zone_crossings(enemy, enemy.global_position, contact)
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
 	score -= _self_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
 	# Aim error can make the shot miss, and a shooter that misses just keeps sliding. Count that risk.
@@ -468,6 +476,18 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score -= overpower_penalty * speed / max_speed
 
 	return {"kind": kind, "score": score, "direction": direction, "speed": speed, "distance": hit_distance}
+
+
+## How many player Alchemist zones the straight path from `from` to `to` touches (our figure would be Doused).
+func _zone_crossings(enemy: Figure, from: Vector2, to: Vector2) -> int:
+	if _arena == null:
+		return 0
+	var count := 0
+	for zone in _arena.zones_of(Figure.Team.PLAYER if enemy.team == Figure.Team.ENEMY else Figure.Team.ENEMY):
+		var closest := Geometry2D.get_closest_point_to_segment(zone.position, from, to)
+		if closest.distance_to(zone.position) <= zone.radius + enemy.radius:
+			count += 1
+	return count
 
 
 ## Aggro-bom: a shot that runs through enough DIFFERENT figures (it needs `needed` minus the ones it has already
@@ -972,7 +992,7 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 		if not _first_hit(enemy, shape, direction, reposition_distance + 30.0).is_empty():
 			continue
 		# Prefer ending up closer to the nearest player figure (and, near the edge, farther from it).
-		var score := -_nearest_distance(end, players)
+		var score := -_nearest_distance(end, players) - zone_path_penalty * _zone_crossings(enemy, enemy.global_position, end)
 		if enemy.would_be_in_aura(end):
 			score += aura_stay_bonus  # stay close to (or move into) an allied Crazy Man's aura
 		# Do not move into a player Bummer's aura; our own Bummer likes ending next to player figures.

@@ -85,6 +85,10 @@ var selected := false:
 		selected = value
 		queue_redraw()
 
+## Doused by an Alchemist's zone: rounds left, the rounds it started with (for the fade) and the knockback multiplier.
+var doused_rounds := 0
+var doused_full := 1
+var doused_multiplier := 1.0
 var _circle: CircleShape2D
 
 var _last_velocity := Vector2.ZERO
@@ -200,6 +204,21 @@ func _ready() -> void:
 	ability.setup_body(self)
 
 
+## The Doused status: a purple tint with three drips under the figure, fading as the rounds run out.
+func _draw_doused() -> void:
+	if doused_rounds <= 0:
+		return
+	var fade := clampf(float(doused_rounds) / maxf(doused_full, 1), 0.0, 1.0)
+	draw_circle(Vector2.ZERO, radius - 2.0, Color(0.6, 0.25, 0.85, 0.35 * fade))
+	draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 48, Color(0.75, 0.4, 0.95, 0.7 * fade), 5.0, true)
+	for i in 3:
+		var x := radius * (-0.45 + 0.45 * i)
+		var top := Vector2(x, radius * (0.55 + 0.12 * (i % 2)))
+		var length := radius * (0.35 + 0.15 * ((i + 1) % 3))
+		draw_line(top, top + Vector2(0, length), Color(0.7, 0.35, 0.95, 0.8 * fade), radius * 0.1)
+		draw_circle(top + Vector2(0, length + radius * 0.06), radius * 0.1, Color(0.8, 0.5, 1.0, 0.9 * fade))
+
+
 ## The toy finish drawn on top of the body: sparkle, sheen, glow or rubber (translucent is
 ## just the figure's alpha).
 func _draw_finish() -> void:
@@ -276,6 +295,7 @@ func _draw() -> void:
 	if not own_body:
 		draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
 	_draw_finish()
+	_draw_doused()
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	var label := data.label if data.label != "" else data.display_name.left(1)
 	var font_size := int(radius * (1.0 if label.length() <= 1 else 0.75))
@@ -453,12 +473,27 @@ func bummer_effect() -> Dictionary:
 	return bummer_effect_at(global_position)
 
 
-## Alchemist: the knockback multiplier of an enemy debuff zone this figure stands in (1 = none).
+## Alchemist: the knockback multiplier from an enemy debuff zone this figure stands in, or from being Doused by
+## one earlier (1 = none). They do not stack: the strongest counts.
 func zone_knockback_multiplier() -> float:
+	var best := doused_multiplier if doused_rounds > 0 else 1.0
 	var combat = RunManager.combat  # the Main node (untyped: Main is not a named class)
 	if combat == null or not is_inside_tree():
-		return 1.0
-	return combat.arena.zone_multiplier_at(global_position, team)
+		return best
+	return maxf(best, combat.arena.zone_multiplier_at(global_position, team))
+
+
+## Touched an Alchemist's zone: Doused for `rounds` rounds (touching again refreshes it back to the full amount).
+func douse(rounds: int, knockback: float) -> void:
+	if doused_rounds < rounds or doused_full != rounds:
+		queue_redraw()
+	doused_rounds = rounds
+	doused_full = rounds
+	doused_multiplier = knockback
+
+
+func is_doused() -> bool:
+	return doused_rounds > 0
 
 
 ## Teammates (not this figure) whose aura reaches this figure.
@@ -776,6 +811,9 @@ func set_size(new_radius: float, new_mass: float) -> void:
 ## Called by main.gd at the start of each round: powers that last "a round" count down here.
 func tick_round() -> void:
 	ability.on_round_ticked(self)
+	if doused_rounds > 0:
+		doused_rounds -= 1
+		queue_redraw()
 	if frozen_rounds > 0:
 		frozen_rounds -= 1
 		if frozen_rounds == 0:
