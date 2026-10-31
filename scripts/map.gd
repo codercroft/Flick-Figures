@@ -4,9 +4,6 @@ extends Control
 ## stops. Layout: the status bar on top (TopBar), the map filling the middle of the screen, and the
 ## Equipment / Upgrades buttons pinned at the bottom.
 
-const COMBAT_SCENE := "res://scenes/main.tscn"
-const SHOP_SCENE := "res://scenes/shop.tscn"
-const REWARD_SCENE := "res://scenes/reward.tscn"
 const EQUIP_SCENE := "res://scenes/equip.tscn"
 const UPGRADE_SCENE := "res://scenes/upgrade.tscn"
 ## Height reserved at the bottom for the hint and buttons (before the gesture-bar inset).
@@ -18,6 +15,7 @@ var view := MapView.new()
 
 
 func _ready() -> void:
+	RunManager.autosave()  # arriving at the map saves the run
 	add_child(top_bar)
 	var insets := SafeArea.insets()
 	var column := VBoxContainer.new()
@@ -90,16 +88,4 @@ func _scroll_to_position() -> void:
 func _go_to(id: int) -> void:
 	if not RunManager.enter_node(id):
 		return
-	match RunManager.node.type:
-		MapNode.Type.SHOP:
-			get_tree().change_scene_to_file(SHOP_SCENE)
-		MapNode.Type.TREASURE:
-			get_tree().change_scene_to_file(REWARD_SCENE)
-		MapNode.Type.EVENT:
-			if RunManager.event != null and RunManager.event.scene != null:
-				get_tree().change_scene_to_packed(RunManager.event.scene)
-			else:
-				RunManager.finish_node()  # no event available: the stop is simply passed
-				get_tree().reload_current_scene()
-		_:
-			get_tree().change_scene_to_file(COMBAT_SCENE)
+	NodeScenes.open_current_node(get_tree())

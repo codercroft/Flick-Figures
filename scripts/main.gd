@@ -219,8 +219,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 				_begin_aim(index, pos)
 		State.GAME_OVER:
 			if _can_restart:
-				RunManager.start_new_run()
-				get_tree().change_scene_to_file(MAP_SCENE)
+				get_tree().change_scene_to_file(NodeScenes.MENU_SCENE)
 
 
 # --- Player turn: reload, aim, flick -----------------------------------------
@@ -865,6 +864,7 @@ func _end_game(won: bool) -> void:
 			await get_tree().create_timer(reward_delay).timeout
 			get_tree().change_scene_to_file(REWARD_SCENE)
 			return
+	RunManager.end_run()  # the run is over: its save is deleted
 	ui.show_result(RunManager.run_over_text(won))
 	await get_tree().create_timer(restart_tap_delay).timeout
 	_can_restart = true

@@ -59,6 +59,12 @@ func _ready() -> void:
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_size_override("font_size", 44)
 	header.add_child(heading)
+	var menu := Button.new()
+	menu.text = "Main menu"
+	menu.custom_minimum_size = Vector2(260.0, 84.0)
+	menu.add_theme_font_size_override("font_size", 32)
+	menu.pressed.connect(_go_to_main_menu)
+	header.add_child(menu)
 	var close := Button.new()
 	close.text = "Close"
 	close.custom_minimum_size = Vector2(190.0, 84.0)
@@ -114,6 +120,14 @@ func _select_tab(index: int) -> void:
 		var ink := Color(0.08, 0.08, 0.1) if active else Color(0.85, 0.87, 0.92)
 		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			_tab_buttons[i].add_theme_color_override(state, ink)
+
+
+## Saves and goes to the main menu. On the map the run is saved as it is now; inside a combat, shop or event the
+## last save stays (it remembers that node, so Continue restarts it from the start).
+func _go_to_main_menu() -> void:
+	RunManager.autosave()
+	close_overlay()
+	get_tree().change_scene_to_file(NodeScenes.MENU_SCENE)
 
 
 func close_overlay() -> void:

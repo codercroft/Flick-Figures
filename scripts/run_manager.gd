@@ -82,6 +82,9 @@ var combat: Node
 var relic_notes: Array[String] = []
 ## The player's power slots (null = empty). They persist across combats until used.
 var powers: Array[PowerData] = []
+## The run's random seed: the act maps come from it, and each map node's lineup/shop/event is rolled from
+## a seed made of it, so Continue re-enters a node with the same enemies (see enter_node).
+var run_seed := 0
 
 
 func _ready() -> void:
@@ -90,6 +93,8 @@ func _ready() -> void:
 
 
 func start_new_run() -> void:
+	run_seed = randi()
+	seed(run_seed)
 	deck.clear()
 	deck_equipment.clear()
 	deck_finish.clear()
@@ -257,12 +262,51 @@ func use_power(slot: int) -> void:
 
 func _start_act() -> void:
 	boss = act_bosses[act] if act < act_bosses.size() else config.registry.random_boss()
-	map = ActMap.generate(config.map)
+	var map_rng := RandomNumberGenerator.new()
+	map_rng.seed = hash([run_seed, act])
+	map = ActMap.generate(config.map, map_rng)
 	current_node = -1
 	node = null
 	enemies.clear()
 	enemy_elite.clear()
 	arena = null
+
+
+## Saves the run (called whenever the map screen opens). Never call it while a node is being played: that
+## state is not worth saving, and the last save already remembers the node to restart.
+func autosave() -> void:
+	if node == null and map != null:
+		RunSave.save(self)
+
+
+## True if Continue has something to load.
+func has_saved_run() -> bool:
+	return RunSave.has_save()
+
+
+## Loads the saved run. Returns the map node the player was inside when they quit (-1 = they were on the
+## map; enter it again with enter_node to restart it), or -2 if the save could not be loaded.
+func load_saved_run() -> int:
+	var pending := RunSave.load_into(self)
+	if pending == -2:
+		return -2
+	boss = act_bosses[act]
+	node = null
+	event = null
+	enemies.clear()
+	enemy_elite.clear()
+	shop_offers.clear()
+	reward_steps.clear()
+	relic_notes.clear()
+	harder_note = ""
+	event_reward_text = ""
+	seed(hash([run_seed, act, current_node, 1]))
+	return pending
+
+
+## The run is over (won or lost): the save is deleted.
+func end_run() -> void:
+	RunSave.delete()
 
 
 func is_last_act() -> bool:
@@ -287,6 +331,8 @@ func enter_node(id: int) -> bool:
 	if not is_reachable(id):
 		return false
 	node = map.nodes[id]
+	seed(hash([run_seed, act, id]))  # the same node always rolls the same lineup / stock / event
+	RunSave.set_pending(id)  # (quitting inside it: Continue enters it again from the start)
 	match node.type:
 		MapNode.Type.COMBAT, MapNode.Type.ELITE, MapNode.Type.BOSS:
 			_build_lineup()
@@ -600,7 +646,7 @@ func run_over_text(won: bool) -> String:
 		result = "Run over\nAct %d: beaten by %s" % [act + 1, boss.display_name]
 	else:
 		result = "Run over\nAct %d: defeated at a %s" % [act + 1, MapNode.type_name(node.type).to_lower() if node != null else "combat"]
-	return result + "\nTap to start a new run"
+	return result + "\nTap to return to the main menu"
 
 
 ## Builds the enemies for the current node. Within an act the lineup ramps from all grunts at the
