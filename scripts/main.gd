@@ -227,6 +227,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 ## `new_round` is false for an Extra Turn flick: the round (and the powers that last a round)
 ## doesn't advance.
 func _start_player_turn(new_round := true) -> void:
+	_end_turn_for_all()  # (the enemy's turn is over)
 	_cancel_power()
 	if new_round:
 		for figure in _all_figures():
@@ -579,7 +580,15 @@ func _is_alive(figure) -> bool:  # untyped on purpose: a freed Figure can't be p
 	return is_instance_valid(figure) and not figure.knocked_off
 
 
+## A turn ended (the player's or the enemy's): per-turn counters (Aggro-bom) reset.
+func _end_turn_for_all() -> void:
+	for figure in _all_figures():
+		if _is_alive(figure):
+			figure.ability.on_turn_ended(figure)
+
+
 func _run_enemy_turn() -> void:
+	_end_turn_for_all()  # (the player's turn is over)
 	var serial := _turn_serial
 	_state = State.ENEMY_TURN
 	turret_side = Figure.Team.ENEMY

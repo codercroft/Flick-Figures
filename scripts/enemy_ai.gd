@@ -400,6 +400,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	var blast := enemy.ability.get_ai_blast(enemy)
 	if not blast.is_empty() and blast.when == "hit":
 		combo += _blast_value(contact, blast, enemy, null, players, table)
+	combo += _aggro_value(enemy, direction, _travel_distance(enemy, speed), players, table)  # Aggro-bom
 	if other.team == Figure.Team.PLAYER:
 		var knocked_off := _leave_chance(other, other.global_position, target_velocity, table)
 		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
@@ -467,6 +468,33 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score -= overpower_penalty * speed / max_speed
 
 	return {"kind": kind, "score": score, "direction": direction, "speed": speed, "distance": hit_distance}
+
+
+## Aggro-bom: a shot that runs through enough DIFFERENT figures (it needs `needed` minus the ones it has already
+## bumped this turn) sets off its big explosion where the last one is met, so it likes lines through clusters.
+## The path is the straight line (deflections are not followed); allies in the way count as collisions too, and
+## `_blast_value` already counts hurt allies against the shot.
+func _aggro_value(enemy: Figure, direction: Vector2, distance: float, players: Array[Figure], table: Rect2) -> float:
+	var info := enemy.ability.get_ai_aggro(enemy)
+	if info.is_empty():
+		return 0.0
+	var need: int = maxi(info.needed - info.met, 1)
+	var along_list: Array[float] = []
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == enemy or other.knocked_off:
+			continue
+		var offset := other.global_position - enemy.global_position
+		var along := offset.dot(direction)
+		if along < 0.0 or along > distance + other.radius:
+			continue
+		if absf(offset.cross(direction)) <= enemy.radius + other.radius:
+			along_list.append(along)
+	if along_list.size() < need:
+		return 0.0
+	along_list.sort()
+	var center := enemy.global_position + direction * along_list[need - 1]
+	return _blast_value(center, {"radius": info.radius, "force": info.force}, enemy, null, players, table)
 
 
 ## The enemy's aim error in radians (either way), from its accuracy.

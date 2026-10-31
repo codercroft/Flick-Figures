@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="FigureRegistry" load_steps=35 format=3]
+[gd_resource type="Resource" script_class="FigureRegistry" load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_registry.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
@@ -10,6 +10,7 @@
 [ext_resource type="Resource" path="res://resources/figures/duwall.tres" id="8"]
 [ext_resource type="Resource" path="res://resources/figures/powerhouse.tres" id="9"]
 [ext_resource type="Resource" path="res://resources/figures/bombo.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/figures/aggro_bom.tres" id="agg"]
 [ext_resource type="Resource" path="res://resources/figures/sneaky_bomber.tres" id="12"]
 [ext_resource type="Resource" path="res://resources/figures/magnet.tres" id="13"]
 [ext_resource type="Script" path="res://scripts/boss_data.gd" id="14"]
@@ -38,7 +39,7 @@
 [resource]
 script = ExtResource("1")
 grunts = Array[ExtResource("2")]([ExtResource("3")])
-draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("27"), ExtResource("29"), ExtResource("30"), ExtResource("eng"), ExtResource("bum"), ExtResource("shl"), ExtResource("alc"), ExtResource("bla"), ExtResource("ene"), ExtResource("eat"), ExtResource("blo")])
+draftable = Array[ExtResource("2")]([ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("4"), ExtResource("12"), ExtResource("13"), ExtResource("5"), ExtResource("6"), ExtResource("18"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("27"), ExtResource("29"), ExtResource("30"), ExtResource("eng"), ExtResource("bum"), ExtResource("shl"), ExtResource("alc"), ExtResource("bla"), ExtResource("ene"), ExtResource("eat"), ExtResource("blo"), ExtResource("agg")])
 economy = Array[ExtResource("2")]([ExtResource("18"), ExtResource("27")])
-explosive = Array[ExtResource("2")]([ExtResource("10"), ExtResource("12"), ExtResource("6"), ExtResource("bla")])
+explosive = Array[ExtResource("2")]([ExtResource("10"), ExtResource("12"), ExtResource("6"), ExtResource("bla"), ExtResource("agg")])
 bosses = Array[ExtResource("14")]([ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("31")])

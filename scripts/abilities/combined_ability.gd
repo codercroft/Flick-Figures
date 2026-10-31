@@ -224,6 +224,16 @@ func get_hit_mass_multiplier(figure: Figure) -> float:
 	return first.get_hit_mass_multiplier(figure) * second.get_hit_mass_multiplier(figure)
 
 
+func on_turn_ended(figure: Figure) -> void:
+	first.on_turn_ended(figure)
+	second.on_turn_ended(figure)
+
+
+func get_ai_aggro(figure: Figure) -> Dictionary:
+	var info := first.get_ai_aggro(figure)
+	return info if not info.is_empty() else second.get_ai_aggro(figure)
+
+
 func on_round_ticked(figure: Figure) -> void:
 	first.on_round_ticked(figure)
 	second.on_round_ticked(figure)

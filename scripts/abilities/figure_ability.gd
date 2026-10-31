@@ -175,6 +175,17 @@ func eats_smaller(_figure: Figure) -> bool:
 	return false
 
 
+## Called on every figure when a turn ends (the player's, and the enemy's): per-turn counters reset here.
+func on_turn_ended(_figure: Figure) -> void:
+	pass
+
+
+## Aggro-bom, for the enemy AI: {needed, met, radius, force} (collisions it needs this turn, how many it has, the
+## explosion), or {} for any other figure.
+func get_ai_aggro(_figure: Figure) -> Dictionary:
+	return {}
+
+
 ## Bloodluster: how many bonus flicks a turn it may earn by knocking opposing figures off (0 = none).
 func get_bloodlust_cap(_figure: Figure) -> int:
 	return 0

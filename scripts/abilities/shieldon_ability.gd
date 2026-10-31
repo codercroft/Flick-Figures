@@ -1,7 +1,7 @@
 class_name ShieldonAbility
 extends FigureAbility
-## When it stops after its own flick, it props up a short immovable wall just in front of it, facing the way it
-## was moving. Only one wall per Shieldon (a new one replaces the old). If Shieldon is bumped or moved off that
+## When it stops after its own flick, it props up a short immovable wall just in front of it, facing the nearest
+## enemy (the way it was moving if there is none). Only one wall per Shieldon (a new one replaces the old). If Shieldon is bumped or moved off that
 ## spot (or flicked again, or knocked off) the wall disappears.
 
 ## Length and thickness of the wall (px), and the gap between Shieldon's edge and the wall.
@@ -36,16 +36,34 @@ func on_stopped(figure: Figure) -> void:
 	if not _flicking:
 		return
 	_flicking = false
-	if _heading == Vector2.ZERO or figure.knocked_off:
+	var facing := _toward_nearest_enemy(figure)
+	if facing == Vector2.ZERO:
+		facing = _heading
+	if facing == Vector2.ZERO or figure.knocked_off:
 		return
 	var combat = RunManager.combat
 	if combat == null:
 		return
-	var center := figure.global_position + _heading * (figure.radius + wall_gap + wall_thickness / 2.0)
-	# Wall across the heading: its long side is perpendicular to the way Shieldon was moving.
-	if combat.arena.place_shield_wall(figure, center, Vector2(wall_length, wall_thickness), _heading.angle() - PI / 2.0):
+	var center := figure.global_position + facing * (figure.radius + wall_gap + wall_thickness / 2.0)
+	# Wall across the facing: its long side is perpendicular to the direction of the nearest enemy.
+	if combat.arena.place_shield_wall(figure, center, Vector2(wall_length, wall_thickness), facing.angle() - PI / 2.0):
 		_spot = figure.global_position
 		figure.show_popup("Wall up!", Color(0.8, 0.9, 1.0))
+
+
+## Direction to the closest opposing figure still on the table (zero if there is none).
+func _toward_nearest_enemy(figure: Figure) -> Vector2:
+	var best := Vector2.ZERO
+	var best_distance := INF
+	for node in figure.get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == null or other.knocked_off or other.team == figure.team:
+			continue
+		var offset := other.global_position - figure.global_position
+		if offset.length() < best_distance and not offset.is_zero_approx():
+			best_distance = offset.length()
+			best = offset.normalized()
+	return best
 
 
 func on_knocked_off(figure: Figure) -> void:

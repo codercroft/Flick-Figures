@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=106 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=107 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -55,6 +55,7 @@
 [ext_resource type="Resource" path="res://resources/finishes/translucent.tres" id="93"]
 [ext_resource type="Resource" path="res://resources/finishes/rubber.tres" id="94"]
 [ext_resource type="Resource" path="res://resources/upgrades/bombo_upgrade.tres" id="100"]
+[ext_resource type="Resource" path="res://resources/upgrades/aggro_bom_upgrade.tres" id="up_agg"]
 [ext_resource type="Resource" path="res://resources/upgrades/powerhouse_upgrade.tres" id="101"]
 [ext_resource type="Resource" path="res://resources/upgrades/duwall_upgrade.tres" id="102"]
 [ext_resource type="Resource" path="res://resources/upgrades/magnet_upgrade.tres" id="103"]
@@ -124,7 +125,7 @@ starting_equipment_count = 2
 equipment_pool = Array[ExtResource("60")]([ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72"), ExtResource("skull")])
 show_upgrade_screen = false
 finish_pool = Array[ExtResource("80")]([ExtResource("90"), ExtResource("91"), ExtResource("92"), ExtResource("93"), ExtResource("94")])
-upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108"), ExtResource("up_glue")])
+upgrade_pool = Array[ExtResource("81")]([ExtResource("100"), ExtResource("101"), ExtResource("102"), ExtResource("103"), ExtResource("104"), ExtResource("105"), ExtResource("106"), ExtResource("107"), ExtResource("108"), ExtResource("up_glue"), ExtResource("up_agg")])
 start_with_relics = false
 starting_relic_count = 3
 relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("124"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135")])
