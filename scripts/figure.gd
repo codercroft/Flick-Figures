@@ -391,8 +391,10 @@ func _on_body_entered(body: Node) -> void:
 		# Both figures get this signal; only the one with the lower id reports the impact.
 		if get_instance_id() < other.get_instance_id():
 			emit_signal.call_deferred(&"impacted", self, other, speed, point)
+			AudioManager.play_clack(speed)
 	else:
 		ability.on_hit_wall.call_deferred(self, body)
+		AudioManager.play_wall(_last_velocity.length())
 
 
 ## Flick power multiplier from teammates' auras (Crazy Man) that this figure stands inside.
@@ -510,6 +512,7 @@ func launch(impulse: Vector2) -> void:
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(impulse)
+	AudioManager.play_flick(impulse.length() / mass)
 	ability.on_flicked(self, impulse)
 	flicked.emit(self, impulse)
 
@@ -520,6 +523,7 @@ func shoot_at(point: Vector2) -> void:
 	turn_flicks += 1
 	touched_since_flick = false
 	ability.fire_shot_at(self, point)
+	AudioManager.play_flick(1000.0)
 	ability.on_flicked(self, Vector2.ZERO)
 
 
@@ -671,6 +675,7 @@ func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: float,
 		source: Figure = null, spared: Figure = null) -> void:
 	force *= RunManager.explosion_force_multiplier()
+	AudioManager.play_boom(blast_radius)
 	for node in tree.get_nodes_in_group("figures"):
 		var other := node as Figure
 		if other == source or other == spared or other.knocked_off:
@@ -805,6 +810,7 @@ func knock_off(fade_time: float, retired := false) -> void:
 	collision_mask = 0
 	if not retired:
 		ability.on_knocked_off(self)
+		AudioManager.play_fall()
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, fade_time)
 	tween.tween_callback(queue_free)

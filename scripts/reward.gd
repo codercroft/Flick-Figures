@@ -54,6 +54,7 @@ func _next_step() -> void:
 		return
 	var step: Dictionary = _steps.pop_front()
 	_lucky = step.get("lucky", false)
+	AudioManager.play_reveal()  # a new reward is shown
 	match step.kind:
 		"figures":
 			_offers = RunManager.offer_rewards(step.get("boss", false))

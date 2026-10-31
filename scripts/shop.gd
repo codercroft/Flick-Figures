@@ -76,6 +76,7 @@ func _buy(offer: ShopOffer, slot: int) -> void:
 	if not RunManager.spend(offer.price):
 		_show_offers("Not enough money.")
 		return
+	AudioManager.play_purchase()
 	_show_offers(offer.buy(slot))
 
 

@@ -12,6 +12,10 @@ var source: Figure  # never pulls itself (it is already off the table)
 var _age := 0.0
 
 
+func _ready() -> void:
+	AudioManager.play_implosion()
+
+
 func _physics_process(delta: float) -> void:
 	_age += delta
 	for node in get_tree().get_nodes_in_group("figures"):

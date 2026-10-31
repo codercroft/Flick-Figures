@@ -12,6 +12,7 @@ var _act_label := Label.new()
 var _money_label := Label.new()
 var _relics := RelicBar.new()
 var _relic_count := -1
+var _sound_button := Button.new()  # sound on / off, saved between sessions (AudioManager)
 
 
 func _ready() -> void:
@@ -40,6 +41,12 @@ func _ready() -> void:
 	info.add_theme_font_size_override("font_size", 40)
 	info.pressed.connect(RunInfo.open.bind("map", null))
 	row.add_child(info)
+
+	_sound_button.custom_minimum_size = Vector2(72.0, 72.0)
+	_sound_button.add_theme_font_size_override("font_size", 22)
+	_sound_button.add_to_group("no_ui_sound")  # (it plays its own tap when it turns sound on)
+	_sound_button.pressed.connect(AudioManager.toggle_mute)
+	row.add_child(_sound_button)
 
 	_act_label.add_theme_font_size_override("font_size", 30)
 	_act_label.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
@@ -71,6 +78,8 @@ func refresh() -> void:
 			where += "  " + MapNode.type_name(RunManager.node.type)
 	_act_label.text = where
 	_money_label.text = "$%d" % RunManager.money
+	_sound_button.text = "OFF" if AudioManager.muted else "SND"
+	_sound_button.modulate = Color(1.0, 0.55, 0.55) if AudioManager.muted else Color.WHITE
 	if _relic_count != RunManager.relics.size():
 		_relic_count = RunManager.relics.size()
 		_relics.refresh()

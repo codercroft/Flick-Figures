@@ -847,6 +847,7 @@ func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
 	turret_side = -1
 	if won:
+		AudioManager.play_fanfare()
 		# Money for every win (elites and bosses pay a bonus on top: see RewardConfig).
 		var on_table: Array[FigureData] = []
 		var equipment_bonus := 0
