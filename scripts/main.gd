@@ -451,9 +451,9 @@ func _has_flick_left(figure) -> bool:
 
 
 ## Gives up this drag. The figure stays selected, so you can drag again.
-## Pinhead placed its pin: that was its whole action. It counts as its flick for the cycle (greyed out), but
+## Alchemist placed its zone: that was its whole action. It counts as its flick for the cycle (greyed out), but
 ## it does not flick, and the player's turn ends (the enemy goes next).
-func _use_up_turn_placing(figure: Figure, text := "Pin placed!") -> void:
+func _use_up_turn_placing(figure: Figure, text := "Zone placed!") -> void:
 	_take_snapshot()
 	figure.flickable = false
 	figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
@@ -487,12 +487,12 @@ func _tap_empty_board(pos: Vector2) -> void:
 		else:
 			ui.show_your_turn("Can't place a zone there")
 		return
-	var radius := _selected.ability.get_pin_radius(_selected)
+	var radius := _selected.ability.get_pin_radius(_selected)  # Pinhead: placing the pin does NOT use its flick
 	if radius <= 0.0:
 		return
 	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect):
 		"placed":
-			_use_up_turn_placing(_selected)
+			ui.show_your_turn("Pin placed. Drag anywhere to flick")
 		"removed":
 			ui.show_your_turn("Pin removed. Drag anywhere to flick")
 		_:

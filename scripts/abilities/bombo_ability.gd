@@ -2,7 +2,7 @@ class_name BomboAbility
 extends FigureAbility
 ## Explodes on its first hit after each flick, pushing nearby figures away.
 
-@export var explosion_radius := 160.0
+@export var explosion_radius := 224.0
 ## Push at the center of the blast; fades to zero at the edge. Like a flick force.
 @export var explosion_force := 900.0
 ## Upgrade: explode on EVERY hit instead of only the first after a flick.

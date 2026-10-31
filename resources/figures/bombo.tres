@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="Resource_1"]
 script = ExtResource("2")
-explosion_radius = 160.0
+explosion_radius = 224.0
 explosion_force = 900.0
 
 [resource]
