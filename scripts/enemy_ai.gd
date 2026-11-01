@@ -128,6 +128,11 @@ const TOUCH_MARGIN := 4.0
 @export var doused_target_bonus := 30.0
 ## Flicking one of our own figures through (or into) a player Alchemist's zone Douses it: penalty per zone crossed.
 @export var zone_path_penalty := 70.0
+## Player turrets fire during the enemy turn too: penalty for each one whose range covers a shot's path (its
+## pellets nudge and deflect the shooter)...
+@export var turret_path_penalty := 25.0
+## ...and a small bonus for each of OUR turrets whose range covers the target (its pellets help).
+@export var turret_support_bonus := 15.0
 @export var zone_grid_spacing := 90.0
 
 @export_group("Duwall shell")
@@ -447,6 +452,9 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
 		score += eater_eat_bonus if other.team == Figure.Team.PLAYER else -eater_ally_penalty
 
+	# Player turrets fire during our turn: their pellets nudge a shooter in range; our own turrets help near the target.
+	score -= turret_path_penalty * _turrets_covering(enemy.team, true, enemy.global_position, contact)
+	score += turret_support_bonus * _turrets_covering(enemy.team, false, contact, other.global_position)
 	# Passing through a player Alchemist's zone Douses our own figure.
 	score -= zone_path_penalty * _zone_crossings(enemy, enemy.global_position, contact)
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
@@ -468,6 +476,19 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score -= overpower_penalty * speed / max_speed
 
 	return {"kind": kind, "score": score, "direction": direction, "speed": speed, "distance": hit_distance}
+
+
+## How many turrets (the opposing team's if `opposing`, otherwise `team`'s own) have the segment from `from` to
+## `to` within range.
+func _turrets_covering(team: int, opposing: bool, from: Vector2, to: Vector2) -> int:
+	if _arena == null:
+		return 0
+	var side := (Figure.Team.PLAYER if team == Figure.Team.ENEMY else Figure.Team.ENEMY) if opposing else team
+	var count := 0
+	for turret in _arena.turrets_of(side):
+		if Geometry2D.get_closest_point_to_segment(turret.position, from, to).distance_to(turret.position) <= turret.range:
+			count += 1
+	return count
 
 
 ## How many player Alchemist zones the straight path from `from` to `to` touches (our figure would be Doused).

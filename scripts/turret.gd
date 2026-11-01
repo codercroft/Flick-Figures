@@ -1,8 +1,9 @@
 class_name Turret
 extends RigidBody2D
 ## An Engineer's turret: a weak, light, pin-like body that figures can knock around and off the table.
-## During the OPPOSING side's turn it fires a Pellet at the nearest opposing figure every `interval`
-## seconds (counted only while it may fire; the first shot comes `interval` after the turn starts).
+## During BOTH sides' turns it fires a Pellet at the nearest OPPOSING figure on the board every `interval`
+## seconds, but only while a turn's movement is in progress (Main.turret_may_fire: from a flick until the board has
+## settled). The cooldown is held full while it may not fire, so the first shot comes `interval` after a flick.
 ## It is not a Figure, so it never counts for winning or losing. It goes when its Engineer does.
 
 var owner_figure: Figure
@@ -56,8 +57,8 @@ func _physics_process(delta: float) -> void:
 		return
 	_flash = maxf(_flash - delta * 4.0, 0.0)
 	queue_redraw()
-	# Only the opposing side's turn counts: otherwise it waits with a full cooldown.
-	if combat.turret_side < 0 or combat.turret_side == team:
+	# Only while a turn's movement is in progress: otherwise it waits with a full cooldown.
+	if not combat.turret_may_fire:
 		_cooldown = stats.interval
 		return
 	var target := _nearest_target()

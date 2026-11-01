@@ -513,6 +513,15 @@ func place_turret(engineer: Figure, pos: Vector2, stats: Dictionary, board: Rect
 	return true
 
 
+## The turrets of `team`: [{position, range}] (the enemy AI weighs shots by which turrets can nudge them).
+func turrets_of(team: int) -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for turret in _turrets:
+		if is_instance_valid(turret) and not turret.is_queued_for_deletion() and turret.team == team:
+			list.append({"position": turret.position, "range": turret.stats.range})
+	return list
+
+
 func turret_of(engineer: Figure) -> Turret:
 	for turret in _turrets:
 		if is_instance_valid(turret) and turret.owner_figure == engineer:

@@ -85,6 +85,9 @@ var selected := false:
 		selected = value
 		queue_redraw()
 
+## Set when a turret's pellet hits this figure while it rests: the nudge alone does not count as "movement in
+## progress" (turrets stop firing once only pellet-driven figures are moving).
+var last_pellet_ms := -100000
 ## Pinhead / Alchemist / Engineer: this figure already placed its pin, zone or turret this turn (reset when a turn ends).
 var placed_this_turn := false
 ## Doused by an Alchemist's zone: rounds left, the rounds it started with (for the fade) and the knockback multiplier.
@@ -525,6 +528,11 @@ func _on_body_shape_entered(_body_rid: RID, body: Node, _body_shape: int, local_
 
 
 ## Below the settle speed right now (not necessarily stopped for good yet).
+## A pellet nudged this figure (from rest) a moment ago, so its motion is not a reason for turrets to keep firing.
+func is_pellet_driven() -> bool:
+	return Time.get_ticks_msec() - last_pellet_ms < 2500
+
+
 func is_slow() -> bool:
 	return linear_velocity.length() < stop_speed
 

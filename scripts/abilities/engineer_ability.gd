@@ -3,9 +3,9 @@ extends FigureAbility
 ## Rare. While the Engineer is selected and before it is flicked, the player can TAP any empty spot on
 ## the board to place ONE turret there (placing another replaces it; tap the turret to take it back).
 ## The turret is a weak, light, pin-like object: figures knock it around and off the table. During the
-## OPPOSING side's turn only, it fires a small pellet at the nearest opposing figure on the board
-## (not one waiting on the deck) every
-## `fire_interval` seconds. A pellet gives a small knockback (enough to nudge or deflect a moving
+## BOTH sides' turns it fires a small pellet at the nearest opposing figure on the board
+## (not one waiting on the deck) every `fire_interval` seconds, but only while a turn's movement is in progress
+## (from a flick until the board settles; Main.turret_may_fire), so it can never keep nudging figures forever. A pellet gives a small knockback (enough to nudge or deflect a moving
 ## figure, not to knock a resting one off from the middle of the board) and vanishes on a hit or after
 ## `pellet_range` px. An enemy Engineer places its turret at the start of the enemy turn, where it
 ## covers the player's likely flick lanes (see EnemyAI.choose_turret_spot).
@@ -15,7 +15,7 @@ extends FigureAbility
 @export var turret_radius := 30.0
 @export var turret_mass := 0.35
 @export var turret_damping := 3.0
-## Seconds between shots (only counted during the opposing side's turn).
+## Seconds between shots (only counted while a turn's movement is in progress).
 @export var fire_interval := 1.5
 @export_group("Pellet")
 ## Speed in px/s, how far it flies (px), and its knockback (a velocity change of a mass-1 figure, px/s).

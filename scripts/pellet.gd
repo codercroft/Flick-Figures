@@ -41,6 +41,8 @@ func _on_body_entered(body: Node) -> void:
 		var figure := body as Figure
 		if figure.team == team or figure.knocked_off:
 			return
+		if figure.is_slow():
+			figure.last_pellet_ms = Time.get_ticks_msec()  # a nudge of a resting figure: not "movement in progress"
 		figure.take_knockback.call_deferred(direction * impulse, owner_figure if is_instance_valid(owner_figure) else null)
 	queue_free()  # a figure, a wall or a pin
 

@@ -81,6 +81,11 @@ var _flick_kills := 0  # opposing figures knocked off since that flick started
 ## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn, and a
 ## Ghost only wraps on its own side's.
 var turret_side := -1
+## Turrets (Engineer) fire during BOTH sides' turns, but only while a turn's movement is in progress: between a
+## flick and the moment the board settles, and only while some figure that was not merely nudged by a pellet is still
+## moving (`turret_may_fire`, updated every physics frame). Pellets in flight never hold up the settle check.
+var turret_may_fire := false
+var _settling := false
 
 var _top_bar := TopBar.new()
 
@@ -156,6 +161,7 @@ func _exit_tree() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_knock_off_fallen_figures()
+	turret_may_fire = _settling and _state != State.GAME_OVER and _real_motion()
 
 
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
@@ -863,6 +869,22 @@ func _deck_line_breached() -> bool:
 
 ## Waits until every figure has stopped. Gives up after max_settle_time and stops them all.
 func _wait_until_settled() -> void:
+	_settling = true
+	await _wait_until_settled_inner()
+	_settling = false
+
+
+## True while something other than pellet nudges is moving (a flick, a slide, a projectile in flight).
+func _real_motion() -> bool:
+	if not get_tree().get_nodes_in_group("projectiles").is_empty():
+		return true
+	for figure in _all_figures():
+		if _is_alive(figure) and not figure.is_resting() and not figure.is_pellet_driven():
+			return true
+	return false
+
+
+func _wait_until_settled_inner() -> void:
 	await get_tree().create_timer(settle_delay).timeout
 	var waited := settle_delay
 	var next_print := settle_debug_after
