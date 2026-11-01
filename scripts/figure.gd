@@ -85,6 +85,8 @@ var selected := false:
 		selected = value
 		queue_redraw()
 
+## Pinhead / Alchemist / Engineer: this figure already placed its pin, zone or turret this turn (reset when a turn ends).
+var placed_this_turn := false
 ## Doused by an Alchemist's zone: rounds left, the rounds it started with (for the fade) and the knockback multiplier.
 var doused_rounds := 0
 var doused_full := 1

@@ -458,21 +458,6 @@ func _has_flick_left(figure) -> bool:
 
 
 ## Gives up this drag. The figure stays selected, so you can drag again.
-## Alchemist placed its zone: that was its whole action. It counts as its flick for the cycle (greyed out), but
-## it does not flick, and the player's turn ends (the enemy goes next).
-func _use_up_turn_placing(figure: Figure, text := "Zone placed!") -> void:
-	_take_snapshot()
-	figure.flickable = false
-	figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
-	figure.show_popup(text, Color(0.75, 0.85, 0.95))
-	_last_player_flicker = figure
-	_bonus_figure = null
-	_cancel_aim()
-	_deselect()
-	_state = State.SETTLING
-	_finish_player_turn()
-
-
 ## Blastoid fires at the tapped spot instead of moving. Like a flick, that is its action for the cycle.
 func _fire_shot(figure: Figure, pos: Vector2) -> void:
 	_take_snapshot()
@@ -493,9 +478,15 @@ func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
 		return
 	var turret := _selected.ability.get_turret_stats(_selected)
+	var places := not turret.is_empty() or not _selected.ability.get_zone_stats(_selected).is_empty() \
+			or _selected.ability.get_pin_radius(_selected) > 0.0
+	if places and _selected.placed_this_turn:  # one placement per turn, and it can't be moved again
+		ui.show_your_turn("Already placed this turn. Drag anywhere to flick")
+		return
 	if not turret.is_empty():  # Engineer
 		match arena.toggle_turret(_selected, pos, turret, board.board_rect):
 			"placed":
+				_selected.placed_this_turn = true
 				ui.show_your_turn("Turret placed. Drag anywhere to flick")
 			"removed":
 				ui.show_your_turn("Turret removed. Drag anywhere to flick")
@@ -506,9 +497,11 @@ func _tap_empty_board(pos: Vector2) -> void:
 		_fire_shot(_selected, pos)
 		return
 	var zone := _selected.ability.get_zone_stats(_selected)
-	if not zone.is_empty():  # Alchemist: placing the zone is its whole action
+	if not zone.is_empty():  # Alchemist: one zone a turn (a new one replaces the old); it can still flick after
 		if arena.place_zone(_selected, pos, zone, board.board_rect):
-			_use_up_turn_placing(_selected, "Zone placed!")
+			_selected.placed_this_turn = true
+			_selected.show_popup("Zone placed!", Color(0.8, 0.6, 1.0))
+			ui.show_your_turn("Zone placed. Drag anywhere to flick")
 		else:
 			ui.show_your_turn("Can't place a zone there")
 		return
@@ -517,6 +510,7 @@ func _tap_empty_board(pos: Vector2) -> void:
 		return
 	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect):
 		"placed":
+			_selected.placed_this_turn = true
 			ui.show_your_turn("Pin placed. Drag anywhere to flick")
 		"removed":
 			ui.show_your_turn("Pin removed. Drag anywhere to flick")
@@ -594,6 +588,7 @@ func _end_turn_for_all() -> void:
 	for figure in _all_figures():
 		if _is_alive(figure):
 			figure.ability.on_turn_ended(figure)
+			figure.placed_this_turn = false  # pins, zones and turrets can be placed again next turn
 
 
 func _run_enemy_turn() -> void:
@@ -611,6 +606,7 @@ func _run_enemy_turn() -> void:
 	if serial != _turn_serial:
 		return
 	_place_enemy_turrets()
+	_place_enemy_zones()
 	if _enemy_turns_taken == 0:
 		var wait := RunManager.relic_first_enemy_turn(self)  # Starter Walls: walls pop up before the first shot
 		if wait > 0.0:
@@ -645,18 +641,10 @@ func _run_enemy_turn() -> void:
 		choice = await _takeover_choice(choice, serial)  # a Bummer's aura replaces the shot
 		if serial != _turn_serial or not _is_alive(choice.enemy):
 			return
-		if choice.has("zone_only"):
-			# An enemy Alchemist's whole action is placing its debuff zone.
-			arena.place_zone(choice.enemy, choice.zone, choice.zone_stats, board.board_rect)
-			choice.enemy.show_popup("Zone!", Color(0.8, 0.6, 1.0))
-			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
-			await _wait_until_settled()
-			if serial != _turn_serial:
-				return
-			continue
 		if choice.has("pin_only"):
 			# An enemy Pinhead's whole action is placing a pin (for an ally's bank shot): no flick this time.
 			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
+			choice.enemy.placed_this_turn = true
 			choice.enemy.show_popup("Pin!", Color(0.75, 0.85, 0.95))
 			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
 			await _wait_until_settled()
@@ -686,7 +674,7 @@ func _run_enemy_turn() -> void:
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
 				return
-			if extra.is_empty() or extra.has("pin_only") or extra.has("zone_only") or extra.has("shot_point") or not _is_alive(shooter):
+			if extra.is_empty() or extra.has("pin_only") or extra.has("shot_point") or not _is_alive(shooter):
 				break
 			if bloodlust:
 				shooter.bonus_flicks_used += 1
@@ -779,7 +767,7 @@ func _enemy_flicks_now() -> int:
 ## then a shot that tries to knock itself off and hit its own teammates replaces the planned one.
 func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 	var enemy = choice.enemy  # untyped: it may fall off and be freed while we wait
-	if choice.has("pin_only") or choice.has("zone_only") or not _is_alive(enemy) or enemy.bummer_effect().is_empty():
+	if choice.has("pin_only") or not _is_alive(enemy) or enemy.bummer_effect().is_empty():
 		return choice
 	enemy.show_popup("Bummed out!", Color(0.8, 0.5, 1.0))
 	await get_tree().create_timer(takeover_delay).timeout
@@ -805,7 +793,23 @@ func _place_enemy_turrets() -> void:
 			continue
 		var spot := ai.choose_turret_spot(enemy, _players, _enemies, stats, arena, board.board_rect, board.get_table_rect())
 		if spot != Vector2.INF:
-			arena.place_turret(enemy, spot, stats, board.board_rect)
+			if arena.place_turret(enemy, spot, stats, board.board_rect):
+				enemy.placed_this_turn = true
+
+
+## Enemy Alchemists put their debuff zone where it catches the most player figures: at the start of the enemy turn,
+## at most once per turn, and it does not cost a flick (like the player's).
+func _place_enemy_zones() -> void:
+	for enemy in _enemies:
+		if not _is_alive(enemy) or enemy.placed_this_turn:
+			continue
+		var stats := enemy.ability.get_zone_stats(enemy)
+		if stats.is_empty():
+			continue
+		var spot := ai.choose_zone_spot(enemy, _players)
+		if spot != Vector2.INF and arena.place_zone(enemy, spot, stats, board.board_rect):
+			enemy.placed_this_turn = true
+			enemy.show_popup("Zone!", Color(0.8, 0.6, 1.0))
 
 
 ## When every enemy that can flick has flicked, the enemy side's cycle resets (they could all flick again):

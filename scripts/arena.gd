@@ -426,9 +426,9 @@ func remove_shield_wall(owner_figure: Figure) -> void:
 
 ## Places the Alchemist's zone at `pos` (its old one goes) if the spot is empty. Returns whether it was placed.
 func place_zone(owner_figure: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> bool:
-	remove_zone(owner_figure)
 	if not is_spot_free(get_world_2d().direct_space_state, board, pos, 30.0):
-		return false
+		return false  # blocked: the old zone stays
+	remove_zone(owner_figure)  # one zone per Alchemist: the new one replaces the old
 	var zone := AlchemyZone.new()
 	zone.radius = stats.radius
 	zone.knockback = stats.knockback

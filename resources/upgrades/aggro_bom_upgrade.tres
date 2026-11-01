@@ -7,5 +7,5 @@
 script = ExtResource("1")
 figure = ExtResource("2")
 display_name = "Hair Trigger"
-description = "Only needs 2 different collisions to explode."
-ability_overrides = {"collisions_needed": 2}
+description = "Only needs 3 collisions to explode."
+ability_overrides = {"collisions_needed": 3}

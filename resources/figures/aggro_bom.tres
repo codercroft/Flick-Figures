@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Aggro-bom"
-description = "Bump 3 different figures in one turn and it explodes big."
+description = "Explodes big after 4 collisions. The count carries over."
 rarity = 1
 label = "AG"
 icon = 7

@@ -229,8 +229,6 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 	if best.is_empty():
 		return {}
 	# Small random aim error: worse accuracy = bigger error.
-	if best.kind == "zone":  # Alchemist's whole action is placing its zone
-		return {"enemy": best_enemy, "zone": best.zone, "zone_stats": best.zone_stats, "zone_only": true}
 	if best.kind == "shot":  # Blastoid fires at a point (aim error moves the point)
 		var spread := randf_range(-_aim_error(best_enemy), _aim_error(best_enemy))
 		var offset: Vector2 = (best.point - best_enemy.global_position).rotated(spread)
@@ -351,7 +349,7 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 
 	# Pinhead: placing a pin uses up its whole turn (it cannot flick too), so it only does so when another
 	# enemy figure can bank a shot off that pin next.
-	if enemy.ability.get_pin_radius(enemy) > 0.0:
+	if enemy.ability.get_pin_radius(enemy) > 0.0 and not enemy.placed_this_turn:  # one pin per turn
 		var setup := _best_pin_setup(enemy, players, table, max_force, tier)
 		if not setup.is_empty() and setup.score >= min_attack_score and (best.is_empty() or setup.score > best.score):
 			best = setup
@@ -362,12 +360,6 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 		if not projectile.is_empty() and projectile.score >= min_attack_score \
 				and (best.is_empty() or projectile.score > best.score):
 			best = projectile
-
-	# Alchemist: spending the turn on a debuff zone that catches player figures.
-	if not enemy.ability.get_zone_stats(enemy).is_empty():
-		var zone := _best_zone_setup(enemy, players)
-		if not zone.is_empty() and (best.is_empty() or zone.score > best.score):
-			best = zone
 
 	if best.is_empty() or best.score < min_attack_score:
 		var move := _choose_reposition(enemy, shape, players, table)
@@ -490,8 +482,7 @@ func _zone_crossings(enemy: Figure, from: Vector2, to: Vector2) -> int:
 	return count
 
 
-## Aggro-bom: a shot that runs through enough DIFFERENT figures (it needs `needed` minus the ones it has already
-## bumped this turn) sets off its big explosion where the last one is met, so it likes lines through clusters.
+## Aggro-bom: a shot that runs through enough figures (it needs `needed` minus the collisions it has already counted) sets off its big explosion where the last one is met, so it likes lines through clusters.
 ## The path is the straight line (deflections are not followed); allies in the way count as collisions too, and
 ## `_blast_value` already counts hurt allies against the shot.
 func _aggro_value(enemy: Figure, direction: Vector2, distance: float, players: Array[Figure], table: Rect2) -> float:
@@ -1337,6 +1328,13 @@ func _chain_blast_value(source: Figure, center: Vector2, radius: float, players:
 
 ## Alchemist: the empty spot where a debuff zone would catch the most player figures (nearer its middle counts
 ## more). Only worth it if clearly better than what our existing zone already covers.
+## Where an enemy Alchemist should put its zone this turn (Vector2.INF = keep the current one / nowhere good).
+func choose_zone_spot(enemy: Figure, players: Array[Figure]) -> Vector2:
+	_prepare()
+	var setup := _best_zone_setup(enemy, players)
+	return setup.zone if not setup.is_empty() else Vector2.INF
+
+
 func _best_zone_setup(enemy: Figure, players: Array[Figure]) -> Dictionary:
 	var stats := enemy.ability.get_zone_stats(enemy)
 	var combat = RunManager.combat

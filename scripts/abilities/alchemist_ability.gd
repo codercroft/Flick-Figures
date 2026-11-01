@@ -1,9 +1,9 @@
 class_name AlchemistAbility
 extends FigureAbility
-## Instead of flicking, the Alchemist can spend its turn tapping an empty spot on the board to place a small
-## debuff zone there: opposing figures inside it take extra knockback. The zone lasts until the Alchemist's side's
-## flick cycle resets, and placing it counts as the Alchemist's action for the cycle. One zone per Alchemist
-## (a new one replaces the old). It can still flick normally instead.
+## Tapping an empty spot on the board places a small debuff zone there: opposing figures inside it take extra
+## knockback. At most ONE placement per turn (locked in, no moving it until the next turn) and it does NOT use up
+## the Alchemist's flick: it can place and then flick. The zone lasts until the Alchemist's side's flick cycle
+## resets; one zone per Alchemist (placing on a later turn replaces the old one).
 ## Any opposing figure that touches or passes through the zone is "Doused": it keeps the extra knockback for
 ## `douse_rounds` rounds even after it leaves the zone. Touching a zone again refreshes the time (no stacking).
 
