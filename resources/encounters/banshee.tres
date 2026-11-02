@@ -17,4 +17,4 @@ display_name = "Banshee"
 enemies = Array[ExtResource("1")]([SubResource("enemy_0")])
 arena = ExtResource("11")
 enemy_flicks_per_turn = 1
-acts = Array[int]([1, 2, 3])
+acts = Array[int]([2])

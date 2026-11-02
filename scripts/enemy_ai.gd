@@ -118,6 +118,11 @@ const TOUCH_MARGIN := 4.0
 ## Eater: hitting a smaller figure eats it (worth about a knock-off); the same figure on our own side is a loss.
 @export var eater_eat_bonus := 150.0
 @export var eater_ally_penalty := 180.0
+## Goo Chain Glue Guy: bonus per extra player figure close to the target that the chain could pick up, and how close.
+@export var glue_chain_bonus := 60.0
+@export var glue_chain_reach := 150.0
+## The Collector's Eater: eating its own smaller teammate is worth this (it grows), on top of cancelling the ally-hit penalty.
+@export var eater_feed_bonus := 160.0
 ## Shieldon: hitting a Shieldon with a wall up moves it and drops the wall.
 @export var shield_break_bonus := 40.0
 ## Blastoid: extra value of a projectile that hits a player figure directly (on top of its blast).
@@ -336,6 +341,21 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 					shot["target"] = target  # who it is aimed at (Lucky Charm adds aim error)
 					best = shot
 
+	# The Collector's Eater: aim straight at a smaller teammate to eat it and grow.
+	if enemy.ability.wants_ally_food(enemy):
+		for node in get_tree().get_nodes_in_group("figures"):
+			var food := node as Figure
+			if food == null or food == enemy or food.team != enemy.team or food.knocked_off or food.radius >= enemy.radius or food.data.uneatable:
+				continue
+			var to_food := food.global_position - enemy.global_position
+			if to_food.is_zero_approx():
+				continue
+			for level in levels:
+				var shot := _score_attack(enemy, shape, to_food.normalized(), level * top_speed, top_speed, players, table, tier)
+				if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
+					shot["target"] = food
+					best = shot
+
 	# Sneaky Bomber: stop on an empty spot next to player figures so the explosion catches them.
 	var free_blast := _best_free_blast(enemy, shape, players, table, top_speed, tier)
 	if not free_blast.is_empty() and free_blast.score >= min_attack_score and (best.is_empty() or free_blast.score > best.score):
@@ -450,7 +470,20 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score += combo * weight
 	# Eater: touching a smaller figure eats it.
 	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
-		score += eater_eat_bonus if other.team == Figure.Team.PLAYER else -eater_ally_penalty
+		if other.team == Figure.Team.PLAYER:
+			score += eater_eat_bonus
+		elif enemy.ability.wants_ally_food(enemy):
+			score += eater_feed_bonus + ally_hit_penalty  # cancels the generic ally-hit penalty: feeding is the plan
+		else:
+			score -= eater_ally_penalty
+	# Goo Chain Glue Guy: a hit glues it to the target, and the chain can reach player figures close to the target.
+	if other.team == Figure.Team.PLAYER and enemy.ability.get_glue_chain_cap(enemy) > 2:
+		var room: int = enemy.ability.get_glue_chain_cap(enemy) - 2
+		var joined := 0
+		for player in players:
+			if player != other and is_instance_valid(player) and player.global_position.distance_to(other.global_position) <= glue_chain_reach + player.radius:
+				joined += 1
+		score += glue_chain_bonus * mini(joined, room) * weight
 
 	# Player turrets fire during our turn: their pellets nudge a shooter in range; our own turrets help near the target.
 	score -= turret_path_penalty * _turrets_covering(enemy.team, true, enemy.global_position, contact)
@@ -771,7 +804,7 @@ func _first_hit_along(shooter: Figure, shape: CircleShape2D, sim: Dictionary) ->
 ## a get_ai_blast() dictionary; `source` (the exploding figure) and `spared` are not pushed.
 func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Figure,
 		players: Array[Figure], table: Rect2) -> float:
-	var radius: float = blast.radius * RunManager.relic_explosion_multiplier()
+	var radius: float = blast.radius * RunManager.relic_explosion_multiplier(Figure.Team.ENEMY)
 	var force: float = blast.force * RunManager.explosion_force_multiplier()
 	var total := 0.0
 	_fast_slides = true

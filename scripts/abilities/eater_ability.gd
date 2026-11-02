@@ -11,6 +11,8 @@ extends FigureAbility
 ## Eater never grows past these.
 @export var max_radius := 110.0
 @export var max_mass := 4.0
+## The Collector elite sets this: the enemy AI feeds Eater its own smaller teammates to grow.
+@export var feeds_on_allies := false
 
 
 func on_hit(figure: Figure, other: Figure) -> void:
@@ -28,3 +30,7 @@ func on_hit(figure: Figure, other: Figure) -> void:
 
 func eats_smaller(_figure: Figure) -> bool:
 	return true
+
+
+func wants_ally_food(_figure: Figure) -> bool:
+	return feeds_on_allies

@@ -10,6 +10,9 @@ extends Resource
 @export var positions: Array[Vector2] = []
 ## Equipment every copy of this enemy always carries (on top of nothing else: it replaces the random roll).
 @export var equipment: EquipmentData
+## A finish and a figure-specific upgrade every copy always carries (Glue Gang's Goo Chain).
+@export var finish: FinishData
+@export var upgrade: UpgradeData
 @export_group("Boosts")
 @export var mass_multiplier := 1.0
 @export var flick_power_multiplier := 1.0
@@ -18,9 +21,13 @@ extends Resource
 @export var bounce_bonus := 0.0
 ## Multiplies the figure's ability numbers (radius, pull, bounce...): same list as Glow-in-the-dark.
 @export var ability_strength := 1.0
+## Size (radius) multiplier: Big Brother's oversized Duwall.
+@export var size_multiplier := 1.0
+## Exact ability values to set on every copy, by property name (Big Brother: {"shell_strength": 16000.0}).
+@export var ability_values := {}
 
 
 ## The boost as a stat-scale dictionary (what Figure.setup reads).
 func boost() -> Dictionary:
 	return {"mass": mass_multiplier, "power": flick_power_multiplier, "accuracy": accuracy_multiplier,
-			"bounce": bounce_bonus, "ability": ability_strength}
+			"bounce": bounce_bonus, "ability": ability_strength, "size": size_multiplier, "ability_values": ability_values}

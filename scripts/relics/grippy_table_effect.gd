@@ -8,3 +8,8 @@ extends RelicEffect
 
 func get_player_damping_multiplier() -> float:
 	return 1.0 / (1.0 - shorter_slide)
+
+
+## Enemy version: enemy figures slide 30% shorter (more control).
+func get_enemy_damping_multiplier() -> float:
+	return 1.0 / (1.0 - shorter_slide)

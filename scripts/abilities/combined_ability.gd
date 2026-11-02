@@ -115,6 +115,10 @@ func eats_smaller(figure: Figure) -> bool:
 	return first.eats_smaller(figure) or second.eats_smaller(figure)
 
 
+func wants_ally_food(figure: Figure) -> bool:
+	return first.wants_ally_food(figure) or second.wants_ally_food(figure)
+
+
 func get_bloodlust_cap(figure: Figure) -> int:
 	return maxi(first.get_bloodlust_cap(figure), second.get_bloodlust_cap(figure))
 

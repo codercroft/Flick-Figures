@@ -12,3 +12,12 @@ func get_knockback_taken_multiplier(figure: Figure, _source: Figure) -> float:
 		return 1.0
 	var board: Rect2 = main.board.board_rect
 	return knockback_multiplier if figure.global_position.y >= board.position.y + board.size.y * 2.0 / 3.0 else 1.0
+
+
+## Enemy version: half knockback for enemy figures in the top third of the board (their home).
+func get_enemy_knockback_taken_multiplier(figure: Figure, _source: Figure) -> float:
+	var main = RunManager.combat
+	if main == null or figure.team != Figure.Team.ENEMY:
+		return 1.0
+	var board: Rect2 = main.board.board_rect
+	return knockback_multiplier if figure.global_position.y <= board.position.y + board.size.y / 3.0 else 1.0

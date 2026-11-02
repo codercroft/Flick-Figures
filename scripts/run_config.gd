@@ -19,6 +19,8 @@ extends Resource
 @export var event_pool: Array[EventData] = []
 ## Rewards and opponent strength for the minigame events.
 @export var minigames: MinigameConfig
+## How elite encounters scale by act (stat boost, guaranteed gear, enemy relics, reward choices).
+@export var elite_config: EliteConfig
 ## How likely enemies are to carry finishes, equipment and upgrades in later acts.
 @export var enemy_gear: EnemyGearConfig
 ## Boss fights always use this arena (the fully open layout: no walls, pins or patches).

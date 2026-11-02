@@ -94,6 +94,7 @@ var _top_bar := TopBar.new()
 var player_flicks := 0
 ## Second Wind: set once it has brought a figure back this combat.
 var second_wind_used := false
+var enemy_flicks_made := 0  # enemy flicks this combat (the Opening Act enemy relic doubles the first)
 var _enemy_turns_taken := 0  # enemy turns started this combat (relics act on the first)
 var _figures_lost := 0  # player figures knocked off for good (Clean Sheet)
 
@@ -139,6 +140,12 @@ func _ready() -> void:
 		banner.append(RunManager.arena.display_name)
 	if RunManager.penalty_text != "":
 		banner.append(RunManager.penalty_text)
+	if not RunManager.enemy_relics.is_empty():
+		var relic_names: Array[String] = []
+		for relic in RunManager.enemy_relics:
+			relic_names.append("%s: %s" % [relic.display_name, relic.description])
+		banner.append("Enemy relic - " + ", ".join(relic_names))
+		ui.show_enemy_relics("Enemy relic: " + ", ".join(RunManager.enemy_relics.map(func(r): return r.display_name)), TopBar.height() + 8.0)
 	if not banner.is_empty():
 		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
 	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom)
@@ -152,6 +159,15 @@ func _ready() -> void:
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
+	_place_opening_turrets()
+
+
+## Enemy Engineers (Siege) have their turret up from the very start of the combat, before the player's first flick.
+func _place_opening_turrets() -> void:
+	await get_tree().physics_frame  # the spots are checked in the physics space
+	if not is_inside_tree() or _state == State.GAME_OVER:
+		return
+	_place_enemy_turrets()
 
 
 func _exit_tree() -> void:
@@ -662,6 +678,7 @@ func _run_enemy_turn() -> void:
 			_on_any_flick(choice.enemy, Vector2.ZERO)
 		else:
 			choice.enemy.launch(choice.impulse)
+		enemy_flicks_made += 1
 		await _wait_until_settled()
 		if serial != _turn_serial:
 			return
@@ -1007,7 +1024,7 @@ func _spawn_enemies() -> void:
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
 		finish: FinishData = null, upgrade: UpgradeData = null, scale := {}, elite := false) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else 1.0)
+	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else RunManager.enemy_relic_damping())
 	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade, scale, elite)
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.flicked.connect(_on_any_flick)

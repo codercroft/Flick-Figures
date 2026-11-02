@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/firecracker.tres" id="f_firecracker"]
+[ext_resource type="Resource" path="res://resources/figures/aggro_bom.tres" id="f_aggro_bom"]
+[ext_resource type="Resource" path="res://resources/figures/bombo.tres" id="f_bombo"]
+
+[sub_resource type="Resource" id="enemy_0"]
+script = ExtResource("1")
+figure = ExtResource("f_firecracker")
+count = 1
+positions = Array[Vector2]([Vector2(450, 230)])
+
+[sub_resource type="Resource" id="enemy_1"]
+script = ExtResource("1")
+figure = ExtResource("f_aggro_bom")
+count = 1
+positions = Array[Vector2]([Vector2(330, 170)])
+
+[sub_resource type="Resource" id="enemy_2"]
+script = ExtResource("1")
+figure = ExtResource("f_bombo")
+count = 2
+positions = Array[Vector2]([Vector2(570, 170), Vector2(450, 340)])
+
+[resource]
+script = ExtResource("2")
+display_name = "Powder Keg"
+enemies = Array[ExtResource("1")]([SubResource("enemy_0"), SubResource("enemy_1"), SubResource("enemy_2")])
+enemy_flicks_per_turn = 1
+acts = Array[int]([2])
+fill_with_grunts = true

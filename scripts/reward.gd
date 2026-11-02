@@ -47,12 +47,16 @@ func _earned_text() -> String:
 	return ""
 
 
+var _relic_step := {}  # the current step (the relic choices read its fields)
+
+
 func _next_step() -> void:
 	if _steps.is_empty():
 		RunManager.finish_rewards()
 		get_tree().change_scene_to_file(MAP_SCENE)
 		return
 	var step: Dictionary = _steps.pop_front()
+	_relic_step = step
 	_lucky = step.get("lucky", false)
 	AudioManager.play_reveal()  # a new reward is shown
 	match step.kind:
@@ -122,7 +126,11 @@ func _on_replace_chosen(slot: int) -> void:
 
 ## Boss: pick 1 of N relics you don't have yet.
 func _show_relic_choices() -> void:
-	var choices := RunManager.random_boss_relics(RunManager.config.rewards.boss_relic_choices)
+	var choices: Array[RelicData] = []
+	if _relic_step.get("elite", false):  # act 3 elites: N random new relics (never Boss ones)
+		choices = RunManager.random_new_relics(int(_relic_step.get("count", 3)))
+	else:
+		choices = RunManager.random_boss_relics(RunManager.config.rewards.boss_relic_choices)
 	if choices.is_empty():
 		_next_step()
 		return

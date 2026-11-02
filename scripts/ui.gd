@@ -51,6 +51,26 @@ func show_banner(lines: Array[String], first_color := Color.WHITE) -> void:
 	_banner_tween.tween_callback(arena_label.hide)
 
 
+var _enemy_relic_label: Label
+
+## A small red line under the top bar naming the relics the enemy side carries (empty hides it).
+func show_enemy_relics(text: String, top_offset: float) -> void:
+	if _enemy_relic_label == null:
+		_enemy_relic_label = Label.new()
+		_enemy_relic_label.add_theme_font_size_override("font_size", 34)
+		_enemy_relic_label.add_theme_color_override("font_color", Color(1, 0.55, 0.5))
+		_enemy_relic_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		_enemy_relic_label.add_theme_constant_override("outline_size", 8)
+		_enemy_relic_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_enemy_relic_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_enemy_relic_label)
+		_enemy_relic_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_enemy_relic_label.offset_top = top_offset
+	_enemy_relic_label.offset_bottom = top_offset + 50.0
+	_enemy_relic_label.text = text
+	_enemy_relic_label.visible = text != ""
+
+
 ## Small orange readout (empty text hides it). Used to show what the turn is waiting for.
 func show_debug(text: String) -> void:
 	debug_label.text = text

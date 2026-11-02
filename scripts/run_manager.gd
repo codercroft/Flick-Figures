@@ -60,6 +60,12 @@ var penalty_text := ""
 var enemy_gear: Array[Dictionary] = []
 ## Equipment an encounter forces onto an enemy (parallel to `enemies`, null = roll as usual).
 var enemy_forced_equipment: Array[EquipmentData] = []
+## A finish / upgrade an encounter forces onto an enemy (parallel to `enemies`, null = none).
+var enemy_forced_finish: Array[FinishData] = []
+var enemy_forced_upgrade: Array[UpgradeData] = []
+## True while the current combat is an elite encounter, and the relics the enemy side carries in it (act 3 elites).
+var elite_encounter := false
+var enemy_relics: Array[RelicData] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
@@ -181,8 +187,29 @@ func _relic_product(method: StringName, args := []) -> float:
 	return result
 
 
-func relic_explosion_multiplier() -> float:
-	return _relic_product(&"get_explosion_radius_multiplier")
+func relic_explosion_multiplier(team := -1) -> float:
+	var multiplier := _relic_product(&"get_explosion_radius_multiplier")
+	if team == Figure.Team.ENEMY:  # Blast Cap carried by the enemy side (act 3 elites): its own explosions only
+		multiplier *= _enemy_relic_product(&"get_enemy_explosion_radius_multiplier")
+	return multiplier
+
+
+## The product of an enemy-relic hook over the relics the enemy side carries this combat.
+func _enemy_relic_product(method: StringName, args := []) -> float:
+	var result := 1.0
+	for relic in enemy_relics:
+		if relic.effect != null:
+			result *= relic.effect.callv(method, args)
+	return result
+
+
+## The flick power multiplier of the enemy relics for an enemy figure.
+func enemy_relic_power(main, figure: Figure) -> float:
+	return _enemy_relic_product(&"get_enemy_flick_power_multiplier", [main, figure])
+
+
+func enemy_relic_damping() -> float:
+	return _enemy_relic_product(&"get_enemy_damping_multiplier")
 
 
 func relic_flick_multiplier(main, figure: Figure) -> float:
@@ -199,7 +226,10 @@ func explosion_force_multiplier() -> float:
 
 
 func relic_knockback_taken(figure: Figure, source: Figure) -> float:
-	return _relic_product(&"get_knockback_taken_multiplier", [figure, source])
+	var multiplier := _relic_product(&"get_knockback_taken_multiplier", [figure, source])
+	if not enemy_relics.is_empty():
+		multiplier *= _enemy_relic_product(&"get_enemy_knockback_taken_multiplier", [figure, source])
+	return multiplier
 
 
 func relic_pull_multiplier() -> float:
@@ -388,8 +418,12 @@ func build_rewards() -> void:
 	_add_harder_fight_bonus()
 	match node.type:
 		MapNode.Type.ELITE:
-			for i in rewards.elite_guaranteed_relics:
-				reward_steps.append({"kind": "relic"})
+			var choices: int = config.elite_config.reward_choices(act) if config.elite_config != null else 1
+			if choices > 1:  # act 3 elites: pick 1 of N relics
+				reward_steps.append({"kind": "relics", "count": choices, "elite": true})
+			else:
+				for i in rewards.elite_guaranteed_relics:
+					reward_steps.append({"kind": "relic"})
 			reward_steps.append({"kind": "figures"})
 			_add_bonus_items()
 			_roll_drop("power", rewards.elite_power_chance)
@@ -458,6 +492,8 @@ func enemy_scale(index := -1) -> Dictionary:
 		scale.mass *= boost.mass
 		scale["bounce"] = boost.bounce
 		scale["ability"] = boost.ability
+		scale["size"] = boost.get("size", 1.0)
+		scale["ability_values"] = boost.get("ability_values", {})
 	return scale
 
 
@@ -682,6 +718,10 @@ func _build_lineup() -> void:
 	enemy_positions.clear()
 	enemy_gear.clear()
 	enemy_forced_equipment.clear()
+	enemy_forced_finish.clear()
+	enemy_forced_upgrade.clear()
+	enemy_relics.clear()
+	elite_encounter = false
 	encounter_name = ""
 	encounter_arena = null
 	enemy_flick_per_unit = false
@@ -693,6 +733,7 @@ func _build_lineup() -> void:
 	var encounter: EncounterData = null
 	if node.type == MapNode.Type.ELITE:
 		encounter = _pick_encounter()
+		elite_encounter = encounter != null
 	elif node.type == MapNode.Type.COMBAT:
 		if first_combat_played:
 			encounter = _pick_regular_encounter()  # (the very first combat is plain Grunts: no encounter)
@@ -734,13 +775,57 @@ func _build_lineup() -> void:
 	var tougher := node.type == MapNode.Type.ELITE or node.type == MapNode.Type.BOSS
 	while enemy_forced_equipment.size() < enemies.size():
 		enemy_forced_equipment.append(null)
+	while enemy_forced_finish.size() < enemies.size():
+		enemy_forced_finish.append(null)
+	while enemy_forced_upgrade.size() < enemies.size():
+		enemy_forced_upgrade.append(null)
+	var guaranteed: bool = elite_encounter and config.elite_config != null and config.elite_config.gear_guaranteed(act)
 	for i in enemies.size():
-		var gear := _roll_enemy_gear(enemies[i], tougher)
+		var gear := _roll_enemy_gear(enemies[i], tougher) if not elite_encounter else {"finish": null, "equipment": null, "upgrade": null}
+		if guaranteed:
+			gear = _guaranteed_gear(enemies[i])
 		if enemy_forced_equipment[i] != null:
 			gear.equipment = enemy_forced_equipment[i]
+		if enemy_forced_finish[i] != null:
+			gear.finish = enemy_forced_finish[i]
+		if enemy_forced_upgrade[i] != null:
+			gear.upgrade = enemy_forced_upgrade[i]
 		enemy_gear.append(gear)
+	if elite_encounter:
+		_pick_enemy_relics()
 	_apply_minigame_penalty()
 	_pick_arena()
+
+
+## Elite encounters in acts 2-3: one compatible gear item that suits this figure's role (equipment or a finish,
+## never economy / player-only equipment).
+func _guaranteed_gear(figure: FigureData) -> Dictionary:
+	var gear := {"finish": null, "equipment": null, "upgrade": null}
+	var items: Array[EquipmentData] = []
+	for item in config.equipment_pool:
+		if not item.economy and not item.player_only:
+			items.append(item)
+	var want_equipment := randf() < config.elite_config.equipment_share
+	if want_equipment:
+		gear.equipment = GearRules.pick(items, figure)
+		if gear.equipment == null:
+			gear.finish = GearRules.pick(config.finish_pool, figure)
+	else:
+		gear.finish = GearRules.pick(config.finish_pool, figure)
+		if gear.finish == null:
+			gear.equipment = GearRules.pick(items, figure)
+	return gear
+
+
+## Act 3 elites: the enemy side carries `elite_config.relics_for(act)` relics from the enemy relic pool.
+func _pick_enemy_relics() -> void:
+	enemy_relics.clear()
+	if config.elite_config == null:
+		return
+	var pool := config.elite_config.enemy_relic_pool.duplicate()
+	pool.shuffle()
+	for i in mini(config.elite_config.relics_for(act), pool.size()):
+		enemy_relics.append(pool[i])
 
 
 ## Rolls what one enemy carries. Never economy or player-only equipment, and only gear that does
@@ -804,7 +889,14 @@ func _build_encounter(encounter: EncounterData) -> void:
 			enemy_elite.append(false)
 			enemy_boosts.append(entry.boost())
 			enemy_forced_equipment.append(entry.equipment)
+			enemy_forced_finish.append(entry.finish)
+			enemy_forced_upgrade.append(entry.upgrade)
 			enemy_positions.append(entry.positions[i] if i < entry.positions.size() else Vector2.INF)
+			if elite_encounter and config.elite_config != null:  # the act's elite stat boost (small in act 1)
+				var extra := config.elite_config.boost_for(act)
+				enemy_boosts[-1].mass *= extra.mass
+				enemy_boosts[-1].power *= extra.power
+				enemy_boosts[-1].accuracy *= extra.accuracy
 	if encounter.mirror_deck:
 		_add_mirror_enemies(encounter)
 	if encounter.fill_with_grunts:
@@ -816,17 +908,25 @@ func _build_encounter(encounter: EncounterData) -> void:
 ## Mirror Match: one enemy per slot of the act's enemy count, cycling through the figure types of the
 ## player's current deck (economy figures, which enemies never use, become Grunts), all boosted.
 func _add_mirror_enemies(encounter: EncounterData) -> void:
-	var types: Array[FigureData] = []
-	for figure in deck:
-		types.append(config.registry.random_grunt() if config.registry.economy.has(figure) else figure)
-	types.shuffle()
+	var slots: Array[int] = []
+	for slot in deck.size():
+		slots.append(slot)
+	slots.shuffle()
 	var boost := {"mass": encounter.mirror_mass_multiplier, "power": encounter.mirror_power_multiplier,
 			"accuracy": encounter.mirror_accuracy_multiplier, "bounce": 0.0, "ability": 1.0}
 	for i in config.difficulty.enemy_count(act):
-		enemies.append(types[i % types.size()])
+		var slot := slots[i % slots.size()]
+		var figure := deck[slot]
+		var economy := config.registry.economy.has(figure)
+		enemies.append(config.registry.random_grunt() if economy else figure)
 		enemy_elite.append(false)
 		enemy_boosts.append(boost.duplicate())
 		enemy_positions.append(Vector2.INF)
+		# Copies of the player's equipment (never economy / player-only items), finish and upgrade for that figure.
+		var item := deck_equipment[slot]
+		enemy_forced_equipment.append(item if item != null and not economy and not item.economy and not item.player_only else null)
+		enemy_forced_finish.append(null if economy else deck_finish[slot])
+		enemy_forced_upgrade.append(null if economy else deck_upgrade[slot])
 
 
 ## Tops the lineup up to the act's enemy count with Grunts in free spots: the spot farthest from
@@ -861,6 +961,10 @@ func _add_grunt(arena_data: ArenaData) -> void:
 	enemy_elite.append(false)
 	enemy_boosts.append({})
 	enemy_positions.append(best)
+	if enemy_forced_equipment.size() == enemies.size() - 1:  # (the forced lists are padded together)
+		enemy_forced_equipment.append(null)
+		enemy_forced_finish.append(null)
+		enemy_forced_upgrade.append(null)
 
 
 ## The minigame penalty, if set: the next combat gets +1 Grunt or one enemy gets a compatible finish,

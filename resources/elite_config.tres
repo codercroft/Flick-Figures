@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EliteConfig" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/elite_config.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/relic_data.gd" id="rd"]
+[ext_resource type="Resource" path="res://resources/relics/blast_cap.tres" id="r1"]
+[ext_resource type="Resource" path="res://resources/relics/home_field.tres" id="r2"]
+[ext_resource type="Resource" path="res://resources/relics/underdog.tres" id="r3"]
+[ext_resource type="Resource" path="res://resources/relics/bully.tres" id="r4"]
+[ext_resource type="Resource" path="res://resources/relics/grippy_table.tres" id="r5"]
+[ext_resource type="Resource" path="res://resources/relics/last_one_standing.tres" id="r6"]
+[ext_resource type="Resource" path="res://resources/relics/opening_act.tres" id="r7"]
+
+[resource]
+script = ExtResource("1")
+boost_mass = Array[float]([1.05, 1.0, 1.0])
+boost_power = Array[float]([1.05, 1.0, 1.0])
+boost_accuracy = Array[float]([1.05, 1.0, 1.0])
+guaranteed_gear = Array[bool]([false, true, true])
+equipment_share = 0.5
+enemy_relic_count = Array[int]([0, 0, 1])
+enemy_relic_pool = Array[ExtResource("rd")]([ExtResource("r1"), ExtResource("r2"), ExtResource("r3"), ExtResource("r4"), ExtResource("r5"), ExtResource("r6"), ExtResource("r7")])
+relic_choices = Array[int]([1, 1, 3])

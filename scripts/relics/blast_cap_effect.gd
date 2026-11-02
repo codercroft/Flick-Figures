@@ -8,3 +8,7 @@ extends RelicEffect
 
 func get_explosion_radius_multiplier() -> float:
 	return radius_multiplier
+
+
+func get_enemy_explosion_radius_multiplier() -> float:
+	return radius_multiplier

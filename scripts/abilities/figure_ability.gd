@@ -175,6 +175,11 @@ func eats_smaller(_figure: Figure) -> bool:
 	return false
 
 
+## Eater, for the AI: eating its own smaller teammates is a good thing (The Collector).
+func wants_ally_food(_figure: Figure) -> bool:
+	return false
+
+
 ## Trangle: true if the ability draws the whole body itself (draw_body), so the usual circle is not drawn.
 func draws_own_body(_figure: Figure) -> bool:
 	return false

@@ -55,6 +55,28 @@ func on_first_enemy_turn(_main) -> float:
 	return 0.0
 
 
+## --- Enemy relics (act 3 elites): the same relics, written for the enemy side. Defaults do nothing. ---
+
+## Multiplies the flick power of an ENEMY figure (main = the Main node).
+func get_enemy_flick_power_multiplier(_main, _figure: Figure) -> float:
+	return 1.0
+
+
+## Multiplies the knockback taken by `figure` (either side) while the enemy side carries this relic.
+func get_enemy_knockback_taken_multiplier(_figure: Figure, _source: Figure) -> float:
+	return 1.0
+
+
+## Multiplies the damping of enemy figures.
+func get_enemy_damping_multiplier() -> float:
+	return 1.0
+
+
+## Multiplies the size of explosions made by the enemy side.
+func get_enemy_explosion_radius_multiplier() -> float:
+	return 1.0
+
+
 ## One of the player's figures is about to be knocked off. Return true to save it.
 func on_player_figure_falling(_main, _figure: Figure) -> bool:
 	return false

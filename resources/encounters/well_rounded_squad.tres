@@ -36,4 +36,5 @@ script = ExtResource("2")
 display_name = "Well-Rounded Squad"
 enemies = Array[ExtResource("1")]([SubResource("enemy_0"), SubResource("enemy_1"), SubResource("enemy_2")])
 enemy_flicks_per_turn = 1
-acts = Array[int]([1, 2, 3])
+acts = Array[int]([1])
+fill_with_grunts = true

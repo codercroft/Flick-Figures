@@ -107,6 +107,17 @@
 [ext_resource type="Resource" path="res://resources/encounters/regular/speed_trap.tres" id="enc_speed_trap"]
 [ext_resource type="Resource" path="res://resources/encounters/regular/demolition_crew.tres" id="enc_demolition_crew"]
 [ext_resource type="Resource" path="res://resources/encounters/mirror_match.tres" id="enc_mirror_match"]
+[ext_resource type="Resource" path="res://resources/encounters/big_brother.tres" id="el_big_brother"]
+[ext_resource type="Resource" path="res://resources/encounters/shield_wall.tres" id="el_shield_wall"]
+[ext_resource type="Resource" path="res://resources/encounters/pinball_wizard.tres" id="el_pinball_wizard"]
+[ext_resource type="Resource" path="res://resources/encounters/powder_keg.tres" id="el_powder_keg"]
+[ext_resource type="Resource" path="res://resources/encounters/glue_gang.tres" id="el_glue_gang"]
+[ext_resource type="Resource" path="res://resources/encounters/juice_bar.tres" id="el_juice_bar"]
+[ext_resource type="Resource" path="res://resources/encounters/the_collector.tres" id="el_the_collector"]
+[ext_resource type="Resource" path="res://resources/encounters/siege.tres" id="el_siege"]
+[ext_resource type="Resource" path="res://resources/encounters/bloodbath.tres" id="el_bloodbath"]
+[ext_resource type="Script" path="res://scripts/elite_config.gd" id="elite_script"]
+[ext_resource type="Resource" path="res://resources/elite_config.tres" id="elite_cfg"]
 
 [resource]
 script = ExtResource("1")
@@ -133,10 +144,11 @@ relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), 
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")
-regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew")])
+regular_encounters = Array[ExtResource("149")]([ExtResource("enc_bodyguards"), ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_pushover"), ExtResource("enc_tinderbox"), ExtResource("enc_ghost_patrol"), ExtResource("enc_the_setup"), ExtResource("enc_sticky_situation"), ExtResource("enc_fortress"), ExtResource("enc_speed_trap"), ExtResource("enc_demolition_crew"), ExtResource("154"), ExtResource("153")])
 event_pool = Array[ExtResource("evt_script")]([ExtResource("evt_trader"), ExtResource("evt_bocce"), ExtResource("evt_curling"), ExtResource("evt_bowling"), ExtResource("evt_golf")])
 minigames = ExtResource("evt_minigames")
-elite_encounters = Array[ExtResource("149")]([ExtResource("150"), ExtResource("151"), ExtResource("152"), ExtResource("153"), ExtResource("154"), ExtResource("enc_mirror_match")])
+elite_encounters = Array[ExtResource("149")]([ExtResource("152"), ExtResource("el_big_brother"), ExtResource("el_shield_wall"), ExtResource("el_pinball_wizard"), ExtResource("151"), ExtResource("150"), ExtResource("el_powder_keg"), ExtResource("el_glue_gang"), ExtResource("el_juice_bar"), ExtResource("enc_mirror_match"), ExtResource("el_the_collector"), ExtResource("el_siege"), ExtResource("el_bloodbath")])
+elite_config = ExtResource("elite_cfg")
 rewards = ExtResource("142")
 enemy_gear = ExtResource("143")
 boss_arena = ExtResource("10")

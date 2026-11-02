@@ -50,7 +50,7 @@ func _explode() -> void:
 	if _done:
 		return
 	_done = true
-	var reach := blast_radius * RunManager.relic_explosion_multiplier()  # Blast Cap
+	var reach := blast_radius * RunManager.relic_explosion_multiplier(owner_figure.team if is_instance_valid(owner_figure) else -1)  # Blast Cap
 	Figure.blast(get_tree(), global_position, reach, blast_force, owner_figure)
 	var effect := BlastEffect.new()
 	effect.position = position

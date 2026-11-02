@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/eater.tres" id="f_eater"]
+[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="f_grunt"]
+
+[sub_resource type="Resource" id="enemy_0"]
+script = ExtResource("1")
+figure = ExtResource("f_eater")
+count = 1
+positions = Array[Vector2]([Vector2(450, 300)])
+size_multiplier = 1.3
+mass_multiplier = 1.3
+ability_values = {"feeds_on_allies": true}
+
+[sub_resource type="Resource" id="enemy_1"]
+script = ExtResource("1")
+figure = ExtResource("f_grunt")
+count = 4
+positions = Array[Vector2]([Vector2(300, 190), Vector2(600, 190), Vector2(270, 360), Vector2(630, 360)])
+
+[resource]
+script = ExtResource("2")
+display_name = "The Collector"
+enemies = Array[ExtResource("1")]([SubResource("enemy_0"), SubResource("enemy_1")])
+enemy_flicks_per_turn = 1
+acts = Array[int]([3])

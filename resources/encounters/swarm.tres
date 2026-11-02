@@ -15,4 +15,4 @@ script = ExtResource("2")
 display_name = "Swarm"
 enemies = Array[ExtResource("1")]([SubResource("enemy_0")])
 enemy_flicks_per_turn = 3
-acts = Array[int]([2, 3])
+acts = Array[int]([2])

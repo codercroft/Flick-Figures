@@ -144,6 +144,7 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 			data.accuracy = minf(data.accuracy * stat_scale.get("accuracy", 1.0), 1.0)
 			data.flick_power_multiplier *= stat_scale.get("power", 1.0)
 			data.mass *= stat_scale.get("mass", 1.0)
+			data.radius *= stat_scale.get("size", 1.0)
 			data.bounce = clampf(data.bounce + stat_scale.get("bounce", 0.0), 0.0, 1.0)
 	_base_damping = base_damping
 	radius = data.radius
@@ -162,6 +163,9 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 		for key in upgrade.ability_overrides:
 			if key in ability:
 				ability.set(key, upgrade.ability_overrides[key])
+	for key in stat_scale.get("ability_values", {}):  # exact values from an encounter (Big Brother's double shell)
+		if key in ability:
+			ability.set(key, stat_scale.ability_values[key])
 	var strength: float = (finish.ability_strength if finish != null else 1.0) * stat_scale.get("ability", 1.0)
 	if strength != 1.0:
 		for key in STRENGTH_PROPERTIES:
@@ -430,6 +434,8 @@ func _on_body_entered(body: Node) -> void:
 ## Flick power multiplier from teammates' auras (Crazy Man) that this figure stands inside.
 func aura_flick_multiplier() -> float:
 	var multiplier := 1.0
+	if team == Team.ENEMY and RunManager.combat != null and not RunManager.enemy_relics.is_empty():
+		multiplier *= RunManager.enemy_relic_power(RunManager.combat, self)  # enemy relics (act 3 elites)
 	for source in _aura_sources():
 		multiplier *= source.ability.get_aura_flick_multiplier(source)
 	return multiplier
@@ -714,7 +720,7 @@ func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
 ## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
 ## `force` at the center and fades to zero at the edge.
 func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
-	blast_radius *= RunManager.relic_explosion_multiplier()  # Blast Cap
+	blast_radius *= RunManager.relic_explosion_multiplier(team)  # Blast Cap
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
 	Figure.blast(get_tree(), global_position, blast_radius, force, self, spared)
