@@ -13,7 +13,7 @@ extends FigureAbility
 @export var drive_acceleration := 2600.0
 ## ...and the whole push (driving, no rebound, extra weight) lasts at most this long (seconds) from its first
 ## contact during a flick. It drives only while it is still touching a target.
-@export var push_seconds := 1.5
+@export var push_seconds := 1.0
 ## Color of the glow shown while the push is active (it fades out as the timer runs down).
 @export var glow_color := Color(1.0, 0.85, 0.3)
 ## Bounce it has during its own flick. Godot adds the two bounce values, so 0 would make every hit nearly

@@ -7,5 +7,5 @@
 script = ExtResource("1")
 figure = ExtResource("2")
 display_name = "Long Haul"
-description = "Keeps pushing for 2.5 seconds instead of 1.5."
-ability_overrides = {"push_seconds": 2.5}
+description = "Keeps pushing for 2 seconds instead of 1."
+ability_overrides = {"push_seconds": 2.0}
