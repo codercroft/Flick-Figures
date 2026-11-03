@@ -51,14 +51,10 @@ func _ready() -> void:
 		warning.add_theme_color_override("font_color", Color(1.0, 0.45, 0.35))
 		column.add_child(warning)
 
-	# Equip / upgrade buttons, side by side along the bottom (thumb reach).
+	# Upgrade button (testing; equipping now lives in the top bar's Inventory), side by side along the bottom (thumb reach).
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 16)
 	column.add_child(buttons)
-	var held := RunManager.equipment_inventory.size()
-	var equipment := _bottom_button(buttons, "Equipment (%d)" % held, EQUIP_SCENE)
-	if held > 0:
-		equipment.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25))
 	if RunManager.config.show_upgrade_screen:
 		_bottom_button(buttons, "Upgrades", UPGRADE_SCENE)
 	_scroll_to_position.call_deferred()

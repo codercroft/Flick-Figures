@@ -1,8 +1,8 @@
 class_name TopBar
 extends CanvasLayer
-## The status bar at the top of every screen: an Info button (opens the run info overlay), which
-## act and stop you are on, your relic icons and your money. It sits below the camera cutout
-## (SafeArea). Add one to a scene with `add_child(TopBar.new())`.
+## The status bar at the top of every screen: a Map button (view-only map overlay), an Inventory button
+## (full-screen roster, equipment, powers and relics), which act and map row you are on, the Ascension level
+## and your money. It sits below the camera cutout (SafeArea). Add one to a scene with `add_child(TopBar.new())`.
 
 const BAR_HEIGHT := 104.0
 const BACKGROUND := Color(0.08, 0.09, 0.12, 0.97)
@@ -10,8 +10,6 @@ const BACKGROUND := Color(0.08, 0.09, 0.12, 0.97)
 var _panel := PanelContainer.new()
 var _act_label := Label.new()
 var _money_label := Label.new()
-var _relics := RelicBar.new()
-var _relic_count := -1
 var _sound_button := Button.new()  # sound on / off, saved between sessions (AudioManager)
 
 
@@ -35,12 +33,19 @@ func _ready() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_panel.add_child(row)
 
-	var info := Button.new()
-	info.text = "i"
-	info.custom_minimum_size = Vector2(72.0, 72.0)
-	info.add_theme_font_size_override("font_size", 40)
-	info.pressed.connect(RunInfo.open.bind("map", null))
-	row.add_child(info)
+	var map_button := Button.new()
+	map_button.text = "Map"
+	map_button.custom_minimum_size = Vector2(130.0, 72.0)
+	map_button.add_theme_font_size_override("font_size", 32)
+	map_button.pressed.connect(RunInfo.open_map)
+	row.add_child(map_button)
+
+	var inventory := Button.new()
+	inventory.text = "Inventory"
+	inventory.custom_minimum_size = Vector2(190.0, 72.0)
+	inventory.add_theme_font_size_override("font_size", 32)
+	inventory.pressed.connect(RunInfo.open_inventory)
+	row.add_child(inventory)
 
 	_sound_button.custom_minimum_size = Vector2(72.0, 72.0)
 	_sound_button.add_theme_font_size_override("font_size", 22)
@@ -48,14 +53,12 @@ func _ready() -> void:
 	_sound_button.pressed.connect(AudioManager.toggle_mute)
 	row.add_child(_sound_button)
 
-	_act_label.add_theme_font_size_override("font_size", 30)
+	_act_label.add_theme_font_size_override("font_size", 28)
+	_act_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_act_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_act_label.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
 	_act_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(_act_label)
-
-	_relics.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_relics.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_child(_relics)
 
 	_money_label.add_theme_font_size_override("font_size", 40)
 	_money_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25))
@@ -70,21 +73,24 @@ func _process(_delta: float) -> void:
 
 ## Updates the texts (cheap: called every frame).
 func refresh() -> void:
-	var where := "Act %d/%d" % [RunManager.act + 1, RunManager.config.acts]
-	if RunManager.node != null:
-		if RunManager.node.type == MapNode.Type.BOSS:
-			where += "  Boss"
-		else:
-			where += "  " + MapNode.type_name(RunManager.node.type)
-	if RunManager.ascension > 0:
-		where += "  A%d" % RunManager.ascension
-	_act_label.text = where
+	_act_label.text = _where_text()
 	_money_label.text = "$%d" % RunManager.money
 	_sound_button.text = "OFF" if AudioManager.muted else "SND"
 	_sound_button.modulate = Color(1.0, 0.55, 0.55) if AudioManager.muted else Color.WHITE
-	if _relic_count != RunManager.relics.size():
-		_relic_count = RunManager.relics.size()
-		_relics.refresh()
+
+
+## "Act 2/3  Row 4  A5": the act, the map row you are on (the node being played, else the last one you finished)
+## and the Ascension level.
+func _where_text() -> String:
+	var text := "Act %d/%d" % [RunManager.act + 1, RunManager.config.acts]
+	var shown: MapNode = RunManager.node
+	if shown == null and RunManager.current_node >= 0 and RunManager.map != null:
+		shown = RunManager.map.nodes[RunManager.current_node]
+	if shown != null:
+		text += "  Boss" if shown.type == MapNode.Type.BOSS else "  Row %d" % (shown.column + 1)
+	if RunManager.ascension > 0:
+		text += "  A%d" % RunManager.ascension
+	return text
 
 
 ## How tall the bar is on this device (including the cutout), in game units.

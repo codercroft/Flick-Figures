@@ -7,6 +7,10 @@ extends Control
 
 signal slot_pressed(slot: int)
 signal reordered
+## An equipment item (from the Inventory's grid) was dropped on a slot.
+signal item_dropped(slot: int, item: EquipmentData)
+## The small equipment badge of a slot was tapped (the Inventory unequips it).
+signal item_tapped(slot: int)
 
 ## Drag to rearrange (only outside combat).
 @export var reorderable := false
@@ -14,6 +18,9 @@ signal reordered
 @export var strip_height := 190.0
 ## A press must move this far (px) sideways before it counts as a drag.
 @export var drag_slop := 16.0
+
+## Accept equipment items dragged onto the slots (the Inventory turns it off in combat).
+var drop_enabled := false
 
 ## Highlighted slot (-1 = none).
 var selected := -1:
@@ -24,6 +31,8 @@ var selected := -1:
 var _badges: Array[FigureBadge] = []
 var _down := -1
 var _down_x := 0.0
+var _down_pos := Vector2.ZERO
+var _drop_hover := -1
 var _dragging := false
 
 
@@ -85,6 +94,10 @@ func _draw() -> void:
 		if i == selected:
 			box.set_border_width_all(4)
 			box.border_color = Color(1.0, 0.9, 0.3)
+		if i == _drop_hover:  # an item is being dragged over this slot
+			box.set_border_width_all(6)
+			box.border_color = Color(0.4, 1.0, 0.5)
+			box.bg_color = Color(0.25, 0.4, 0.3)
 		draw_style_box(box, rect)
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(10.0, 26.0), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT,
 				-1, 22, Color(1, 1, 1, 0.45))
@@ -97,6 +110,7 @@ func _gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			_down = _slot_at(event.position.x)
 			_down_x = event.position.x
+			_down_pos = event.position
 			_dragging = false
 		else:
 			_release(event.position.x)
@@ -125,9 +139,45 @@ func _release(x: float) -> void:
 		refresh()
 		reordered.emit()
 		slot_pressed.emit(to)
+	elif _hit_item_badge(from, _down_pos):
+		selected = from
+		item_tapped.emit(from)
 	else:
 		selected = from
 		slot_pressed.emit(from)
+
+
+## True if `point` is on the small equipment badge drawn at the lower right of a slot's picture.
+func _hit_item_badge(slot: int, point: Vector2) -> bool:
+	if RunManager.deck_equipment[slot] == null or slot >= _badges.size():
+		return false
+	var badge := _badges[slot]
+	var radius := minf(badge.size.x, badge.size.y) * 0.4
+	var badge_center := badge.position + badge.size / 2.0 + Vector2(radius, radius) * 0.7
+	return point.distance_to(badge_center) <= radius * 0.5
+
+
+# --- Dropping equipment on a slot (Godot's built-in drag and drop) --------------------------
+
+func _can_drop_data(at_position: Vector2, data) -> bool:
+	var ok: bool = drop_enabled and data is Dictionary and data.has("equipment")
+	var hover := _slot_at(at_position.x) if ok else -1
+	if hover != _drop_hover:
+		_drop_hover = hover
+		queue_redraw()
+	return ok
+
+
+func _drop_data(at_position: Vector2, data) -> void:
+	_drop_hover = -1
+	queue_redraw()
+	item_dropped.emit(_slot_at(at_position.x), data.equipment)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and _drop_hover != -1:
+		_drop_hover = -1
+		queue_redraw()
 
 
 ## One line about a slot for the pickers: what is there and what would be lost by replacing it.

@@ -687,6 +687,15 @@ func equip(item: EquipmentData, slot: int) -> bool:
 	return true
 
 
+## Takes the item off a deck slot and puts it back in storage. Returns false if the slot has none.
+func unequip(slot: int) -> bool:
+	if slot < 0 or slot >= deck.size() or deck_equipment[slot] == null:
+		return false
+	equipment_inventory.append(deck_equipment[slot])
+	deck_equipment[slot] = null
+	return true
+
+
 ## Adds an item to the inventory (rewards and shops can call this).
 func add_equipment(item: EquipmentData) -> void:
 	equipment_inventory.append(item)

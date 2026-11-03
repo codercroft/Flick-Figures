@@ -129,6 +129,7 @@ func _ready() -> void:
 	ui.apply_bottom_inset(insets.bottom)
 	ui.power_pressed.connect(_on_power_slot_pressed)
 	ui.set_powers(RunManager.powers)
+	RunInfo.powers_changed.connect(_on_powers_discarded)
 	_update_status()
 	var boss_wall := RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS \
 			and RunManager.boss != null and RunManager.boss.back_wall
@@ -171,6 +172,8 @@ func _place_opening_turrets() -> void:
 
 
 func _exit_tree() -> void:
+	if RunInfo.powers_changed.is_connected(_on_powers_discarded):
+		RunInfo.powers_changed.disconnect(_on_powers_discarded)
 	if RunManager.combat == self:
 		RunManager.combat = null
 
@@ -1324,6 +1327,12 @@ func _on_power_slot_pressed(slot: int) -> void:
 	_power_slot = slot
 	ui.set_powers(RunManager.powers, slot)
 	notice(power.effect.prompt if power.effect.prompt != "" else "Tap a target")
+
+
+## A power was discarded in the Inventory: drop any pending targeting and redraw the power bar.
+func _on_powers_discarded() -> void:
+	_cancel_power()
+	ui.set_powers(RunManager.powers)
 
 
 ## Gives up choosing a target (the power is not used up).
