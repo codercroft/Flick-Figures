@@ -298,6 +298,7 @@ func _make_all_flickable() -> void:
 	for figure in _players:
 		if _is_alive(figure):
 			figure.flickable = true
+			figure.ability.on_became_flickable(figure)
 
 
 func _try_reload(pos: Vector2) -> void:
@@ -437,6 +438,7 @@ func _offer_bonus_flick(figure: Figure) -> void:
 	var bloodlust := _bloodlust_ready(figure)
 	if bloodlust:
 		figure.bonus_flicks_used += 1
+		figure.ability.on_bloodlust_bonus(figure)  # its damping stacks up
 		figure.show_popup("Bloodlust!", Color(1.0, 0.25, 0.3))
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
@@ -693,6 +695,8 @@ func _run_enemy_turn() -> void:
 			if not _is_alive(shooter):
 				break
 			var bloodlust := _bloodlust_ready(shooter)
+			if bloodlust:
+				shooter.ability.on_bloodlust_bonus(shooter)  # stack first: the AI then plans with the longer slide
 			var extra := ai.choose_flick([shooter], _players, board.get_table_rect(), max_flick_force, ai.bonus_flick_min_score)
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
@@ -845,6 +849,9 @@ func _refresh_enemy_cycle() -> void:
 			return
 	_enemy_cycle.clear()
 	arena.remove_team_pins(Figure.Team.ENEMY)
+	for enemy in _enemies:
+		if _is_alive(enemy):
+			enemy.ability.on_became_flickable(enemy)
 
 
 ## The enemies allowed to flick right now: alive, able to flick, and not the one that flicked
@@ -1141,6 +1148,7 @@ func recharge_figure(figure: Figure) -> void:
 	if not _is_alive(figure):
 		return
 	figure.turn_flicks = 0
+	figure.ability.on_became_flickable(figure)
 	if figure.team == Figure.Team.PLAYER:
 		figure.flickable = true
 	else:

@@ -3,8 +3,8 @@
 [ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/crazy_man.tres" id="f_crazy_man"]
-[ext_resource type="Resource" path="res://resources/figures/grunt.tres" id="f_grunt"]
-[ext_resource type="Resource" path="res://resources/arenas/pinball.tres" id="arena"]
+[ext_resource type="Resource" path="res://resources/figures/speedo.tres" id="f_speedo"]
+[ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="arena"]
 
 [sub_resource type="Resource" id="enemy_0"]
 script = ExtResource("1")
@@ -14,9 +14,9 @@ positions = Array[Vector2]([Vector2(450, 270)])
 
 [sub_resource type="Resource" id="enemy_1"]
 script = ExtResource("1")
-figure = ExtResource("f_grunt")
-count = 3
-positions = Array[Vector2]([Vector2(300, 170), Vector2(600, 170), Vector2(450, 150)])
+figure = ExtResource("f_speedo")
+count = 2
+positions = Array[Vector2]([Vector2(320, 180), Vector2(580, 180)])
 
 [resource]
 script = ExtResource("2")

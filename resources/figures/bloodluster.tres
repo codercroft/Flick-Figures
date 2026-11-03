@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Bloodluster"
-description = "A flick that knocks a foe off earns a bonus flick, as long as each one gets a kill."
+description = "A kill earns a bonus flick, but each one in a row slides less far (resets next round)."
 rarity = 2
 label = "BX"
 icon = 30

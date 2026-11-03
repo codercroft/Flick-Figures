@@ -1,8 +1,8 @@
 class_name JuicerAbility
 extends FigureAbility
-## While it moves, Juicer leaves a trail of speed-boosting floor material. Each piece pushes any
-## figure that rolls over it (moving ones only) in the direction Juicer was travelling. Pieces fade
-## after a few rounds. The boost is much weaker than an arena boost patch (470).
+## While it moves, Juicer leaves a trail of sticky floor material. Each piece pushes any OPPOSING
+## figure that rolls over it (moving ones only) BACK the way Juicer came from. Its own team is not
+## affected. Pieces fade after a few rounds. The push is much weaker than an arena boost patch (470).
 
 ## Rounds a trail piece lasts (a round = until the player's next turn).
 @export var trail_rounds := 3
@@ -18,7 +18,7 @@ extends FigureAbility
 ## Oldest pieces vanish early beyond this many per Juicer, so the board does not fill up.
 @export var max_segments := 30
 ## Splash: when Juicer hits an opposing figure (faster than `splash_min_speed`), this many boost pieces
-## appear in a ring `splash_distance` px around the impact point, each pushing outward from it. They
+## appear in a ring `splash_distance` px around the impact point, each pushing opposing figures outward from it. They
 ## fade like the trail (`trail_rounds`).
 @export var splash_count := 6
 @export var splash_distance := 75.0
@@ -40,7 +40,7 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 	if figure.global_position.distance_to(_last_drop) < segment_spacing:
 		return
 	_last_drop = figure.global_position
-	combat.arena.add_trail_segment(figure, figure.global_position, figure.linear_velocity.normalized(), self)
+	combat.arena.add_trail_segment(figure, figure.global_position, -figure.linear_velocity.normalized(), self)
 
 
 func on_impact(figure: Figure, other: Figure, speed: float, point: Vector2) -> void:

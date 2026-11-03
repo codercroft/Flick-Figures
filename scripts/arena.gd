@@ -170,7 +170,7 @@ func has_bending_floor() -> bool:
 
 ## True if anything on the floor is within `margin` px of the segment a-b (so a figure sliding along it
 ## could be pushed or bent). Used by the enemy AI to skip the stepped simulation when nothing is near.
-func floor_near_segment(a: Vector2, b: Vector2, margin: float) -> bool:
+func floor_near_segment(a: Vector2, b: Vector2, margin: float, team := -1) -> bool:
 	if _data != null:
 		var samples := maxi(int(a.distance_to(b) / 50.0), 1)
 		for patch in _data.patches:
@@ -179,6 +179,8 @@ func floor_near_segment(a: Vector2, b: Vector2, margin: float) -> bool:
 				if rect.has_point(a.lerp(b, float(i) / samples)):
 					return true
 	for piece in _trail:
+		if piece.team == team:
+			continue  # a team's own juice does not affect it
 		var ability: JuicerAbility = piece.ability
 		var closest := Geometry2D.get_closest_point_to_segment(piece.center, a, b)
 		if closest.distance_to(piece.center) <= ability.segment_radius + margin:
@@ -193,7 +195,7 @@ func floor_near_segment(a: Vector2, b: Vector2, margin: float) -> bool:
 
 ## The velocity a MOVING figure at `pos` with `velocity` has `delta` seconds later because of the floor
 ## (the same maths as the real patches, trail pieces and magnet zones; damping is not included).
-func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float) -> Vector2:
+func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float, team := -1) -> Vector2:
 	if _data != null:
 		for patch in _data.patches:
 			if not _patch_rect(patch).has_point(pos):
@@ -210,7 +212,7 @@ func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float) -> Ve
 					velocity = velocity.rotated(sign * deg_to_rad(turn_rate_degrees * patch.strength) * delta)
 	for piece in _trail:
 		var ability: JuicerAbility = piece.ability
-		if pos.distance_to(piece.center) <= ability.segment_radius and velocity.dot(piece.direction) < ability.boost_max_speed:
+		if piece.team != team and pos.distance_to(piece.center) <= ability.segment_radius and velocity.dot(piece.direction) < ability.boost_max_speed:
 			velocity += piece.direction * ability.boost_acceleration * delta
 	for zone in _zones:
 		if zone.kind != ZoneVisual.Kind.MAGNET:
@@ -558,7 +560,7 @@ func add_trail_segment(owner_figure: Figure, center: Vector2, direction: Vector2
 	node.z_index = 0  # (the Board is drawn first, so these show up on top of it)
 	add_child(node)
 	_trail.append({"owner": owner_figure, "ability": ability, "center": center, "direction": direction,
-			"rounds": ability.trail_rounds, "total": ability.trail_rounds, "node": node})
+			"team": owner_figure.team, "rounds": ability.trail_rounds, "total": ability.trail_rounds, "node": node})
 	# Too many pieces from one Juicer: its oldest one goes.
 	var mine := 0
 	for piece in _trail:
@@ -579,8 +581,8 @@ func _apply_trail_piece(piece: Dictionary, figures: Array) -> void:
 	for node in figures:
 		var figure := node as Figure
 		# Like patches: only moving figures are pushed, so a resting one is never nudged.
-		if figure.on_deck or figure.knocked_off or figure.is_slow():
-			continue
+		if figure.on_deck or figure.knocked_off or figure.is_slow() or figure.team == piece.team:
+			continue  # (only OPPOSING figures are affected by the juice)
 		if figure.global_position.distance_to(piece.center) > ability.segment_radius:
 			continue
 		if figure.linear_velocity.dot(piece.direction) < ability.boost_max_speed:

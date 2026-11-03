@@ -288,6 +288,16 @@ func get_hit_mass_multiplier(_figure: Figure) -> float:
 	return 1.0
 
 
+## Bloodluster: it was just granted a bonus flick (a kill earned it).
+func on_bloodlust_bonus(_figure: Figure) -> void:
+	pass
+
+
+## The figure can be flicked again (a new flick cycle, Energizer's recharge, back on deck).
+func on_became_flickable(_figure: Figure) -> void:
+	pass
+
+
 ## Called on every figure at the start of each round (the player's turn start): short effects wear off.
 func on_round_ticked(_figure: Figure) -> void:
 	pass

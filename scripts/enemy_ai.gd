@@ -735,7 +735,7 @@ func _path_affected(figure: Figure, from: Vector2, direction: Vector2, length: f
 	if not _floor_on:
 		return false
 	var to := from + direction * length
-	if _arena != null and _arena.floor_near_segment(from, to, figure.radius):
+	if _arena != null and _arena.floor_near_segment(from, to, figure.radius, figure.team):
 		return true
 	var samples := maxi(int(length / 60.0), 1)
 	for source in _pull_sources:
@@ -760,7 +760,7 @@ func _simulate_flight(figure: Figure, from: Vector2, velocity: Vector2) -> Dicti
 		if vel.length() <= figure.stop_speed:
 			break
 		if _arena != null:
-			vel = _arena.predict_floor_velocity(pos, vel, sim_step)
+			vel = _arena.predict_floor_velocity(pos, vel, sim_step, figure.team)
 		for source in _pull_sources:
 			if source != figure:
 				vel += source.ability.get_path_pull(source, pos, figure.team) * sim_step

@@ -242,6 +242,16 @@ func get_ai_aggro(figure: Figure) -> Dictionary:
 	return info if not info.is_empty() else second.get_ai_aggro(figure)
 
 
+func on_bloodlust_bonus(figure: Figure) -> void:
+	first.on_bloodlust_bonus(figure)
+	second.on_bloodlust_bonus(figure)
+
+
+func on_became_flickable(figure: Figure) -> void:
+	first.on_became_flickable(figure)
+	second.on_became_flickable(figure)
+
+
 func on_round_ticked(figure: Figure) -> void:
 	first.on_round_ticked(figure)
 	second.on_round_ticked(figure)

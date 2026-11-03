@@ -844,6 +844,7 @@ func return_to_deck() -> void:
 	global_position = deck_position
 	on_deck = true
 	flickable = true
+	ability.on_became_flickable(self)
 
 
 ## Stretches (amount > 0) or squashes (amount < 0) the body along `direction`, then wobbles back.
