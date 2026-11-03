@@ -168,6 +168,11 @@ const TOUCH_MARGIN := 4.0
 ## Power levels tried for a takeover shot (fractions of the top speed) and extra directions around the circle.
 @export var takeover_power_levels: Array[float] = [0.3, 0.5, 0.7, 0.85, 1.0]
 @export var takeover_extra_directions := 24
+## A BOSS BODY taken over by a Bummer never aims off the table: penalty per unit of chance it leaves (this wins over any
+## ally hit), plus a reward for ending farther from the Bummer (per 300 px gained) and a flat one for ending outside its aura.
+@export var takeover_boss_self_penalty := 2500.0
+@export var takeover_boss_escape_bonus := 150.0
+@export var takeover_boss_exit_bonus := 250.0
 
 @export_group("Turrets")
 ## Engineer turret spots are tried on this grid (px).
@@ -1281,10 +1286,19 @@ func choose_takeover(figure: Figure, allies: Array[Figure], table: Rect2, max_fo
 			directions.append(to_ally.normalized().rotated(deg_to_rad(offset)))
 	for i in takeover_extra_directions:  # straight at the table edge, no allies needed
 		directions.append(Vector2.from_angle(TAU * i / takeover_extra_directions))
+	var bummers: Array[Dictionary] = []  # opposing Bummers: {position, reach} (a boss body runs away from them)
+	if figure.data.boss_body:
+		for node in get_tree().get_nodes_in_group("figures"):
+			var other := node as Figure
+			if other.knocked_off or other.team == figure.team:
+				continue
+			var stats := other.ability.get_bummer_stats(other)
+			if not stats.is_empty():
+				bummers.append({"position": other.global_position, "reach": stats.radius + figure.radius})
 	var best := {}
 	for direction in directions:
 		for level in takeover_power_levels:
-			var shot := _score_takeover(figure, shape, direction, level * top_speed, allies, table)
+			var shot := _score_takeover(figure, shape, direction, level * top_speed, allies, table, bummers)
 			if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 				best = shot
 	if best.is_empty():
@@ -1295,22 +1309,36 @@ func choose_takeover(figure: Figure, allies: Array[Figure], table: Rect2, max_fo
 
 
 func _score_takeover(figure: Figure, shape: CircleShape2D, direction: Vector2, speed: float,
-		allies: Array[Figure], table: Rect2) -> Dictionary:
+		allies: Array[Figure], table: Rect2, bummers: Array[Dictionary] = []) -> Dictionary:
 	if _travel_distance(figure, speed) < 1.0:
 		return {}
+	var boss := figure.data.boss_body
+	var self_weight := -takeover_boss_self_penalty if boss else takeover_self_bonus  # a boss body must never fall
 	var hit := _shot_path(figure, shape, direction, speed)
 	var score := 0.0
+	var end_point := figure.global_position
 	if hit.is_empty() or hit.collider == null:
 		# Nothing in the way: does the flight itself carry it off the table?
-		score = takeover_self_bonus * _flight_leave_chance(figure, figure.global_position, direction * speed, table)
+		score = self_weight * _flight_leave_chance(figure, figure.global_position, direction * speed, table)
+		end_point = _flight_end(figure, figure.global_position, direction * speed, table)
 	else:
 		var other: Figure = hit.collider
 		var outcome := _predict_collision(figure, other, hit.velocity, hit.position)
-		score = takeover_self_bonus * _leave_chance(figure, hit.position, outcome.shooter, table)
+		score = self_weight * _leave_chance(figure, hit.position, outcome.shooter, table)
+		end_point = hit.position
+		if outcome.shooter.length() > figure.stop_speed:
+			end_point += outcome.shooter.normalized() * _travel_distance(figure, outcome.shooter.length())
 		if allies.has(other):
 			var knocked_off := _leave_chance(other, other.global_position, outcome.target, table)
 			var pushed := _push_progress(other, other.global_position, outcome.target, table)
 			score += takeover_ally_hit_bonus + takeover_ally_kill_bonus * knocked_off + takeover_edge_bonus * pushed
+	if boss:  # run away from the Bummer(s), ideally out of the aura
+		for bummer in bummers:
+			var from_start: float = figure.global_position.distance_to(bummer.position)
+			var from_end: float = end_point.distance_to(bummer.position)
+			score += takeover_boss_escape_bonus * clampf((from_end - from_start) / 300.0, -1.0, 2.0)
+			if from_end > bummer.reach:
+				score += takeover_boss_exit_bonus
 	return {"score": score, "direction": direction, "speed": speed}
 
 

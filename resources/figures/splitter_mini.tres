@@ -1,14 +1,20 @@
 [gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/splitter_mini_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="mini_ability"]
+script = ExtResource("2")
 
 [resource]
 script = ExtResource("1")
 display_name = "Mini"
-description = "A piece of a Splitter."
+description = "A sturdy piece of a Splitter: weaker flick and hits."
 label = "s"
 color = Color(0.4, 0.7, 1.0, 1)
 radius = 45.0
 mass = 0.78
 bounce = 0.7
 pays_income = false
+flick_power_multiplier = 0.7
+ability = SubResource("mini_ability")
