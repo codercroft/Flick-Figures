@@ -66,6 +66,14 @@ var enemy_forced_upgrade: Array[UpgradeData] = []
 ## True while the current combat is an elite encounter, and the relics the enemy side carries in it (act 3 elites).
 var elite_encounter := false
 var enemy_relics: Array[RelicData] = []
+## The Ascension level of this run (0 = the flat base game; see AscensionConfig). Each level includes the lower ones.
+var ascension := 0
+## Ascension 10: the second act 3 boss fight is on (after the first boss was beaten).
+var in_second_boss := false
+## Set by end_run when winning unlocked a new Ascension level (-1 = none).
+var newly_unlocked_level := -1
+## The Mad Creator's floor-space summons for this fight (Ascension 8 swaps the Grunt for a Bombo).
+var boss_summons: Array[FigureData] = []
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
@@ -101,7 +109,14 @@ func _ready() -> void:
 	start_new_run()
 
 
-func start_new_run() -> void:
+## True if this run's Ascension level is at least `level`.
+func asc(level: int) -> bool:
+	return ascension >= level
+
+
+func start_new_run(ascension_level := 0) -> void:
+	ascension = clampi(ascension_level, 0, config.ascension.max_level if config.ascension != null else 0)
+	in_second_boss = false
 	run_seed = randi()
 	seed(run_seed)
 	deck.clear()
@@ -305,6 +320,7 @@ func use_power(slot: int) -> void:
 # --- Acts, the map and nodes ---------------------------------------------------
 
 func _start_act() -> void:
+	in_second_boss = false
 	boss = act_bosses[act] if act < act_bosses.size() else config.registry.random_boss()
 	var map_rng := RandomNumberGenerator.new()
 	map_rng.seed = hash([run_seed, act])
@@ -354,6 +370,9 @@ func load_saved_run() -> int:
 func end_run(won: bool) -> void:
 	RunHistory.record_run(self, won)
 	RunSave.delete()
+	newly_unlocked_level = -1
+	if won and config.ascension != null and AscensionProgress.record_win(ascension, config.ascension.max_level):
+		newly_unlocked_level = ascension + 1
 
 
 func is_last_act() -> bool:
@@ -386,6 +405,9 @@ func enter_node(id: int) -> bool:
 			RunHistory.mark_seen_all(enemies)  # (faced as an enemy: unlocks it in the Compendium)
 		MapNode.Type.SHOP:
 			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
+			if asc(4):  # Leaner Economy
+				for offer in shop_offers:
+					offer.price = ceili(offer.price * config.ascension.shop_price_multiplier)
 		MapNode.Type.TREASURE:
 			reward_steps = [{"kind": "treasure"}]
 		MapNode.Type.EVENT:
@@ -405,6 +427,8 @@ func finish_node() -> void:
 ## last act's boss (the run is won); the caller then shows the end screen instead of rewards.
 func combat_won() -> bool:
 	if node.type == MapNode.Type.BOSS and is_last_act():
+		if asc(10) and not in_second_boss and _start_second_boss():
+			return false  # Double Boss: main reloads the fight instead of showing rewards (see second_boss_next)
 		return true
 	build_rewards()
 	return false
@@ -464,6 +488,8 @@ func _add_bonus_items() -> void:
 
 ## Adds a "lucky" drop step with the given chance.
 func _roll_drop(kind: String, chance: float) -> void:
+	if asc(6):  # Fewer Offers: chance drops are halved
+		chance *= config.ascension.chance_drop_multiplier
 	if randf() < chance:
 		reward_steps.append({"kind": kind, "lucky": true})
 
@@ -483,7 +509,10 @@ func finish_rewards() -> void:
 func enemy_scale(index := -1) -> Dictionary:
 	var is_boss := node != null and node.type == MapNode.Type.BOSS
 	var is_elite := index >= 0 and index < enemy_elite.size() and enemy_elite[index]
-	var scale := config.difficulty.scale_for(act, is_boss, is_elite)
+	# Base game: no act multiplier. Ascension 3 (Rising Threat) brings it back (bosses too).
+	var scale := {"accuracy": 1.0, "power": 1.0, "mass": 1.0}
+	if asc(3):
+		scale = config.difficulty.scale_for(act, is_boss, is_elite)
 	# An encounter's own boosts for this enemy stack on top of the act's multipliers.
 	if index >= 0 and index < enemy_boosts.size() and not enemy_boosts[index].is_empty():
 		var boost := enemy_boosts[index]
@@ -494,6 +523,7 @@ func enemy_scale(index := -1) -> Dictionary:
 		scale["ability"] = boost.ability
 		scale["size"] = boost.get("size", 1.0)
 		scale["ability_values"] = boost.get("ability_values", {})
+		scale["creep"] = boost.get("creep", 1.0)
 	return scale
 
 
@@ -584,6 +614,8 @@ func has_free_power_slot() -> bool:
 ## (act 1 is mostly common figures, later acts lean rarer).
 func offer_rewards(boss := false) -> Array[FigureData]:
 	var count := config.rewards.boss_figure_choices if boss else config.rewards.figure_choices(act)
+	if asc(6):  # Fewer Offers
+		count = mini(count, config.ascension.max_figure_choices)
 	for relic in relics:
 		if relic.effect != null:
 			count += relic.effect.get_reward_choice_bonus()
@@ -666,7 +698,7 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 	var base := figures_on_table.size() * config.income_per_figure
 	var bonus := equipment_bonus
 	for figure in figures_on_table:
-		bonus += figure.income_bonus
+		bonus += maxi(figure.income_bonus - (cha_ching_reduction() if figure.ability is ChaChingAbility else 0), 0)
 	for relic in relics:
 		if relic.effect != null:
 			bonus += relic.effect.get_income_bonus()
@@ -695,6 +727,8 @@ func spend(amount: int) -> bool:
 
 func progress_text() -> String:
 	var where := "Act %d of %d" % [act + 1, config.acts]
+	if ascension > 0:
+		where += " (Ascension %d)" % ascension
 	if node == null:
 		return where
 	if node.type == MapNode.Type.BOSS:
@@ -706,6 +740,10 @@ func run_over_text(won: bool) -> String:
 	var result := ""
 	if won:
 		result = "Run complete!\nYou beat all %d acts" % config.acts
+		if ascension > 0:
+			result += " on Ascension %d" % ascension
+		if newly_unlocked_level > 0:
+			result += "\nAscension %d unlocked!" % newly_unlocked_level
 	elif node != null and node.type == MapNode.Type.BOSS:
 		result = "Run over\nAct %d: beaten by %s" % [act + 1, boss.display_name]
 	else:
@@ -744,6 +782,12 @@ func _build_lineup() -> void:
 		first_combat_played = true
 	if encounter != null:
 		_build_encounter(encounter)
+		# Regular combats have a fixed enemy count (4 in the base game): hand-made lineups are topped up / cut to it.
+		if node.type == MapNode.Type.COMBAT:
+			while enemies.size() < _enemy_count():
+				_add_grunt(encounter.arena)
+			if enemies.size() > _enemy_count():
+				_trim_lineup(_enemy_count())
 	elif node.type == MapNode.Type.BOSS:
 		enemies.append_array(boss.enemies)
 		for i in enemies.size():
@@ -751,8 +795,9 @@ func _build_lineup() -> void:
 		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
 		enemy_flick_per_unit = boss.flick_per_unit
 		enemies_in_row = boss.straight_row
+		_apply_boss_ascension()
 	else:
-		var count := difficulty.enemy_count(act)
+		var count := _enemy_count()
 		var progress := float(node.column) / maxf(map.columns - 1, 1)
 		var non_grunts := clampi(roundi(count * progress), 0, count)
 		if node.type == MapNode.Type.ELITE:
@@ -771,6 +816,8 @@ func _build_lineup() -> void:
 			for i in elite_count:
 				enemy_elite[enemies.size() - 1 - i] = true
 			enemy_flicks_per_turn += difficulty.elite_extra_flicks
+	if node.type == MapNode.Type.BOSS:
+		boss_summons = _boss_summons()
 	while enemy_boosts.size() < enemies.size():
 		enemy_boosts.append({})
 	while enemy_positions.size() < enemies.size():
@@ -783,9 +830,12 @@ func _build_lineup() -> void:
 		enemy_forced_finish.append(null)
 	while enemy_forced_upgrade.size() < enemies.size():
 		enemy_forced_upgrade.append(null)
-	var guaranteed: bool = elite_encounter and config.elite_config != null and config.elite_config.gear_guaranteed(act)
+	# Ascension 5 (Hardened Elites): every enemy of an elite carries a fitting item.
+	var guaranteed: bool = asc(5) and elite_encounter and config.elite_config != null and config.elite_config.gear_guaranteed(act)
 	for i in enemies.size():
-		var gear := _roll_enemy_gear(enemies[i], tougher) if not elite_encounter else {"finish": null, "equipment": null, "upgrade": null}
+		var gear := {"finish": null, "equipment": null, "upgrade": null}
+		if asc(1):  # Geared Enemies (the base game has no random gear)
+			gear = _roll_enemy_gear(enemies[i], tougher)
 		if guaranteed:
 			gear = _guaranteed_gear(enemies[i])
 		if enemy_forced_equipment[i] != null:
@@ -795,10 +845,101 @@ func _build_lineup() -> void:
 		if enemy_forced_upgrade[i] != null:
 			gear.upgrade = enemy_forced_upgrade[i]
 		enemy_gear.append(gear)
-	if elite_encounter:
+	if elite_encounter and asc(7):  # Elite Relics
 		_pick_enemy_relics()
 	_apply_minigame_penalty()
 	_pick_arena()
+
+
+## Enemies in a regular combat: 4 in every act in the base game. Ascension 3 (Rising Threat) brings back the
+## act scaling (4 / 5 / 6) and Ascension 9 (Bigger Squads) adds more in regular combats.
+func _enemy_count() -> int:
+	var count: int = config.ascension.base_enemies_per_combat
+	if asc(3):
+		count = config.difficulty.enemy_count(act)
+	if asc(9) and node != null and node.type == MapNode.Type.COMBAT:
+		count += config.ascension.bigger_squads_extra
+	return count
+
+
+## Drops enemies from the END of the lineup until it has `count` (hand-made encounters with more figures).
+func _trim_lineup(count: int) -> void:
+	while enemies.size() > count:
+		enemies.pop_back()
+		enemy_elite.pop_back()
+		enemy_boosts.pop_back()
+		enemy_positions.pop_back()
+		enemy_forced_equipment.pop_back()
+		enemy_forced_finish.pop_back()
+		enemy_forced_upgrade.pop_back()
+
+
+## Cha-ching's bonuses are this much smaller at Ascension 4 (Leaner Economy).
+func cha_ching_reduction() -> int:
+	return config.ascension.cha_ching_reduction if asc(4) else 0
+
+
+## Ascension 8 (Boss Upgrades): changes to this fight's boss. Done through per-enemy boost dictionaries
+## (ability_values / creep) and extra copies, so the boss data files are never changed.
+func _apply_boss_ascension() -> void:
+	if not asc(8):
+		return
+	var cfg := config.ascension
+	while enemy_boosts.size() < enemies.size():
+		enemy_boosts.append({})
+	var template := {"mass": 1.0, "power": 1.0, "accuracy": 1.0, "bounce": 0.0, "ability": 1.0, "ability_values": {}, "creep": 1.0}
+	var first: FigureData = enemies[0]
+	if boss.display_name == cfg.sniper_boss_name:
+		while enemies.size() < cfg.sniper_count:
+			enemies.append(first)
+			enemy_elite.append(false)
+	elif first.creep_distance > 0.0:  # The Wall
+		for i in enemies.size():
+			var boost := template.duplicate(true)
+			boost.creep = cfg.wall_creep_multiplier
+			enemy_boosts[i] = boost
+	elif first.ability is TrangleAbility:
+		var boost := template.duplicate(true)
+		boost.ability_values = {"flick_spin": first.ability.flick_spin * cfg.trangle_spin_multiplier}
+		enemy_boosts[0] = boost
+		enemy_flicks_per_turn = cfg.trangle_flicks
+	elif first.ability is SlimeAbility:
+		var boost := template.duplicate(true)
+		boost.ability_values = {"piece_count": cfg.slime_pieces}
+		enemy_boosts[0] = boost
+	elif first.ability is SkullotronAbility:
+		var boost := template.duplicate(true)
+		boost.ability_values = {"arm_count": cfg.skull_arms}
+		enemy_boosts[0] = boost
+
+
+## The Mad Creator's floor-space summons (Ascension 8: the Grunt space summons a Bombo).
+func _boss_summons() -> Array[FigureData]:
+	var list: Array[FigureData] = []
+	if boss == null:
+		return list
+	list.append_array(boss.summons)
+	if asc(8) and boss.creator_box and config.ascension.creator_from != null and config.ascension.creator_to != null:
+		for i in list.size():
+			if list[i] == config.ascension.creator_from:
+				list[i] = config.ascension.creator_to
+	return list
+
+
+## Ascension 10 (Double Boss): after the last act's boss, the OTHER act 3 boss is fought straight away.
+## Returns false if there is no other boss. The caller (main) then reloads the combat scene.
+func _start_second_boss() -> bool:
+	var other: Array[BossData] = []
+	for candidate in config.registry.bosses_act3:
+		if candidate != boss:
+			other.append(candidate)
+	if other.is_empty():
+		return false
+	in_second_boss = true
+	boss = other.pick_random()
+	_build_lineup()
+	RunHistory.mark_seen_all(enemies)
+	return true
 
 
 ## Elite encounters in acts 2-3: one compatible gear item that suits this figure's role (equipment or a finish,
@@ -828,7 +969,8 @@ func _pick_enemy_relics() -> void:
 		return
 	var pool := config.elite_config.enemy_relic_pool.duplicate()
 	pool.shuffle()
-	for i in mini(config.elite_config.relics_for(act), pool.size()):
+	var wanted := maxi(config.elite_config.relics_for(act), config.ascension.elite_relics)
+	for i in mini(wanted, pool.size()):
 		enemy_relics.append(pool[i])
 
 
@@ -896,7 +1038,7 @@ func _build_encounter(encounter: EncounterData) -> void:
 			enemy_forced_finish.append(entry.finish)
 			enemy_forced_upgrade.append(entry.upgrade)
 			enemy_positions.append(entry.positions[i] if i < entry.positions.size() else Vector2.INF)
-			if elite_encounter and config.elite_config != null:  # the act's elite stat boost (small in act 1)
+			if elite_encounter and asc(5) and config.elite_config != null:  # the act's elite stat boost (small in act 1)
 				var extra := config.elite_config.boost_for(act)
 				enemy_boosts[-1].mass *= extra.mass
 				enemy_boosts[-1].power *= extra.power
@@ -918,7 +1060,7 @@ func _add_mirror_enemies(encounter: EncounterData) -> void:
 	slots.shuffle()
 	var boost := {"mass": encounter.mirror_mass_multiplier, "power": encounter.mirror_power_multiplier,
 			"accuracy": encounter.mirror_accuracy_multiplier, "bounce": 0.0, "ability": 1.0}
-	for i in config.difficulty.enemy_count(act):
+	for i in _enemy_count():
 		var slot := slots[i % slots.size()]
 		var figure := deck[slot]
 		var economy := config.registry.economy.has(figure)
@@ -936,7 +1078,7 @@ func _add_mirror_enemies(encounter: EncounterData) -> void:
 ## Tops the lineup up to the act's enemy count with Grunts in free spots: the spot farthest from
 ## everything already placed, clear of the arena's walls and pins.
 func _fill_with_grunts(encounter: EncounterData) -> void:
-	var want := config.difficulty.enemy_count(act)
+	var want := _enemy_count()
 	while enemies.size() < want:
 		_add_grunt(encounter.arena)
 
@@ -979,7 +1121,9 @@ func _apply_minigame_penalty() -> void:
 	minigame_penalty = false
 	harder_fight = true  # (this fight pays better: see build_rewards)
 	var can_add_grunt := node.type != MapNode.Type.BOSS and not enemies_in_row
-	if can_add_grunt and (randf() < 0.5 or enemies.is_empty()):
+	if asc(2) and can_add_grunt:  # Harsher Events: BOTH penalties (the extra Grunt, then gear on an enemy below)
+		_add_penalty_grunt()
+	elif can_add_grunt and (randf() < 0.5 or enemies.is_empty()):
 		# (_add_grunt appends to the gear list too, which the caller filled for the original enemies only)
 		_add_penalty_grunt()
 		return
@@ -993,7 +1137,7 @@ func _apply_minigame_penalty() -> void:
 	if enemy_gear[index].upgrade == null and not upgrades_for(figure).is_empty():
 		choices.append("upgrade")
 	if choices.is_empty():
-		if can_add_grunt:
+		if can_add_grunt and not asc(2):
 			_add_penalty_grunt()
 		return
 	match choices.pick_random():
@@ -1009,7 +1153,7 @@ func _apply_minigame_penalty() -> void:
 				enemy_gear[index].equipment = picked
 		"upgrade":
 			enemy_gear[index].upgrade = upgrades_for(figure).pick_random()
-	penalty_text = "Penalty: a %s is upgraded" % figure.display_name
+	penalty_text = ("Penalty: +1 Grunt and a %s is upgraded" if asc(2) and can_add_grunt else "Penalty: a %s is upgraded") % figure.display_name
 
 
 func _add_penalty_grunt() -> void:

@@ -150,6 +150,7 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 			data.flick_power_multiplier *= stat_scale.get("power", 1.0)
 			data.mass *= stat_scale.get("mass", 1.0)
 			data.radius *= stat_scale.get("size", 1.0)
+			data.creep_distance *= stat_scale.get("creep", 1.0)  # (Ascension: The Wall creeps faster)
 			data.bounce = clampf(data.bounce + stat_scale.get("bounce", 0.0), 0.0, 1.0)
 	_base_damping = base_damping
 	radius = data.radius

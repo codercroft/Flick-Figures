@@ -22,7 +22,9 @@ extends Resource
 ## How elite encounters scale by act (stat boost, guaranteed gear, enemy relics, reward choices).
 @export var elite_config: EliteConfig
 ## How likely enemies are to carry finishes, equipment and upgrades in later acts.
-@export var enemy_gear: EnemyGearConfig
+@export var enemy_gear: EnemyGearConfig  # (the rates now live in ascension.gear; kept for reference)
+## Ascension levels (0 = the flat base game): see AscensionConfig.
+@export var ascension: AscensionConfig
 ## Boss fights always use this arena (the fully open layout: no walls, pins or patches).
 @export var boss_arena: ArenaData
 ## How each act's branching map is built.

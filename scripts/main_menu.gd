@@ -69,8 +69,59 @@ func _show_confirm_new_run() -> void:
 	_root.add_child(spacer)
 	_label("Start a new run?", 56, Color.WHITE)
 	_label("Your saved run will be lost.", 38, Color(1.0, 0.6, 0.5))
-	_button("Yes, start a new run", Color(0.8, 0.35, 0.3), _start_new_run)
+	_button("Yes, start a new run", Color(0.8, 0.35, 0.3), _show_ascension_select)
 	_button("No, go back", Color(0.45, 0.48, 0.58), _show_main)
+
+
+## Pick the Ascension level for the new run (any unlocked one), with its description and everything that stacks.
+func _show_ascension_select(selected := -1) -> void:
+	var config: AscensionConfig = RunManager.config.ascension
+	var unlocked := AscensionProgress.highest_unlocked()
+	if selected < 0:
+		selected = unlocked
+	_clear()
+	_label("Ascension", 72, TITLE_COLOR)
+	_label("Pick a difficulty. Each level includes all lower ones.", 32, Color(0.6, 0.64, 0.75))
+	var grid := GridContainer.new()
+	grid.columns = 6
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_root.add_child(grid)
+	for level in config.max_level + 1:
+		var button := Button.new()
+		button.text = str(level) if level <= unlocked else "x"
+		button.disabled = level > unlocked
+		button.custom_minimum_size = Vector2(150.0, 110.0)
+		button.add_theme_font_size_override("font_size", 52)
+		if level == selected:
+			button.add_theme_color_override("font_color", TITLE_COLOR)
+			button.add_theme_color_override("font_hover_color", TITLE_COLOR)
+			var box := StyleBoxFlat.new()
+			box.bg_color = Color(0.3, 0.34, 0.5)
+			box.set_corner_radius_all(14)
+			box.set_border_width_all(4)
+			box.border_color = TITLE_COLOR
+			button.add_theme_stylebox_override("normal", box)
+		button.pressed.connect(_show_ascension_select.bind(level))
+		grid.add_child(button)
+	_label("%s%s" % ["Ascension %d: " % selected if selected > 0 else "", config.level_name(selected)], 48, Color.WHITE)
+	_label(config.level_description(selected), 34, Color(0.8, 0.83, 0.9))
+	if unlocked < config.max_level:
+		_label("Win a run on Ascension %d to unlock Ascension %d." % [unlocked, unlocked + 1], 30, Color(0.55, 0.58, 0.68))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_root.add_child(scroll)
+	var summary := Label.new()
+	summary.text = "Everything that applies:\n" + config.summary(selected)
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	summary.add_theme_font_size_override("font_size", 28)
+	summary.add_theme_color_override("font_color", Color(0.7, 0.73, 0.82))
+	scroll.add_child(summary)
+	_button("Start", Color(0.25, 0.65, 0.4), _start_new_run.bind(selected))
+	_button("Back", Color(0.45, 0.48, 0.58), _show_main)
 
 
 func _show_placeholder(heading: String, text: String) -> void:
@@ -128,12 +179,12 @@ func _on_new_run() -> void:
 	if RunManager.has_saved_run():
 		_show_confirm_new_run()
 	else:
-		_start_new_run()
+		_show_ascension_select()
 
 
-func _start_new_run() -> void:
+func _start_new_run(ascension_level := 0) -> void:
 	RunSave.delete()
-	RunManager.start_new_run()
+	RunManager.start_new_run(ascension_level)
 	get_tree().change_scene_to_file(NodeScenes.MAP_SCENE)
 
 

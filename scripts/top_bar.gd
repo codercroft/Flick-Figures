@@ -76,6 +76,8 @@ func refresh() -> void:
 			where += "  Boss"
 		else:
 			where += "  " + MapNode.type_name(RunManager.node.type)
+	if RunManager.ascension > 0:
+		where += "  A%d" % RunManager.ascension
 	_act_label.text = where
 	_money_label.text = "$%d" % RunManager.money
 	_sound_button.text = "OFF" if AudioManager.muted else "SND"

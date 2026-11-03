@@ -1011,6 +1011,13 @@ func _end_game(won: bool) -> void:
 		RunManager.notify_combat_won({"figures_lost": _figures_lost})
 		var income: int = RunManager.last_income.total
 		var run_complete := RunManager.combat_won()
+		if not run_complete and RunManager.in_second_boss and RunManager.node.type == MapNode.Type.BOSS and RunManager.is_last_act() \
+				and RunManager.reward_steps.is_empty():
+			# Ascension 10: the other act 3 boss comes straight after (no rewards in between).
+			ui.show_your_turn("Boss beaten! Now: %s" % RunManager.boss.display_name)
+			await get_tree().create_timer(reward_delay).timeout
+			get_tree().reload_current_scene()
+			return
 		if not run_complete:
 			ui.show_your_turn("Combat cleared! +$%d" % income)
 			await get_tree().create_timer(reward_delay).timeout

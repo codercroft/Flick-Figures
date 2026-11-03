@@ -26,7 +26,7 @@ var _tile_size := 0.0
 ## and the summon cap.
 func build(board_rect: Rect2, boss: BossData, creator_figure: Figure) -> void:
 	creator = creator_figure
-	summons = boss.summons
+	summons = RunManager.boss_summons if not RunManager.boss_summons.is_empty() else boss.summons
 	var origin := Vector2(board_rect.position.x + (board_rect.size.x - box_size) / 2.0, board_rect.position.y + top_margin)
 	_outer = Rect2(origin, Vector2(box_size, box_size))
 	_inner = _outer.grow(-wall_thickness)

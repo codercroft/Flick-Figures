@@ -29,6 +29,7 @@ static func save(run, pending_node := -1) -> void:
 	var data := {
 		"version": VERSION,
 		"seed": run.run_seed,
+		"ascension": run.ascension,
 		"act": run.act,
 		"current_node": run.current_node,
 		"pending_node": pending_node,
@@ -75,6 +76,8 @@ static func load_into(run) -> int:
 	if data.is_empty():
 		return -2
 	run.run_seed = int(data.get("seed", 0))
+	run.ascension = int(data.get("ascension", 0))
+	run.in_second_boss = false
 	run.act = int(data.get("act", 0))
 	run.current_node = int(data.get("current_node", -1))
 	run.money = int(data.get("money", 0))

@@ -9,6 +9,7 @@
 [ext_resource type="Resource" path="res://resources/map_config.tres" id="141"]
 [ext_resource type="Resource" path="res://resources/reward_config.tres" id="142"]
 [ext_resource type="Resource" path="res://resources/enemy_gear_config.tres" id="143"]
+[ext_resource type="Resource" path="res://resources/ascension_config.tres" id="asc_cfg"]
 [ext_resource type="Resource" path="res://resources/arenas/open_field.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/arenas/corner_posts.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/arenas/open_corners.tres" id="12"]
@@ -151,4 +152,5 @@ elite_encounters = Array[ExtResource("149")]([ExtResource("152"), ExtResource("e
 elite_config = ExtResource("elite_cfg")
 rewards = ExtResource("142")
 enemy_gear = ExtResource("143")
+ascension = ExtResource("asc_cfg")
 boss_arena = ExtResource("10")

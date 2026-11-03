@@ -68,6 +68,7 @@ static func record_run(run, won: bool) -> void:
 		"ts": int(Time.get_unix_time_from_system()),
 		"date": Time.get_datetime_string_from_system(false, true).left(16),
 		"won": won,
+		"ascension": run.ascension,
 		"act": run.act + 1,
 		"acts": run.config.acts,
 		"node": node_text,
@@ -100,6 +101,20 @@ static func overall_stats() -> Dictionary:
 		furthest = maxi(furthest, int(entry.act))
 	var count: int = _data.runs.size()
 	return {"runs": count, "wins": wins, "win_rate": float(wins) / count if count > 0 else 0.0, "furthest_act": furthest}
+
+
+## Per Ascension level: {level: {runs, wins}} for every level that has finished runs (old runs count as level 0).
+static func ascension_stats() -> Dictionary:
+	_load()
+	var stats := {}
+	for entry in _data.runs:
+		var level := int(entry.get("ascension", 0))
+		if not stats.has(level):
+			stats[level] = {"runs": 0, "wins": 0}
+		stats[level].runs += 1
+		if entry.won:
+			stats[level].wins += 1
+	return stats
 
 
 ## Per figure, keyed by resource path: {name, picked, in_deck, wins, win_rate (-1 if never in a final deck)}.
