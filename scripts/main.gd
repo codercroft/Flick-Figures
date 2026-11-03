@@ -177,7 +177,17 @@ func _exit_tree() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_knock_off_fallen_figures()
+	_update_blast_shields()
 	turret_may_fire = _settling and _state != State.GAME_OVER and _real_motion()
+
+
+## Figures of a team with a Firecracker on the table get the faint "explosion shield" ring.
+func _update_blast_shields() -> void:
+	var player_shield := Figure.team_has_firecracker(get_tree(), Figure.Team.PLAYER)
+	var enemy_shield := Figure.team_has_firecracker(get_tree(), Figure.Team.ENEMY)
+	for figure in _all_figures():
+		if _is_alive(figure):
+			figure.blast_shield = player_shield if figure.team == Figure.Team.PLAYER else enemy_shield
 
 
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
@@ -1203,7 +1213,7 @@ func explode_at(point: Vector2, radius: float, force: float) -> void:
 	picture.position = point
 	add_child(picture)
 	picture.start(radius)
-	Figure.blast(get_tree(), point, radius, force)
+	Figure.blast(get_tree(), point, radius, force, null, null, Figure.Team.PLAYER)  # (a power: the player's explosion)
 
 
 ## Swaps two figures' positions (Swap).

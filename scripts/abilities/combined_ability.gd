@@ -242,6 +242,10 @@ func get_ai_aggro(figure: Figure) -> Dictionary:
 	return info if not info.is_empty() else second.get_ai_aggro(figure)
 
 
+func grants_explosion_immunity(figure: Figure) -> bool:
+	return first.grants_explosion_immunity(figure) or second.grants_explosion_immunity(figure)
+
+
 func on_bloodlust_bonus(figure: Figure) -> void:
 	first.on_bloodlust_bonus(figure)
 	second.on_bloodlust_bonus(figure)

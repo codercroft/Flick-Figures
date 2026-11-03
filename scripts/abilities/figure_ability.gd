@@ -288,6 +288,11 @@ func get_hit_mass_multiplier(_figure: Figure) -> float:
 	return 1.0
 
 
+## Firecracker: while this figure is on the table, its whole team takes no knockback from explosions its own team causes.
+func grants_explosion_immunity(_figure: Figure) -> bool:
+	return false
+
+
 ## Bloodluster: it was just granted a bonus flick (a kill earned it).
 func on_bloodlust_bonus(_figure: Figure) -> void:
 	pass

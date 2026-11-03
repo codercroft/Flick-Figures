@@ -118,6 +118,8 @@ const TOUCH_MARGIN := 4.0
 ## Eater: hitting a smaller figure eats it (worth about a knock-off); the same figure on our own side is a loss.
 @export var eater_eat_bonus := 150.0
 @export var eater_ally_penalty := 180.0
+## Hitting a player Firecracker (its team is immune to its own explosions): bonus, mostly if it is knocked off.
+@export var firecracker_target_bonus := 80.0
 ## Goo Chain Glue Guy: bonus per extra player figure close to the target that the chain could pick up, and how close.
 @export var glue_chain_bonus := 60.0
 @export var glue_chain_reach := 150.0
@@ -430,6 +432,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		score = hit_player_bonus + kill_bonus * knocked_off * kill_weight + edge_bonus * edge_weight * pushed_toward_edge
 		if kill_weight > 1.0:
 			score += bloodluster_kill_bonus * knocked_off  # a kill earns a bonus flick
+		if other.ability.grants_explosion_immunity(other):
+			score += firecracker_target_bonus * (0.4 + knocked_off)  # removing it makes the player's own blasts hurt them
 		if other.ability.has_active_wall(other):
 			score += shield_break_bonus  # moving a Shieldon drops its wall
 		if other.is_doused():
@@ -808,10 +812,13 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 	var force: float = blast.force * RunManager.explosion_force_multiplier()
 	var total := 0.0
 	_fast_slides = true
+	var protected := Figure.team_has_firecracker(get_tree(), Figure.Team.ENEMY)  # our Firecracker shields our own figures
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
 		if figure == source or figure == spared or figure.knocked_off:
 			continue
+		if Figure.blast_immune(figure, Figure.Team.ENEMY, protected):
+			continue  # a friendly figure with a Firecracker around costs nothing, so blasts near our own figures are free
 		var offset := figure.global_position - center
 		var distance := offset.length()
 		if distance >= radius:

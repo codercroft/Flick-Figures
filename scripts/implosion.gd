@@ -18,9 +18,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_age += delta
+	var source_team: int = source.team if is_instance_valid(source) else -1
+	var protected := Figure.team_has_firecracker(get_tree(), source_team)
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
-		if figure == source or figure.knocked_off or figure.is_frozen():
+		if figure == source or figure.knocked_off or figure.is_frozen() or Figure.blast_immune(figure, source_team, protected):
 			continue
 		var offset := center - figure.global_position
 		var distance := offset.length()

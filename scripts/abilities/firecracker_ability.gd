@@ -4,6 +4,8 @@ extends FigureAbility
 ## the friend that hit it. It also explodes when caught in another explosion (chain reactions).
 ## And when IT hits any figure during its own flick, every other explosive figure of its team on the table
 ## (Bombo, Sneaky Bomber, other Firecrackers: the registry's "explosive" tag) detonates (once per flick).
+## While a Firecracker is on the table, every figure on its team is immune to explosions caused by its own team
+## (a faint orange ring shows it). Explosions from the other side still push them.
 
 @export var explosion_radius := 260.0
 @export var explosion_force := 1500.0
@@ -59,6 +61,10 @@ func _detonate_team(figure: Figure) -> void:
 			continue
 		if registry.is_explosive(other.base_data):
 			other.ability.detonate(other)
+
+
+func grants_explosion_immunity(_figure: Figure) -> bool:
+	return true
 
 
 func sets_off_team_explosives(_figure: Figure) -> bool:
