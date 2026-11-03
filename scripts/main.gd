@@ -497,6 +497,20 @@ func _fire_shot(figure: Figure, pos: Vector2) -> void:
 	_finish_player_turn()
 
 
+## Alchemist: placing its zone is its whole action this cycle (like a flick, without launching it).
+func _use_up_turn_placing(figure: Figure) -> void:
+	_take_snapshot()
+	figure.flickable = false
+	figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+	figure.show_popup("Zone placed!", Color(0.8, 0.6, 1.0))
+	_last_player_flicker = figure
+	_bonus_figure = null
+	_cancel_aim()
+	_deselect()
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
 ## A tap on empty board with a figure selected: Pinhead places (or takes back) its temporary pin.
 func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
@@ -521,11 +535,10 @@ func _tap_empty_board(pos: Vector2) -> void:
 		_fire_shot(_selected, pos)
 		return
 	var zone := _selected.ability.get_zone_stats(_selected)
-	if not zone.is_empty():  # Alchemist: one zone a turn (a new one replaces the old); it can still flick after
+	if not zone.is_empty():  # Alchemist: placing a zone is its action (it cannot also flick); one per turn
 		if arena.place_zone(_selected, pos, zone, board.board_rect):
 			_selected.placed_this_turn = true
-			_selected.show_popup("Zone placed!", Color(0.8, 0.6, 1.0))
-			ui.show_your_turn("Zone placed. Drag anywhere to flick")
+			_use_up_turn_placing(_selected)
 		else:
 			ui.show_your_turn("Can't place a zone there")
 		return
@@ -828,7 +841,7 @@ func _place_enemy_turrets() -> void:
 ## at most once per turn, and it does not cost a flick (like the player's).
 func _place_enemy_zones() -> void:
 	for enemy in _enemies:
-		if not _is_alive(enemy) or enemy.placed_this_turn:
+		if not _is_alive(enemy) or enemy.placed_this_turn or _enemy_cycle.has(enemy.get_instance_id()):
 			continue
 		var stats := enemy.ability.get_zone_stats(enemy)
 		if stats.is_empty():
@@ -836,7 +849,9 @@ func _place_enemy_zones() -> void:
 		var spot := ai.choose_zone_spot(enemy, _players)
 		if spot != Vector2.INF and arena.place_zone(enemy, spot, stats, board.board_rect):
 			enemy.placed_this_turn = true
+			_enemy_cycle[enemy.get_instance_id()] = true  # placing is its action this cycle (it does not flick too)
 			enemy.show_popup("Zone!", Color(0.8, 0.6, 1.0))
+			_refresh_enemy_cycle()
 
 
 ## When every enemy that can flick has flicked, the enemy side's cycle resets (they could all flick again):

@@ -227,17 +227,29 @@ func _fill_roster() -> void:
 	# The deck as one row of slots, like the deck strip in combat. Outside combat the figures can be dragged to
 	# rearrange them: that order sets their starting positions on the deck in the next combat.
 	var in_combat := RunManager.combat != null
+	# Details fill the page; the deck row sits at the bottom, where the deck is on the combat screen.
+	var scroll: Control = page.list.get_parent()
+	var holder: Control = page.detail.get_parent()
+	var tab_page: Control = scroll.get_parent()
+	scroll.visible = false
+	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if page.has("footer"):
+		page.footer.queue_free()
+	var footer := VBoxContainer.new()
+	footer.add_theme_constant_override("separation", 8)
+	tab_page.add_child(footer)
+	page["footer"] = footer
 	var note := Label.new()
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.add_theme_font_size_override("font_size", 26)
 	note.add_theme_color_override("font_color", Color(1.0, 0.75, 0.4) if in_combat else Color(0.7, 0.85, 1.0))
 	note.text = "Rearranging is only possible outside combat." if in_combat else "Drag a figure sideways to rearrange. The order is your starting order on the deck."
-	page.list.add_child(note)
+	footer.add_child(note)
 	var strip := DeckStrip.new()
 	strip.reorderable = not in_combat
 	strip.slot_pressed.connect(func(slot: int): page.detail.text = _figure_text(RunManager.deck[slot],
 			RunManager.deck_finish[slot], RunManager.deck_upgrade[slot], RunManager.deck_equipment[slot]))
-	page.list.add_child(strip)
+	footer.add_child(strip)
 
 
 func _figure_text(figure: FigureData, finish: FinishData, upgrade: UpgradeData, item: EquipmentData) -> String:

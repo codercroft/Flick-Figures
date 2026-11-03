@@ -4,7 +4,7 @@ extends PowerEffect
 ## sides) for a round.
 
 ## How far (px) the field reaches.
-@export var field_radius := 450.0
+@export var field_radius := 225.0
 ## Inside this distance (px) of the center there is no pull.
 @export var inner_radius := 90.0
 ## Pull (px/s per second) at the edge of the field; it fades to zero at inner_radius.
