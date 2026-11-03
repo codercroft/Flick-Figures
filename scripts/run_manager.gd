@@ -594,11 +594,15 @@ func offer_rewards(boss := false) -> Array[FigureData]:
 		var offered := config.registry.random_draftable_top(count, owned)
 		RunHistory.mark_seen_all(offered)
 		return offered
+	if node != null and node.type == MapNode.Type.ELITE:
+		return draft_figures(count, config.rewards.elite_rarity_weights)
 	return draft_figures(count)
 
 
-func draft_figures(count: int) -> Array[FigureData]:
-	var offered := config.registry.random_draftable_weighted(count, config.rewards.rarity_weights(act))
+func draft_figures(count: int, weights := Vector3.ZERO) -> Array[FigureData]:
+	if weights == Vector3.ZERO:
+		weights = config.rewards.rarity_weights(act)
+	var offered := config.registry.random_draftable_weighted(count, weights)
 	RunHistory.mark_seen_all(offered)  # (offered = met: unlocks it in the Compendium)
 	return offered
 
@@ -1028,6 +1032,17 @@ func _pick_event() -> EventData:
 	var chosen: EventData = fresh.pick_random()
 	used_events.append(chosen)
 	return chosen
+
+
+## Moves a deck slot (figure plus its finish, upgrade and equipment) to another position. The deck order is
+## the order of the starting positions on the deck strip in combat, and it is saved with the run.
+func move_deck_slot(from: int, to: int) -> void:
+	if from == to or from < 0 or to < 0 or from >= deck.size() or to >= deck.size():
+		return
+	for list in [deck, deck_equipment, deck_finish, deck_upgrade]:
+		var value = list.pop_at(from)
+		list.insert(to, value)
+	autosave()  # (does nothing while a node is being played)
 
 
 ## Removes a figure from the deck for good (its equipment goes back to the inventory). Never removes the

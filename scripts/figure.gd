@@ -27,7 +27,7 @@ const ENEMY_RING := Color(0.95, 0.15, 0.15)
 const KNOCKBACK_MIN_CHANGE := 60.0
 const BLAST_RING_TIME := 0.35
 ## Ability numbers that the Glow-in-the-dark finish makes stronger (radius, pull, bounce).
-const STRENGTH_PROPERTIES := ["explosion_radius", "pull_radius", "pull_acceleration", "bounce_boost", "bump_ratio", "nudge_speed", "aura_radius"]
+const STRENGTH_PROPERTIES := ["explosion_radius", "blast_radius", "pull_radius", "pull_acceleration", "bounce_boost", "bump_ratio", "nudge_speed", "aura_radius"]
 
 var team := Team.PLAYER
 var data: FigureData  # may be a modified copy of base_data (upgrades and finishes change stats)

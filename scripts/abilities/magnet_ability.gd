@@ -13,6 +13,14 @@ extends FigureAbility
 @export var pull_acceleration := 1600.0
 ## Figures slower than this (px/s) are left alone, so resting figures are never dragged in.
 @export var min_pull_speed := 60.0
+@export_group("Implosion")
+## When the Magnet is knocked off it implodes like Short Fuse: it pulls nearby figures toward the spot where it left.
+@export var implosion_radius := 300.0
+@export var implosion_strength := 1800.0
+@export var implosion_seconds := 0.4
+## If the Magnet wears Short Fuse the implosion is stronger instead of happening twice.
+@export var fused_implosion_radius := 440.0
+@export var fused_implosion_strength := 2700.0
 
 
 func on_physics_process(figure: Figure, _delta: float) -> void:
@@ -32,6 +40,22 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 		var strength := (distance - inner_radius) / (pull_radius - inner_radius)
 		# Force = mass * acceleration, so heavy figures are pulled as hard as light ones.
 		other.apply_central_force(offset.normalized() * pull_acceleration * RunManager.relic_pull_multiplier() * strength * other.mass)
+
+
+func on_knocked_off(figure: Figure) -> void:
+	var parent := figure.get_parent()
+	if parent == null:
+		return
+	var fused := figure.equipment != null and figure.equipment.effect is ShortFuseEffect
+	var pull := Implosion.new()
+	pull.center = figure.global_position
+	pull.radius = fused_implosion_radius if fused else implosion_radius
+	pull.strength = fused_implosion_strength if fused else implosion_strength
+	pull.seconds = implosion_seconds
+	pull.source = figure
+	pull.position = figure.global_position
+	pull.z_index = 5
+	parent.add_child.call_deferred(pull)
 
 
 func has_path_pull(figure: Figure) -> bool:

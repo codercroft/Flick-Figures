@@ -57,18 +57,19 @@ func _on_offer_pressed(offer: ShopOffer) -> void:
 func _show_slots() -> void:
 	frame.clear()
 	title.text = _pending.slot_prompt
-	var slots: Array[int] = []
-	for i in RunManager.deck.size():
-		if RunManager.config.registry.is_grunt(RunManager.deck[i]):
-			slots.append(i)
-	for i in RunManager.deck.size():
-		if not slots.has(i):
-			slots.append(i)
-	for slot in slots:
-		var card := FigureCard.new()
-		card.setup(RunManager.deck[slot], 120.0)
-		card.pressed.connect(_buy.bind(_pending, slot))
-		column.add_child(card)
+	# The deck as it sits on the table: tap a slot, then confirm.
+	var strip := DeckStrip.new()
+	column.add_child(strip)
+	var info := Label.new()
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_theme_font_size_override("font_size", 34)
+	info.text = "Tap a figure."
+	column.add_child(info)
+	var confirm := frame.add_action("Confirm", func(): _buy(_pending, strip.selected))
+	confirm.disabled = true
+	strip.slot_pressed.connect(func(slot: int):
+		info.text = DeckStrip.describe_slot(slot, false)
+		confirm.disabled = false)
 	frame.add_action("Back", _show_offers)
 
 

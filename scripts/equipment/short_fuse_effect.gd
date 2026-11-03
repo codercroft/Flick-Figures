@@ -12,6 +12,8 @@ extends FigureAbility
 
 
 func on_knocked_off(figure: Figure) -> void:
+	if figure.data.ability is MagnetAbility:
+		return  # a Magnet already implodes, and stronger with this item (see MagnetAbility)
 	var parent := figure.get_parent()
 	if parent == null:
 		return

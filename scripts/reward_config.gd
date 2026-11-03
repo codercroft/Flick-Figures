@@ -14,6 +14,8 @@ extends Resource
 @export var bonus_items_by_act: Array[int] = [0, 1, 2]
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
+## Figure choices after an ELITE fight roll each slot's rarity with these weights (common, uncommon, rare) in every act.
+@export var elite_rarity_weights := Vector3(0.6, 0.35, 0.05)
 @export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.8, 0.18, 0.02), Vector3(0.35, 0.5, 0.15), Vector3(0.2, 0.5, 0.3)]
 
 @export_group("Relics")

@@ -7,6 +7,15 @@ var data: FigureData:
 	set(value):
 		data = value
 		queue_redraw()
+## Small extras like on the table: a gold pip for a figure-specific upgrade, the equipment's badge label.
+var upgraded := false:
+	set(value):
+		upgraded = value
+		queue_redraw()
+var item_label := "":
+	set(value):
+		item_label = value
+		queue_redraw()
 var locked := false:
 	set(value):
 		locked = value
@@ -32,6 +41,13 @@ func _draw() -> void:
 		return
 	draw_circle(center, radius, data.color)
 	draw_arc(center, radius - 4.0, 0.0, TAU, 48, Figure.PLAYER_RING, 8.0, true)
+	if upgraded:
+		draw_circle(center + Vector2(radius, -radius) * 0.7, radius * 0.14, Color(1.0, 0.82, 0.25))
+	if item_label != "":
+		var badge_center := center + Vector2(radius, radius) * 0.7
+		draw_circle(badge_center, radius * 0.26, Color(0.1, 0.1, 0.14, 0.9))
+		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-radius * 0.26, radius * 0.1), item_label,
+				HORIZONTAL_ALIGNMENT_CENTER, radius * 0.52, int(radius * 0.3), Color.WHITE)
 	draw_circle(center + Vector2(-radius, -radius) * 0.3, radius * 0.22, data.color.lightened(0.4))
 	var label := data.label if data.label != "" else data.display_name.left(1)
 	var ink := data.color.darkened(0.5)

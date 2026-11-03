@@ -102,18 +102,19 @@ func _on_offer_chosen(offer: FigureData) -> void:
 func _show_replacements() -> void:
 	_clear_cards()
 	title.text = "Replace which figure with %s?" % _chosen.display_name
-	# Grunts first, since they are the usual sacrifice. Slots keep their deck order otherwise.
-	var slots: Array[int] = []
-	for i in RunManager.deck.size():
-		if RunManager.config.registry.is_grunt(RunManager.deck[i]):
-			slots.append(i)
-	for i in RunManager.deck.size():
-		if not slots.has(i):
-			slots.append(i)
-	var card_height := minf(REPLACE_CARD_HEIGHT, 900.0 / maxi(slots.size(), 1))
-	for slot in slots:
-		var card := _add_card(RunManager.deck[slot], card_height)
-		card.pressed.connect(_on_replace_chosen.bind(slot))
+	# Your deck as it sits on the table: tap the slot to replace, then confirm.
+	var strip := DeckStrip.new()
+	column.add_child(strip)
+	var info := Label.new()
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_theme_font_size_override("font_size", 34)
+	info.text = "Tap the figure to replace."
+	column.add_child(info)
+	var confirm := frame.add_action("Replace", func(): _on_replace_chosen(strip.selected))
+	confirm.disabled = true
+	strip.slot_pressed.connect(func(slot: int):
+		info.text = DeckStrip.describe_slot(slot)
+		confirm.disabled = false)
 	_add_button("Back", _show_offers)
 
 

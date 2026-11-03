@@ -1346,7 +1346,7 @@ func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2) 
 	var best := {}
 	for point in aim_points:
 		var offset := point - enemy.global_position
-		var wanted := minf(offset.length(), proj.range)
+		var wanted := offset.length()
 		if wanted < start_gap:
 			continue
 		var direction := offset.normalized()

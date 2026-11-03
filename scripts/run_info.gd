@@ -224,16 +224,20 @@ func _row(page: Dictionary, data: FigureData, text: String, detail: String, heig
 func _fill_roster() -> void:
 	var page: Dictionary = _pages.roster
 	_clear(page, "Tap a figure to read all about it.")
-	for slot in RunManager.deck.size():
-		var figure: FigureData = RunManager.deck[slot]
-		var finish: FinishData = RunManager.deck_finish[slot]
-		var upgrade: UpgradeData = RunManager.deck_upgrade[slot]
-		var item: EquipmentData = RunManager.deck_equipment[slot]
-		# A tall card with one line per thing (the list scrolls): name and rarity, ability, then the gear.
-		var summary := "%s (%s)\n%s" % [figure.display_name, figure.rarity_name(), figure.description]
-		var gear := "Finish: %s\nUpgrade: %s\nItem: %s" % [finish.display_name if finish else "none",
-				upgrade.display_name if upgrade else "none", item.display_name if item else "none"]
-		_row(page, figure, summary + "\n" + gear, _figure_text(figure, finish, upgrade, item), 330.0, 28)
+	# The deck as one row of slots, like the deck strip in combat. Outside combat the figures can be dragged to
+	# rearrange them: that order sets their starting positions on the deck in the next combat.
+	var in_combat := RunManager.combat != null
+	var note := Label.new()
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.add_theme_font_size_override("font_size", 26)
+	note.add_theme_color_override("font_color", Color(1.0, 0.75, 0.4) if in_combat else Color(0.7, 0.85, 1.0))
+	note.text = "Rearranging is only possible outside combat." if in_combat else "Drag a figure sideways to rearrange. The order is your starting order on the deck."
+	page.list.add_child(note)
+	var strip := DeckStrip.new()
+	strip.reorderable = not in_combat
+	strip.slot_pressed.connect(func(slot: int): page.detail.text = _figure_text(RunManager.deck[slot],
+			RunManager.deck_finish[slot], RunManager.deck_upgrade[slot], RunManager.deck_equipment[slot]))
+	page.list.add_child(strip)
 
 
 func _figure_text(figure: FigureData, finish: FinishData, upgrade: UpgradeData, item: EquipmentData) -> String:
