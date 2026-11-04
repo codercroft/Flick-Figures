@@ -48,6 +48,7 @@ var elite := false
 var _fx_time := 0.0
 ## The equipment item attached to this figure (player figures only), or null.
 var equipment: EquipmentData
+var deck_slot := -1  # the index in RunManager.deck for the player's starting figures (-1 for anything else)
 var _core_ability: FigureAbility  # the figure's own ability, without equipment / upgrade / finish effects
 var _equipment_effect: FigureAbility
 var _upgrade_effect: FigureAbility

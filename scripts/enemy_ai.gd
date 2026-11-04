@@ -130,6 +130,16 @@ const TOUCH_MARGIN := 4.0
 ## Blastoid: extra value of a projectile that hits a player figure directly (on top of its blast).
 ## Rally: value of each teammate nudged toward a player figure.
 @export var rally_ally_bonus := 15.0
+## Cluster: a toss is worth this share of the same shot as a flick.
+@export var toss_factor := 0.8
+## A loose clustling walks home when it has nothing better; this is how far it tries to go (px) at most.
+@export var rejoin_max_distance := 700.0
+## Spitter: a spray is worth this share of the equivalent push, and it needs at least this much water (seconds).
+@export var spray_factor := 0.9
+@export var spray_min_water := 0.8
+## Absorber: value of a hit that absorbs a smaller player figure; of a hard hit on a player Absorber holding an ally.
+@export var absorber_absorb_bonus := 200.0
+@export var absorber_rescue_bonus := 220.0
 @export var blastoid_hit_bonus := 40.0
 ## Alchemist: value of each player figure caught in a new debuff zone (nearer the middle counts more).
 @export var zone_value_per_figure := 70.0
@@ -252,6 +262,10 @@ func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_f
 		var spread := randf_range(-_aim_error(best_enemy), _aim_error(best_enemy))
 		var offset: Vector2 = (best.point - best_enemy.global_position).rotated(spread)
 		return {"enemy": best_enemy, "shot_point": best_enemy.global_position + offset}
+	if best.kind == "spray":  # Spitter sprays toward a point for a while
+		var wobble := randf_range(-_aim_error(best_enemy), _aim_error(best_enemy))
+		var spray_offset: Vector2 = (best.point - best_enemy.global_position).rotated(wobble)
+		return {"enemy": best_enemy, "spray_point": best_enemy.global_position + spray_offset, "spray_seconds": best.seconds}
 	if best.kind == "pin":  # Pinhead's whole action is placing the pin
 		return {"enemy": best_enemy, "pin": best.pin, "pin_radius": best.pin_radius, "pin_only": true}
 	var error := _aim_error(best_enemy)
@@ -395,7 +409,23 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 				and (best.is_empty() or projectile.score > best.score):
 			best = projectile
 
+	# Cluster: tossing a clustling at a player figure (worth a share of the same shot).
+	if not enemy.ability.get_toss_stats(enemy).is_empty():
+		var toss := _best_toss(enemy, players, table)
+		if not toss.is_empty() and toss.score >= min_attack_score and (best.is_empty() or toss.score > best.score):
+			best = toss
+
+	# Spitter: spraying a player figure toward the edge.
+	if not enemy.ability.get_spray_stats(enemy).is_empty():
+		var spray := _best_spray(enemy, players, table)
+		if not spray.is_empty() and spray.score >= min_attack_score and (best.is_empty() or spray.score > best.score):
+			best = spray
+
 	if best.is_empty() or best.score < min_attack_score:
+		# A loose clustling with nothing better walks home to its cluster.
+		var home := _rejoin_move(enemy)
+		if not home.is_empty():
+			return home
 		var move := _choose_reposition(enemy, shape, players, table)
 		if not move.is_empty():
 			best = move
@@ -479,6 +509,17 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if enemy.ability.sets_off_team_explosives(enemy):
 		combo += _team_detonation_value(enemy, players, table)
 	score += combo * weight
+	# Absorber: a hard enough hit swallows a smaller player figure; a hard hit on a player Absorber frees our held ally.
+	var hit_speed: float = hit.get("velocity", Vector2.ZERO).length()
+	var absorb_need := enemy.ability.get_absorb_speed(enemy)
+	if absorb_need > 0.0 and other.team == Figure.Team.PLAYER and other.radius < enemy.radius \
+			and not other.data.uneatable and not other.data.boss_body and hit_speed >= absorb_need:
+		score += absorber_absorb_bonus * weight
+	var escape_need := other.ability.get_escape_speed(other)
+	if escape_need > 0.0 and other.team == Figure.Team.PLAYER and hit_speed >= escape_need:
+		var held := other.ability.get_held_figure(other)
+		if held != null and held.team == enemy.team:
+			score += absorber_rescue_bonus * weight
 	# Rally: its flick sends each teammate toward that teammate's nearest player figure.
 	score += _rally_value(enemy, table) * weight
 	# Eater: touching a smaller figure eats it.
@@ -1361,6 +1402,84 @@ func _rally_value(enemy: Figure, table: Rect2) -> float:
 		if table.has_point(end):
 			total += rally_ally_bonus
 	return total
+
+
+## Cluster: the best clustling toss. Each player figure in reach is a target; the toss is scored like a hit by a
+## light piece (the target's push toward the edge and its chance of going off), times `toss_factor`.
+func _best_toss(enemy: Figure, players: Array[Figure], table: Rect2) -> Dictionary:
+	var stats := enemy.ability.get_toss_stats(enemy)
+	if not stats.get("can", false):
+		return {}
+	var piece: FigureData = stats.piece
+	var shape := CircleShape2D.new()
+	shape.radius = piece.radius
+	var speed: float = stats.speed
+	var best := {}
+	for target in players:
+		var to_target := target.global_position - enemy.global_position
+		if to_target.is_zero_approx():
+			continue
+		var direction := to_target.normalized()
+		var hit := _shot_path(enemy, shape, direction, speed)
+		if hit.is_empty() or hit.collider != target:
+			continue
+		# An elastic hit by the light piece: the target leaves with 2m/(m+M) of the piece's speed at contact.
+		var contact_speed: float = hit.velocity.length()
+		var push := contact_speed * 2.0 * piece.mass / (piece.mass + target.mass)
+		var velocity := direction * push
+		var score := hit_player_bonus * 0.5 \
+				+ kill_bonus * _leave_chance(target, target.global_position, velocity, table) \
+				+ edge_bonus * _push_progress(target, target.global_position, velocity, table)
+		score *= toss_factor
+		if best.is_empty() or score > best.score:
+			best = {"kind": "shot", "score": score, "point": enemy.global_position + direction * 300.0}
+	return best
+
+
+## Spitter: spray the player figure that ends up closest to going off. The stream pushes with a steady force
+## F = drops/s x impulse for `seconds` (damping limits the speed); then the figure slides on.
+func _best_spray(enemy: Figure, players: Array[Figure], table: Rect2) -> Dictionary:
+	var stats := enemy.ability.get_spray_stats(enemy)
+	if stats.water < spray_min_water:
+		return {}
+	var seconds := minf(stats.water, RunManager.combat.enemy_spray_seconds if RunManager.combat != null else 1.6)
+	var force: float = stats.drops_per_second * stats.impulse
+	var best := {}
+	for target in players:
+		var to_target := target.global_position - enemy.global_position
+		var gap := to_target.length() - enemy.radius - target.radius
+		if gap > stats.range * 0.9 or to_target.is_zero_approx():
+			continue
+		var direction := to_target.normalized()
+		var damp := maxf(target.linear_damp, 0.1)
+		var terminal := force * target.data.knockback_taken_multiplier / (target.mass * damp)
+		var end_speed := terminal * (1.0 - exp(-damp * seconds))
+		var during := terminal * (seconds - (1.0 - exp(-damp * seconds)) / damp)
+		var in_range := maxf(stats.range - maxf(gap, 0.0), 0.0)  # the stream stops pushing once the figure is out of range
+		if during > in_range:
+			end_speed *= in_range / maxf(during, 1.0)
+			during = in_range
+		var slide := during + end_speed / damp
+		var velocity := direction * (slide * damp + target.stop_speed)  # (the same maths as a flick that slides this far)
+		var score := (hit_player_bonus * 0.25 \
+				+ kill_bonus * _leave_chance(target, target.global_position, velocity, table) \
+				+ edge_bonus * _push_progress(target, target.global_position, velocity, table)) * spray_factor
+		if best.is_empty() or score > best.score:
+			best = {"kind": "spray", "score": score, "point": target.global_position, "seconds": seconds}
+	return best
+
+
+## A loose clustling walks back to its cluster when nothing better is on: a flick that slides it into the cluster.
+func _rejoin_move(enemy: Figure) -> Dictionary:
+	var home := enemy.ability.get_rejoin_target(enemy)
+	if home == null:
+		return {}
+	var to_home := home.global_position - enemy.global_position
+	var distance := to_home.length() - enemy.radius - home.radius
+	if distance < 5.0 or distance > rejoin_max_distance:
+		return {}
+	var speed := (distance + 20.0) * enemy.linear_damp + enemy.stop_speed
+	return {"kind": "reposition", "score": 1.0, "direction": to_home.normalized(), "speed": speed, "distance": distance + 20.0}
 
 
 ## The blasts of the other explosive figures on `enemy`'s team (set off by a Firecracker's hit), scored as usual.

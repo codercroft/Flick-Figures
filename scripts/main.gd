@@ -15,6 +15,10 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export_range(0.1, 0.6) var max_pull_fraction := 0.3
 ## Drags shorter than this (px) are cancelled instead of flicking.
 @export var min_pull_distance := 40.0
+## Spitter: hold still this long (seconds, within min_pull_distance) to start spraying instead of flicking.
+@export var spray_hold_seconds := 0.25
+## Enemy Spitter: how long its AI sprays (seconds, at most its water).
+@export var enemy_spray_seconds := 1.6
 ## Extra px around a figure that still counts as touching it.
 @export var grab_padding := 30.0
 
@@ -71,6 +75,10 @@ var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
 var _busy_time := 0.0  # seconds spent settling or in the enemy turn
+var _hold_pending := false  # Spitter: this touch may turn into a spray if it is held still
+var _hold_time := 0.0
+var _spraying := false
+var _last_touch := Vector2.ZERO
 var _press_was_empty := false  # the current touch started on empty board (a tap there can place a pin)
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
@@ -196,6 +204,10 @@ func _update_blast_shields() -> void:
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
 func _process(delta: float) -> void:
 	ui.set_powers_enabled(_state == State.PLAYER_TURN)
+	if _hold_pending and _state == State.AIMING:
+		_hold_time += delta
+		if _hold_time >= spray_hold_seconds:
+			_start_spray()
 	if _state != State.SETTLING and _state != State.ENEMY_TURN:
 		return
 	_busy_time += delta
@@ -290,6 +302,8 @@ func _start_player_turn(new_round := true) -> void:
 	_busy_time = 0.0
 	_touch_index = -1
 	_aim_figure = null
+	_hold_pending = false
+	_spraying = false
 	aim_line.clear()
 	_deselect()
 	ui.show_debug("")
@@ -340,6 +354,10 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 	_touch_index = index
 	_aim_figure = _selected
 	_touch_start = pos
+	_spraying = false
+	_hold_time = 0.0
+	var spray := _selected.ability.get_spray_stats(_selected)
+	_hold_pending = not spray.is_empty() and spray.water > 0.0 and _selected.flickable and _bonus_figure == null
 	_update_aim(pos)
 
 
@@ -361,6 +379,12 @@ func _deselect() -> void:
 func _update_aim(pos: Vector2) -> void:
 	if _state != State.AIMING:
 		return
+	_last_touch = pos
+	if _spraying:  # Spitter: the stream follows the finger
+		_aim_figure.ability.set_spray(_aim_figure, true, pos)
+		return
+	if _hold_pending and (pos - _touch_start).length() >= min_pull_distance:
+		_hold_pending = false  # moved: it is a flick drag
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
 		aim_line.clear()
@@ -378,6 +402,10 @@ func _update_aim(pos: Vector2) -> void:
 
 func _release_aim(pos: Vector2) -> void:
 	if _state != State.AIMING:
+		return
+	_hold_pending = false
+	if _spraying:
+		_end_spray()
 		return
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
@@ -510,6 +538,48 @@ func _fire_shot(figure: Figure, pos: Vector2) -> void:
 	_finish_player_turn()
 
 
+## Spitter: the touch was held still: start spraying toward the finger (instead of flicking).
+func _start_spray() -> void:
+	_hold_pending = false
+	if not is_instance_valid(_aim_figure):
+		return
+	_spraying = true
+	aim_line.clear()
+	_aim_figure.ability.set_spray(_aim_figure, true, _last_touch)
+	ui.show_your_turn("Spraying: release to stop")
+
+
+## Spitter: the finger lifted. Spraying was its action for this cycle (spray OR flick).
+func _end_spray() -> void:
+	var figure := _aim_figure
+	_spraying = false
+	if is_instance_valid(figure):
+		figure.ability.set_spray(figure, false)
+		_take_snapshot()
+		player_flicks += 1
+		_update_status()
+		figure.flickable = false
+		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+		_on_any_flick(figure, Vector2.ZERO)
+		_last_player_flicker = figure
+	_bonus_figure = null
+	_cancel_aim()
+	_deselect()
+	_state = State.SETTLING
+	_finish_player_turn()
+
+
+## Enemy Spitter: sprays toward `point` for a while; that is its action.
+func _enemy_spray(enemy: Figure, point: Vector2, seconds: float) -> void:
+	enemy.turn_flicks = enemy.ability.get_flicks_per_turn(enemy)
+	_on_any_flick(enemy, Vector2.ZERO)
+	enemy.show_popup("Spray!", Color(0.5, 0.75, 1.0))
+	enemy.ability.set_spray(enemy, true, point)
+	await get_tree().create_timer(seconds).timeout
+	if is_instance_valid(enemy):
+		enemy.ability.set_spray(enemy, false)
+
+
 ## Alchemist: placing its zone is its whole action this cycle (like a flick, without launching it).
 func _use_up_turn_placing(figure: Figure) -> void:
 	_take_snapshot()
@@ -544,6 +614,13 @@ func _tap_empty_board(pos: Vector2) -> void:
 			_:
 				ui.show_your_turn("Can't place a turret there")
 		return
+	var toss := _selected.ability.get_toss_stats(_selected)
+	if not toss.is_empty():  # Cluster: tap = toss a clustling toward that spot (instead of flicking)
+		if toss.can:
+			_fire_shot(_selected, pos)
+		else:
+			ui.show_your_turn("Can't toss its last clustling")
+		return
 	if not _selected.ability.get_shot_stats(_selected).is_empty():  # Blastoid: tap = fire at that spot
 		_fire_shot(_selected, pos)
 		return
@@ -569,6 +646,10 @@ func _tap_empty_board(pos: Vector2) -> void:
 
 
 func _cancel_aim() -> void:
+	_hold_pending = false
+	if _spraying and is_instance_valid(_aim_figure):
+		_aim_figure.ability.set_spray(_aim_figure, false)
+		_spraying = false
 	aim_line.clear()
 	_aim_figure = null
 	_touch_index = -1
@@ -701,7 +782,11 @@ func _run_enemy_turn() -> void:
 			if serial != _turn_serial:
 				return
 			continue
-		if choice.has("shot_point"):  # an enemy Blastoid fires instead of moving
+		if choice.has("spray_point"):  # an enemy Spitter sprays instead of moving
+			await _enemy_spray(choice.enemy, choice.spray_point, choice.spray_seconds)
+			if serial != _turn_serial:
+				return
+		elif choice.has("shot_point"):  # an enemy Blastoid fires (or a Cluster tosses) instead of moving
 			choice.enemy.shoot_at(choice.shot_point)
 			_on_any_flick(choice.enemy, Vector2.ZERO)
 		else:
@@ -727,7 +812,7 @@ func _run_enemy_turn() -> void:
 			await get_tree().create_timer(enemy_think_time).timeout
 			if serial != _turn_serial:
 				return
-			if extra.is_empty() or extra.has("pin_only") or extra.has("shot_point") or not _is_alive(shooter):
+			if extra.is_empty() or extra.has("pin_only") or extra.has("shot_point") or extra.has("spray_point") or not _is_alive(shooter):
 				break
 			if bloodlust:
 				shooter.bonus_flicks_used += 1
@@ -1042,6 +1127,7 @@ func _spawn_players() -> void:
 		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos, RunManager.deck_equipment[i],
 				RunManager.deck_finish[i], RunManager.deck_upgrade[i])
 		figure.deck_position = pos
+		figure.deck_slot = i
 		_players.append(figure)
 
 
@@ -1091,9 +1177,11 @@ func _on_shed_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> v
 			_enemies.append(spawned)
 		else:
 			spawned.on_deck = false
-			spawned.flickable = false
+			spawned.flickable = piece.get("flickable", false)  # (a tossed clustling is fresh and flickable)
 			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
+		if piece.has("on_spawn"):
+			piece.on_spawn.call(spawned)
 
 
 ## A figure (a Slime) splits: spawn its pieces on its team, then remove it. The pieces are new
@@ -1186,8 +1274,70 @@ func can_swap_equipment() -> bool:
 
 ## Costume Change: puts the deck slot's current equipment on its figure on the board (or on deck).
 func refresh_equipment(slot: int) -> void:
-	if slot >= 0 and slot < _players.size() and _is_alive(_players[slot]):
-		_players[slot].set_equipment(RunManager.deck_equipment[slot])
+	for figure in _players:
+		if figure.deck_slot == slot and _is_alive(figure):
+			figure.set_equipment(RunManager.deck_equipment[slot])
+
+
+## A figure leaves play without counting as knocked off (a clustling rejoining its cluster).
+func retire_figure(figure: Figure) -> void:
+	if not _is_alive(figure):
+		return
+	_players.erase(figure)
+	_enemies.erase(figure)
+	figure.knock_off(knock_off_fade_time, true)
+
+
+## Absorber: `figure` is held inside it. It leaves play at once (win/loss ignore it) but is kept, hidden and
+## frozen, until it is freed or fully shrunk.
+func absorb_figure(figure: Figure) -> void:
+	if not _is_alive(figure):
+		return
+	_players.erase(figure)
+	_enemies.erase(figure)
+	figure.knocked_off = true
+	figure.linear_velocity = Vector2.ZERO
+	figure.collision_layer = 0
+	figure.collision_mask = 0
+	figure.freeze = true
+	figure.visible = false
+	if figure == _selected:
+		_deselect()
+
+
+## The held figure is fully shrunk: it counts as knocked off (relics, income, kill counts) and is gone.
+func finish_absorbed(figure: Figure) -> void:
+	if not is_instance_valid(figure):
+		return
+	figure.knocked_off = false  # (so the usual knock-off bookkeeping accepts it)
+	figure.visible = true
+	if figure.team == Figure.Team.PLAYER:
+		_figures_lost += 1
+	_count_kill(figure)
+	figure.knock_off(knock_off_fade_time)
+	if figure.team == Figure.Team.ENEMY:
+		for player in _players:
+			if _is_alive(player):
+				player.ability.on_opponent_knocked_off(player, figure)
+
+
+## The held figure escapes (or its Absorber fell): back in play at `at`, at its current (shrunk) size.
+func release_absorbed(figure: Figure, at: Vector2) -> void:
+	if not is_instance_valid(figure):
+		return
+	var table: Rect2 = board.get_table_rect()
+	figure.knocked_off = false
+	figure.visible = true
+	figure.freeze = false
+	figure.global_position = Vector2(clampf(at.x, table.position.x + 40.0, table.end.x - 40.0),
+			clampf(at.y, table.position.y + 40.0, table.end.y - 40.0))
+	figure.linear_velocity = Vector2.ZERO
+	figure._update_collision()
+	if figure.team == Figure.Team.PLAYER:
+		figure.on_deck = false
+		_players.append(figure)
+	else:
+		_enemies.append(figure)
 
 
 func recharge_figure(figure: Figure) -> void:

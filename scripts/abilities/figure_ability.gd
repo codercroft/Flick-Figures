@@ -240,6 +240,46 @@ func detonate(_figure: Figure) -> void:
 	pass
 
 
+## Cluster: tap-to-toss stats ({} = none): {"speed", "can"}. A quick tap on the board calls `fire_shot_at`.
+func get_toss_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## Clustling: asked of the cluster it touches; true if it takes the clustling back in.
+func accept_rejoin(_figure: Figure) -> bool:
+	return false
+
+
+## Clustling: the cluster this loose piece belongs to (the enemy AI walks it back), or null.
+func get_rejoin_target(_figure: Figure) -> Figure:
+	return null
+
+
+## Spitter: spray stats ({} = none): {"range", "speed", "drops_per_second", "impulse", "water"}.
+func get_spray_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## Spitter: the player (or the AI) starts / aims / stops the spray. `point` is where it is aimed (world space).
+func set_spray(_figure: Figure, _active: bool, _point := Vector2.ZERO) -> void:
+	pass
+
+
+## Absorber: the impact speed needed to absorb a smaller figure (0 = cannot, or it already holds one).
+func get_absorb_speed(_figure: Figure) -> float:
+	return 0.0
+
+
+## Absorber holding a figure: the impact speed from a teammate of the held figure that frees it (0 = holds nothing).
+## The held figure itself is returned by get_held_figure.
+func get_escape_speed(_figure: Figure) -> float:
+	return 0.0
+
+
+func get_held_figure(_figure: Figure) -> Figure:
+	return null
+
+
 ## AI hint: Rally's aimed nudge speed on its teammates (0 = none).
 func get_rally_speed(_figure: Figure) -> float:
 	return 0.0

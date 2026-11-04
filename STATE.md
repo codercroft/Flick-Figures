@@ -102,6 +102,8 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Triple Split | - |
 | Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | - | - |
 | Uncommon | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
+| Uncommon | Cluster | 2.2 (3 x 0.73) | 74 (3 clustlings; 45 for one) | 1 | 1 | 0.7 | 1 | Big Bunch | - |
+| Uncommon | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Big Gulp | - |
 | Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Bomb Shelter | - |
 | Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | - | - |
 | Uncommon | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Full Haunt | - |
@@ -114,6 +116,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Rare | Bloodluster | 1 | 58 | 1 | 1.667 | 0.7 | 1 | - | - |
 | Rare | Bombo | 1 | 55 | 1 | 1 | 0.7 | 1 | Boom Boom | explosive |
 | Rare | Bumper | 1.1 | 70 | 0.7 | 1.6 | 1 | 0.75 | - | - |
+| Rare | Absorber | 2 | 66 | 0.8 | 1.4 | 0.5 | 1 | Big Belly | - |
 | Rare | Eater | 0.9 | 54 | 1 | 1 | 0.6 | 1 | - | - |
 | Rare | Engineer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
 
@@ -147,6 +150,9 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Bloodluster | Damping x1.667 (flicks about 60% as far). A flick that knocks an opposing figure off earns a bonus flick from where it stopped, chaining while each flick kills; each bonus adds +35% damping until the round ticks or it becomes flickable again (red pips + tint). |
 | Bombo | Explodes (radius 200, force 900) on its first hit after each flick and survives. Boom Boom: every hit. |
 | Bumper | Bounce 1, damping x1.6, flick x0.7, takes x0.75 knockback. Anything that bounces off it leaves 1.3x faster (not a pushing Pusher). |
+| Cluster | Starts as 3 clustlings in ONE body (radius 45 x (1 + 0.45 x sqrt(count - 1)), mass 0.73 each). Tap the board instead of flicking: tosses one clustling toward the spot at 700 px/s; it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Toss OR flick per turn; cannot toss the last one. A loose clustling that touches its own cluster (after 0.4 s) rejoins it (the cluster grows back). Big Bunch: starts with 4. |
+| Spitter | Select it, then press and hold ~0.25 s without moving (more than 40 px of movement is a normal flick drag) to spray toward the finger; the stream follows it; release stops it. Spraying is its action (spray OR flick). 20 drops/s, 800 px/s, range 450, each drop pushes 20 impulse (a 3 s spray slides a resting mass-1 figure about 280 px; it nudges and redirects, no more). 4 s of water per combat, shrinking size and mass in proportion down to 50% at empty; a blue arc shows the water. Big Gulp: radius 68, mass 1.6, 6 s of water. |
+| Absorber | Its OWN flick hitting an opposing figure with a smaller radius at 300 px/s or more absorbs it (one at a time): the figure leaves play at once (win/loss ignore it), is drawn shrinking inside, and shrinks for 3 rounds (counted at each round tick); then it counts as knocked off. A hit on the Absorber by a teammate of the held figure at 500 px/s or more frees it at its reduced size; if the Absorber falls off, the held figure pops out where it fell. Bosses, boss pieces and uneatable figures cannot be absorbed. Big Belly: radius 80, mass 3 (can absorb Duwall and Bumper, radius 70). |
 | Eater | Eats any figure of either team it touches with a smaller radius (not uneatable bosses/pieces): victim counts as knocked off; Eater grows (60% of victim's area, 70% of its mass; caps radius 110, mass 4). |
 | Engineer | Tap empty board: place ONE turret (radius 30, mass 0.35, not a Figure). It fires a 260-impulse pellet every 1.5 s at the nearest opposing board figure within 520 px, on BOTH sides' turns, only while figures are moving. |
 
@@ -171,6 +177,9 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 |---|---|---|
 | Hair Trigger | Aggro Bom | Only needs 3 collisions to explode. |
 | Twin Rockets | Blastoid | Every shot fires 2 rockets. |
+| Big Bunch | Cluster | Starts with 4 clustlings. |
+| Big Gulp | Spitter | Starts bigger and heavier, with more water. |
+| Big Belly | Absorber | Bigger, so it can absorb Duwalls and Bumpers. |
 | Rallying Cry | Rally | Also makes your other figures flickable again. |
 | Boom Boom | Bombo | Explodes on every hit, not just the first. |
 | Big Spender | Cha Ching | Pays +$3 instead of +$2. |

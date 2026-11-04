@@ -263,3 +263,40 @@ func on_became_flickable(figure: Figure) -> void:
 func on_round_ticked(figure: Figure) -> void:
 	first.on_round_ticked(figure)
 	second.on_round_ticked(figure)
+
+
+func get_toss_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_toss_stats(figure)
+	return stats if not stats.is_empty() else second.get_toss_stats(figure)
+
+
+func accept_rejoin(figure: Figure) -> bool:
+	return first.accept_rejoin(figure) or second.accept_rejoin(figure)
+
+
+func get_rejoin_target(figure: Figure) -> Figure:
+	var target := first.get_rejoin_target(figure)
+	return target if target != null else second.get_rejoin_target(figure)
+
+
+func get_spray_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_spray_stats(figure)
+	return stats if not stats.is_empty() else second.get_spray_stats(figure)
+
+
+func set_spray(figure: Figure, active: bool, point := Vector2.ZERO) -> void:
+	first.set_spray(figure, active, point)
+	second.set_spray(figure, active, point)
+
+
+func get_absorb_speed(figure: Figure) -> float:
+	return maxf(first.get_absorb_speed(figure), second.get_absorb_speed(figure))
+
+
+func get_escape_speed(figure: Figure) -> float:
+	return maxf(first.get_escape_speed(figure), second.get_escape_speed(figure))
+
+
+func get_held_figure(figure: Figure) -> Figure:
+	var held := first.get_held_figure(figure)
+	return held if held != null else second.get_held_figure(figure)

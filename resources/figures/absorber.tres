@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/abilities/absorber_ability.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Absorber"
+description = "Its hit absorbs a smaller figure, which shrinks inside for 3 rounds, then is knocked off. A teammate's hard hit frees it."
+rarity = 2
+label = "AB"
+icon = 35
+color = Color(0.6, 0.35, 0.65, 1)
+radius = 66.0
+mass = 2.0
+bounce = 0.5
+damping_multiplier = 1.4
+flick_power_multiplier = 0.8
+accuracy = 0.8
+ability = SubResource("Resource_1")

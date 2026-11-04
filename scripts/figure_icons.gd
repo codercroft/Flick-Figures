@@ -5,7 +5,7 @@ extends RefCounted
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, FIRECRACKER, SLIME, COIN,
 		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG,
-		TRIANGLE, BOX }
+		TRIANGLE, BOX, CLUSTER, SPRAYER, MAW }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -155,6 +155,17 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 		Icon.BOX:  # a square box with a diamond inside (Mad Creator)
 			canvas.draw_rect(Rect2(center - Vector2(s, s) * 0.85, Vector2(s, s) * 1.7), color, false, w)
 			canvas.draw_polyline(PackedVector2Array([center + Vector2(0, -s * 0.45), center + Vector2(s * 0.45, 0), center + Vector2(0, s * 0.45), center + Vector2(-s * 0.45, 0), center + Vector2(0, -s * 0.45)]), color, w * 0.8)
+		Icon.CLUSTER:  # three small balls together
+			canvas.draw_arc(center + Vector2(-s * 0.45, s * 0.4), s * 0.42, 0.0, TAU, 12, color, w)
+			canvas.draw_arc(center + Vector2(s * 0.45, s * 0.4), s * 0.42, 0.0, TAU, 12, color, w)
+			canvas.draw_arc(center + Vector2(0, -s * 0.45), s * 0.42, 0.0, TAU, 12, color, w)
+		Icon.SPRAYER:  # a nozzle with three spray lines
+			canvas.draw_line(center + Vector2(-s, 0), center + Vector2(-s * 0.3, 0), color, w * 1.6)
+			for a in [-0.5, 0.0, 0.5]:
+				canvas.draw_line(center + Vector2(-s * 0.1, 0), center + Vector2(s, 0).rotated(a), color, w * 0.7)
+		Icon.MAW:  # a big open mouth ring with a dot inside
+			canvas.draw_arc(center, s * 0.9, 0.0, TAU, 20, color, w)
+			canvas.draw_circle(center, s * 0.28, color)
 		Icon.SKULL:  # a skull: round head, two eyes, jaw
 			canvas.draw_arc(center + Vector2(0, -s * 0.15), s * 0.75, 0.0, TAU, 20, color, w)
 			canvas.draw_circle(center + Vector2(-s * 0.3, -s * 0.2), w * 0.9, color)
