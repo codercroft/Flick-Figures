@@ -4,6 +4,14 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-04: Playtest changes (Blastoid, Rally, Ascension 4, relics)
+- Blastoid: rocket explosion force 800 -> 1200 (radius still 170). When a Firecracker's hit (or any "set off explosives" effect) detonates it, it now fires a rocket at the nearest opposing figure on the table and stays put (keeps its action) instead of exploding in place. New upgrade Twin Rockets (`rockets_per_shot` 2): a tap fans the 2 rockets 6 degrees either side of the tapped point (`spread_degrees`, @export); a detonation sends one at each of the 2 nearest opposing figures (the same one if only one is left). Description updated. AI: a set-off Blastoid is valued as the blast at the nearest player figure(s).
+- Rally: each teammate (board and deck) is now nudged toward ITS OWN nearest opposing figure at the same `nudge_speed` 440 (forward if no opponent is left). New upgrade Rallying Cry (`resets_cycle`): also makes every other teammate flickable again (Rally itself is not recharged, so it cannot loop alone: deviation from "every figure"). AI: `_rally_value` adds `rally_ally_bonus` (15) per teammate whose aimed nudge heads at a player figure and stays on the table.
+- Ascension 4: Cha-ching nerf removed completely (`cha_ching_reduction` and its plumbing gone); shop prices x1.5 rounded up (was x1.2).
+- Relics: Second Wind is now Boss rarity (boss rewards only). New Common relic Costume Change: equip, unequip and swap equipment in the Inventory during combat, on your own idle turn (Main.can_swap_equipment: PLAYER_TURN, no bonus flick pending); no flick is used and effects apply at once (`Figure.set_equipment` re-applies mass, damping, bounce and the effect). Reordering stays locked in combat.
+- Checked headless: live equip/unequip mass, 1/2 rockets on detonate and tap, Rallying Cry recharge, lock outside the player's turn.
+- Open issues: swapping equipment resets that item's per-combat state (e.g. a used Parachute); Rally's aimed nudge is only modelled roughly by the AI.
+
 ## 2026-11-04: Audit, STATE.md, CHANGELOG.md, CLAUDE.md refresh
 - Wrote STATE.md from the code and resource files (rules, map, rewards, shop, every figure/relic/power/equipment/finish/upgrade, arenas, encounters, elites, bosses, AI, Ascension, events, screens, known issues).
 - Added this CHANGELOG.md and the standing "sync" rules to CLAUDE.md; refreshed its game summary and fixed stale lines (top bar, run info, shop picker, encounter counts).

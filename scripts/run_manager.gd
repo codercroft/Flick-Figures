@@ -260,6 +260,23 @@ func relic_first_enemy_turn(main) -> float:
 	return wait
 
 
+## Equipment can be changed right now: always outside combat; in combat only with Costume Change, on the player's own turn.
+func equipment_change_allowed() -> bool:
+	if combat == null:
+		return true
+	for relic in relics:
+		if relic.effect != null and relic.effect.enables_combat_equip():
+			return combat.can_swap_equipment()
+	return false
+
+
+func relic_enables_combat_equip() -> bool:
+	for relic in relics:
+		if relic.effect != null and relic.effect.enables_combat_equip():
+			return true
+	return false
+
+
 func relic_enables_reload() -> bool:
 	for relic in relics:
 		if relic.effect != null and relic.effect.enables_reload():
@@ -707,7 +724,7 @@ func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> 
 	var base := figures_on_table.size() * config.income_per_figure
 	var bonus := equipment_bonus
 	for figure in figures_on_table:
-		bonus += maxi(figure.income_bonus - (cha_ching_reduction() if figure.ability is ChaChingAbility else 0), 0)
+		bonus += figure.income_bonus
 	for relic in relics:
 		if relic.effect != null:
 			bonus += relic.effect.get_income_bonus()
@@ -882,10 +899,6 @@ func _trim_lineup(count: int) -> void:
 		enemy_forced_finish.pop_back()
 		enemy_forced_upgrade.pop_back()
 
-
-## Cha-ching's bonuses are this much smaller at Ascension 4 (Leaner Economy).
-func cha_ching_reduction() -> int:
-	return config.ascension.cha_ching_reduction if asc(4) else 0
 
 
 ## Ascension 8 (Boss Upgrades): changes to this fight's boss. Done through per-enemy boost dictionaries

@@ -76,7 +76,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 | Equipment | 1 | $5 |
 | Figure-specific upgrade for a figure you hold (applies at once) | 1 | $6 |
 | Finish (you pick the figure) | 1 | $7 |
-Ascension 4: every price x1.2, rounded up.
+Ascension 4: every price x1.5, rounded up.
 
 ### Economy
 - Start $0. Income: see "On a combat win". Spending: shop, Trader. Cha-ching also pays $1 per enemy knocked off while it is on the table. Piggy Bank scales with held money.
@@ -122,11 +122,11 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 ### Abilities as implemented
 | Figure | Ability |
 |---|---|
-| Rally | When flicked, nudges every other teammate (board and deck) forward at 440 px/s. |
+| Rally | When flicked, sends every other teammate (board and deck) at 440 px/s toward that teammate's own nearest opposing figure (forward if none is left). Rallying Cry: also makes those teammates flickable again. |
 | Splitter | First impact (>=150 px/s) after a flick splits it into 2 Minis (radius 45, mass 0.78, flick power x0.7, 25% less knockback dealt, no income) that burst out at 260 px/s, +-55 deg, keeping 20% of its speed. Minis are fresh unflicked figures. Triple Split: 3 minis. |
 | Cha-ching | Economy only (see Win rules); +$1 per enemy knocked off while it is on the table. |
 | Aggro-bom | Counts collisions (pair cooldown 0.2 s); on the 4th it explodes (radius 320, force 1500) and survives; count persists across turns. Hair Trigger: 3. Pips drawn above it. |
-| Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 800) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. |
+| Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 1200) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. When a Firecracker's hit (or anything else that sets off explosives) detonates it, it fires a rocket at the nearest opposing figure on the table instead of exploding where it stands (it stays put and keeps its action). Twin Rockets: 2 rockets per shot (a tap fans them +-6 degrees around the tapped point; a detonation sends one at each of the 2 nearest opposing figures, both at the same one if only one is left). |
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
 | Firecracker | Explodes (radius 260, force 1500) when a teammate hits it (sparing that teammate) or when caught in an explosion (1.5 s re-arm). Its own flick hit detonates every other explosive teammate on the table once per flick. While on the table its whole team ignores its own team's explosions (orange ring). |
 | Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Goo Chain: several figures, stuck figures turn sticky, chain cap 5. |
@@ -170,6 +170,8 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Upgrade | Figure | Effect |
 |---|---|---|
 | Hair Trigger | Aggro Bom | Only needs 3 collisions to explode. |
+| Twin Rockets | Blastoid | Every shot fires 2 rockets. |
+| Rallying Cry | Rally | Also makes your other figures flickable again. |
 | Boom Boom | Bombo | Explodes on every hit, not just the first. |
 | Big Spender | Cha Ching | Pays +$3 instead of +$2. |
 | Bomb Shelter | Duwall | Also immune to explosion knockback. |
@@ -193,6 +195,7 @@ Every draftable figure without an upgrade above can only take a finish.
 |---|---|---|
 | Common | Aim Assist | The aim line shows the first bounce off a wall, pin or figure. |
 | Common | Grippy Table | Your figures stop 30% sooner. |
+| Common | Costume Change | Equip, unequip and swap equipment in the Inventory during combat, on your own turn (nothing moving, not mid-aim). Costs no flick; effects apply at once. |
 | Common | Home Field | Your figures take half knockback in your bottom third of the board. |
 | Common | Lucky Coin (economy) | +$1 after every won combat. |
 | Uncommon | Blast Cap | Explosions are 50% bigger. |
@@ -203,9 +206,9 @@ Every draftable figure without an upgrade above can only take a finish.
 | Uncommon | Underdog | +50% flick power while you have fewer figures on the table than the enemy. |
 | Rare | Last One Standing | Your final remaining figure gets 2x flick power and takes half knockback. |
 | Rare | Opening Act | The first flick of each combat has 2x power. |
-| Rare | Second Wind | The first of your figures knocked off each combat returns to the deck strip. |
 | Rare | Starter Walls | Before the enemy's first turn, a wall pops up in front of each unflicked figure on the deck. It lasts that turn. |
 | Boss | Extra Pocket | +1 deck slot. |
+| Boss | Second Wind | The first of your figures knocked off each combat returns to the deck strip. (Only from boss rewards.) |
 
 Exact numbers: Blast Cap x1.5 radius; Bully x2 within 200 px of the edge; Grippy Table: damping x1/0.7; Home Field x0.5 in the bottom third; Last One Standing x2 power, x0.5 knockback; Opening Act first flick x2; Underdog x1.5 power; Gravity Well x2 pulls (Magnet, Magnet Charm, Magnet Throw); Trophy Case +1 figure choice; Extra Pocket +1 deck slot (Boss rarity, boss reward only); Starter Walls pops a 190 x 26 wall above every unflicked deck figure before the enemy's first turn (lasts that turn); Second Wind returns the first knocked-off figure each combat to its deck slot; Clean Sheet gives a random power if no figure was lost; Aim Assist shows the first bounce.
 The enemy-side versions (Ascension 7+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act (never economy relics).
@@ -356,7 +359,7 @@ Selector on New Run; highest unlocked level saved in `user://ascension.json`; wi
 | 1 | Geared Enemies | Regular enemies roll gear (act 2: 25% finish, 15% equipment; act 3: 50% / 35% / 10% figure upgrade); elites and bosses roll at the next act's rates. Always compatible. |
 | 2 | Harsher Events | A lost minigame gives BOTH penalties: extra Grunt AND gear on an enemy. |
 | 3 | Rising Threat | Act multipliers return: accuracy x1.05/1.1, flick power x1.1/1.2, mass x1.1/1.25 (acts 2/3); bosses accuracy x1.05/1.1, power x1.1/1.2, mass x1.15/1.3; regular combats 4/5/6 enemies. |
-| 4 | Leaner Economy | Shop prices x1.2 (rounded up); Cha-ching's bonuses -$1 each (its kill bonus becomes $0, income 2 becomes 1). |
+| 4 | Leaner Economy | Shop prices x1.5 (rounded up). |
 | 5 | Hardened Elites | Elite enemies get the EliteConfig stat boost (x1.05 mass/power/accuracy in act 1, 1.0 later) and, in acts 2-3, one guaranteed role-fitting item each (50% equipment / 50% finish). Act 1 elites get no gear. |
 | 6 | Fewer Offers | Figure choices capped at 2 (including the boss pick); chance drops halved. |
 | 7 | Elite Relics | Elites carry one enemy relic in every act (random from the 7-relic enemy pool); shown in the banner and a red line under the top bar. |
@@ -384,7 +387,7 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 - **Map**: scrolling act map, tap a glowing next node; shows a "next fight will be harder" warning when a minigame penalty is set; Upgrades button only if `show_upgrade_screen` is on (off). Autosaves each time it opens.
 - **Top bar** (map, combat, shop, reward, event screens): Map button, Inventory button, sound button, "Act n/3  Row r  An", money.
 - **Map overlay** (top bar): view-only map with your position and tap-for-description; Close returns.
-- **Inventory** (top bar, full screen): roster along the bottom in deck order (tap = full details; drag to reorder outside combat), details box above it, tabs Equipment (drag an item onto a figure to equip, tap an equipped item's badge or the Unequip button to store it), Powers (Discard with confirm, works in combat), Relics (read-only). In combat equipping/reordering are locked with a note. Header has Main menu and Close.
+- **Inventory** (top bar, full screen): roster along the bottom in deck order (tap = full details; drag to reorder outside combat), details box above it, tabs Equipment (drag an item onto a figure to equip, tap an equipped item's badge or the Unequip button to store it), Powers (Discard with confirm, works in combat), Relics (read-only). In combat reordering is locked, and equipping too unless you hold Costume Change (then on your own idle turn). Header has Main menu and Close.
 - **Combat**: board, deck strip, turn label, power bar (3 slots), enemy relic line if any, banner (encounter, arena, penalty). Win/loss panel.
 - **Reward screen**: steps one at a time (figures draft -> which figure to replace on a deck strip, relics, power, equipment, finish, upgrade_item), each skippable; lucky drops get a flourish.
 - **Shop**, **Trader/minigame event screens** as above; "which figure?" picker uses the deck strip (tap a slot then confirm).
@@ -399,7 +402,6 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 ### Differences from what a prompt asked (kept as coded)
 - **Pinball Wizard arena**: prompt said "corner-walls layout"; implemented Corner Posts (6 wall segments at the corners). If Open Corners was meant, it is a one-line change in `pinball_wizard.tres`.
 - **Ascension 5**: prompt said "fitting gear on every enemy"; act 1 elites get the stat boost but NO gear (EliteConfig `guaranteed_gear` = [false, true, true], from the earlier elite-scaling design).
-- **Ascension 4**: "Cha-ching bonuses $1 less each" makes the kill bonus $0 (income 2 -> 1).
 - **Ascension 0 enemy count**: hand-made encounters with 5 figures (Fireworks, Fortress, Demolition Crew) are trimmed from the end at Ascension 0-2, so their last entry (Magnet / Sneaky Bomber / a Powerhouse) is missing there.
 - **Encounter-forced gear stays at Ascension 0** (The Setup's Skull, Mirror Match's copies): treated as encounter design, not random enemy gear.
 - **Shops/events start in the 4th row**, not the 3rd (the 3rd row is the chest row).

@@ -40,6 +40,11 @@ func get_pull_multiplier() -> float:
 ## --- Combat: rules and events ---
 
 ## True turns on the old reload rule.
+## Costume Change: equipment can be swapped in the Inventory during combat (own idle turn only).
+func enables_combat_equip() -> bool:
+	return false
+
+
 func enables_reload() -> bool:
 	return false
 

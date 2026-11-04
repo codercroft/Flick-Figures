@@ -6,7 +6,7 @@ extends Control
 ## figure to equip it; tap an equipped item's badge on a figure to unequip it), Powers (each slot has a Discard with a
 ## short confirm; works anywhere, also in combat) and Relics (read-only, tap for the description).
 ## Outside combat the roster can be reordered by dragging (that order is the starting positions on the deck).
-## In combat reordering and equipping are locked (a note says so); viewing and discarding powers still work.
+## In combat reordering and equipping are locked unless the Costume Change relic is held, on your own idle turn (a note says so); viewing and discarding powers still work.
 
 signal closed
 signal main_menu_requested
@@ -129,11 +129,13 @@ func open(tab := 0, selected = null) -> void:
 
 func refresh() -> void:
 	var in_combat := RunManager.combat != null
+	var equip_locked := not RunManager.equipment_change_allowed()
 	_strip.reorderable = not in_combat
-	_strip.drop_enabled = not in_combat
-	_note.text = "In combat: rearranging and equipping are locked. You can still look around and discard powers." if in_combat else "Drag a figure to rearrange the deck. Drag an item onto a figure to equip it; tap an item's badge on a figure to unequip it."
+	_strip.drop_enabled = not equip_locked
+	_note.text = ("In combat: rearranging is locked, and equipping is locked until your turn (Costume Change)." if RunManager.relic_enables_combat_equip()
+			else "In combat: rearranging and equipping are locked. You can still look around and discard powers.") if in_combat else "Drag a figure to rearrange the deck. Drag an item onto a figure to equip it; tap an item's badge on a figure to unequip it."
 	_strip.refresh()
-	_fill_equipment(in_combat)
+	_fill_equipment(equip_locked)
 	_fill_powers()
 	_fill_relics()
 	_update_unequip_button()
@@ -176,7 +178,7 @@ func _select_tab(index: int) -> void:
 			_tab_buttons[i].add_theme_color_override(state, ink)
 
 
-func _fill_equipment(in_combat: bool) -> void:
+func _fill_equipment(equip_locked: bool) -> void:
 	_clear(_equipment_grid)
 	if RunManager.equipment_inventory.is_empty():
 		var empty := Label.new()
@@ -187,7 +189,7 @@ func _fill_equipment(in_combat: bool) -> void:
 	for item in RunManager.equipment_inventory:
 		var tile := EquipTile.new()
 		tile.setup(item, tile_size)
-		tile.locked = in_combat
+		tile.locked = equip_locked
 		tile.pressed.connect(func(): _details.text = _equipment_text(item))
 		_equipment_grid.add_child(tile)
 
@@ -250,10 +252,11 @@ func _on_slot_pressed(slot: int) -> void:
 
 
 func _on_item_dropped(slot: int, item: EquipmentData) -> void:
-	if RunManager.combat != null:
+	if not RunManager.equipment_change_allowed():
 		_flash_locked()
 		return
 	if RunManager.equip(item, slot):
+		_sync_combat(slot)
 		refresh()
 		_strip.selected = slot
 		_details.text = "%s equipped.\n\n%s" % [item.display_name, _figure_text(slot)]
@@ -261,14 +264,14 @@ func _on_item_dropped(slot: int, item: EquipmentData) -> void:
 
 
 func _on_item_tapped(slot: int) -> void:
-	if RunManager.combat != null:
+	if not RunManager.equipment_change_allowed():
 		_flash_locked()
 		return
 	_unequip(slot)
 
 
 func _on_unequip_pressed() -> void:
-	if RunManager.combat != null:
+	if not RunManager.equipment_change_allowed():
 		_flash_locked()
 		return
 	if _strip.selected >= 0:
@@ -278,6 +281,7 @@ func _on_unequip_pressed() -> void:
 func _unequip(slot: int) -> void:
 	var item: EquipmentData = RunManager.deck_equipment[slot]
 	if RunManager.unequip(slot):
+		_sync_combat(slot)
 		refresh()
 		_strip.selected = slot
 		_details.text = "%s is back in storage.\n\n%s" % [item.display_name, _figure_text(slot)]
@@ -296,6 +300,12 @@ func _discard_power(slot: int) -> void:
 	powers_changed.emit()  # (a running combat refreshes its power bar)
 
 
+## Costume Change: the change shows on the figure in the running combat at once.
+func _sync_combat(slot: int) -> void:
+	if RunManager.combat != null:
+		RunManager.combat.refresh_equipment(slot)
+
+
 func _flash_locked() -> void:
 	_note.text = "Locked during combat."
 
@@ -304,7 +314,7 @@ func _update_unequip_button() -> void:
 	var slot := _strip.selected
 	var show := slot >= 0 and slot < RunManager.deck.size() and RunManager.deck_equipment[slot] != null
 	_unequip_button.visible = show
-	_unequip_button.disabled = RunManager.combat != null
+	_unequip_button.disabled = not RunManager.equipment_change_allowed()
 	if show:
 		_unequip_button.text = "Unequip %s" % RunManager.deck_equipment[slot].display_name
 

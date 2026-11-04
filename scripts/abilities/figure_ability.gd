@@ -240,6 +240,11 @@ func detonate(_figure: Figure) -> void:
 	pass
 
 
+## AI hint: Rally's aimed nudge speed on its teammates (0 = none).
+func get_rally_speed(_figure: Figure) -> float:
+	return 0.0
+
+
 ## AI hint: hitting anything with this figure also sets off the team's other explosive figures (Firecracker).
 func sets_off_team_explosives(_figure: Figure) -> bool:
 	return false

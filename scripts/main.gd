@@ -1179,6 +1179,17 @@ func force_knock_off(figure: Figure) -> void:
 
 
 ## Energizer: the figure can be flicked again this cycle.
+## Costume Change: true on the player's own turn while nothing moves and no flick is half done.
+func can_swap_equipment() -> bool:
+	return _state == State.PLAYER_TURN and _bonus_figure == null
+
+
+## Costume Change: puts the deck slot's current equipment on its figure on the board (or on deck).
+func refresh_equipment(slot: int) -> void:
+	if slot >= 0 and slot < _players.size() and _is_alive(_players[slot]):
+		_players[slot].set_equipment(RunManager.deck_equipment[slot])
+
+
 func recharge_figure(figure: Figure) -> void:
 	if not _is_alive(figure):
 		return

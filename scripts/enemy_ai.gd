@@ -128,6 +128,8 @@ const TOUCH_MARGIN := 4.0
 ## Shieldon: hitting a Shieldon with a wall up moves it and drops the wall.
 @export var shield_break_bonus := 40.0
 ## Blastoid: extra value of a projectile that hits a player figure directly (on top of its blast).
+## Rally: value of each teammate nudged toward a player figure.
+@export var rally_ally_bonus := 15.0
 @export var blastoid_hit_bonus := 40.0
 ## Alchemist: value of each player figure caught in a new debuff zone (nearer the middle counts more).
 @export var zone_value_per_figure := 70.0
@@ -477,6 +479,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if enemy.ability.sets_off_team_explosives(enemy):
 		combo += _team_detonation_value(enemy, players, table)
 	score += combo * weight
+	# Rally: its flick sends each teammate toward that teammate's nearest player figure.
+	score += _rally_value(enemy, table) * weight
 	# Eater: touching a smaller figure eats it.
 	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
 		if other.team == Figure.Team.PLAYER:
@@ -1342,6 +1346,23 @@ func _score_takeover(figure: Figure, shape: CircleShape2D, direction: Vector2, s
 	return {"score": score, "direction": direction, "speed": speed}
 
 
+## Rally: `rally_ally_bonus` per teammate whose aimed nudge heads at a player figure and keeps it on the table.
+func _rally_value(enemy: Figure, table: Rect2) -> float:
+	var speed := enemy.ability.get_rally_speed(enemy)
+	if speed <= 0.0:
+		return 0.0
+	var total := 0.0
+	for node in get_tree().get_nodes_in_group("figures"):
+		var ally := node as Figure
+		if ally == enemy or ally.knocked_off or ally.team != enemy.team:
+			continue
+		var direction := RallyAbility.nudge_direction(ally)
+		var end := ally.global_position + direction * _travel_distance(ally, speed)
+		if table.has_point(end):
+			total += rally_ally_bonus
+	return total
+
+
 ## The blasts of the other explosive figures on `enemy`'s team (set off by a Firecracker's hit), scored as usual.
 func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2) -> float:
 	var registry := RunManager.config.registry if RunManager.config != null else null
@@ -1355,7 +1376,16 @@ func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2)
 		if not registry.is_explosive(other.base_data):
 			continue
 		var blast := other.ability.get_ai_blast(other)
-		if not blast.is_empty():
+		if blast.is_empty():
+			continue
+		var stats: Dictionary = other.ability.get_shot_stats(other)
+		if not stats.is_empty():
+			# Blastoid: being set off means a rocket at the nearest player figure(s), not a blast where it stands.
+			var targets := BlastoidAbility.nearest_opponents(other, int(stats.get("rockets", 1)))
+			for i in int(stats.get("rockets", 1)):
+				if not targets.is_empty():
+					total += _blast_value(targets[mini(i, targets.size() - 1)].global_position, blast, other, null, players, table)
+		else:
 			total += _blast_value(other.global_position, blast, other, null, players, table)
 	return total
 

@@ -48,6 +48,10 @@ var elite := false
 var _fx_time := 0.0
 ## The equipment item attached to this figure (player figures only), or null.
 var equipment: EquipmentData
+var _core_ability: FigureAbility  # the figure's own ability, without equipment / upgrade / finish effects
+var _equipment_effect: FigureAbility
+var _upgrade_effect: FigureAbility
+var _finish_effect: FigureAbility
 var radius := 60.0
 var stop_speed := 15.0  # below this speed (px/s) the figure counts as slow
 var settle_frames := 5  # ...and after this many slow frames in a row it stops dead
@@ -178,10 +182,40 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 			if key in ability:
 				ability.set(key, ability.get(key) * strength)
 	# Equipment, upgrades and finishes with an effect run next to the figure's own ability.
-	for extra in [equipment.effect if equipment != null else null,
-			upgrade.extra_effect if upgrade != null else null, finish.effect if finish != null else null]:
+	_core_ability = ability
+	_equipment_effect = _copy_effect(equipment.effect if equipment != null else null)
+	_upgrade_effect = _copy_effect(upgrade.extra_effect if upgrade != null else null)
+	_finish_effect = _copy_effect(finish.effect if finish != null else null)
+	_rebuild_ability()
+
+
+func _copy_effect(effect: FigureAbility) -> FigureAbility:
+	return effect.duplicate() as FigureAbility if effect != null else null
+
+
+## The figure's own ability plus the equipment / upgrade / finish effects (events go to all of them).
+func _rebuild_ability() -> void:
+	ability = _core_ability
+	for extra in [_equipment_effect, _upgrade_effect, _finish_effect]:
 		if extra != null:
-			ability = CombinedAbility.new(ability, extra.duplicate() as FigureAbility)
+			ability = CombinedAbility.new(ability, extra)
+
+
+## Costume Change relic: swap this figure's equipment during a combat. Stat changes and the effect apply at once;
+## the old item's effect is gone (its per-combat state, e.g. a used Parachute, starts fresh with a new copy).
+func set_equipment(item: EquipmentData) -> void:
+	if equipment != null:
+		mass /= equipment.mass_multiplier
+		linear_damp /= equipment.damping_multiplier
+	equipment = item
+	if equipment != null:
+		mass *= equipment.mass_multiplier
+		linear_damp *= equipment.damping_multiplier
+	if physics_material_override != null:
+		physics_material_override.bounce = clampf(data.bounce + (equipment.bounce_bonus if equipment != null else 0.0), 0.0, 1.0)
+	_equipment_effect = _copy_effect(equipment.effect if equipment != null else null)
+	_rebuild_ability()
+	queue_redraw()
 
 
 func _ready() -> void:

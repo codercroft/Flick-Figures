@@ -16,7 +16,7 @@ extends Resource
 	"Regular enemies roll finishes, equipment and upgrades (more in later acts). Elites and bosses roll like the next act.",
 	"Losing a minigame gives BOTH penalties: an extra Grunt AND enemy gear.",
 	"Enemies get stronger each act (accuracy, flick power, mass; bosses too) and regular combats have 4 / 5 / 6 enemies by act.",
-	"Shop prices +20%. Cha-ching earns $1 less on each of its bonuses.",
+	"Shop prices +50%.",
 	"Elites get a stat boost and a fitting item on every enemy.",
 	"Figure rewards offer 2 choices instead of 3, and chance drops are halved.",
 	"Elites carry an enemy relic in every act.",
@@ -35,9 +35,8 @@ extends Resource
 @export var bigger_squads_extra := 1
 
 @export_group("4: Leaner Economy")
-@export var shop_price_multiplier := 1.2
-## Subtracted from each of Cha-ching's money bonuses (never below $0).
-@export var cha_ching_reduction := 1
+## Shop prices are multiplied by this and rounded up.
+@export var shop_price_multiplier := 1.5
 
 @export_group("6: Fewer Offers")
 @export var max_figure_choices := 2

@@ -151,6 +151,10 @@ func detonate(figure: Figure) -> void:
 	second.detonate(figure)
 
 
+func get_rally_speed(figure: Figure) -> float:
+	return maxf(first.get_rally_speed(figure), second.get_rally_speed(figure))
+
+
 func sets_off_team_explosives(figure: Figure) -> bool:
 	return first.sets_off_team_explosives(figure) or second.sets_off_team_explosives(figure)
 
