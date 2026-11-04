@@ -987,9 +987,10 @@ func _pick_enemy_relics() -> void:
 ## something for this figure (GearRules), preferring gear that fits its role.
 func _roll_enemy_gear(figure: FigureData, tougher: bool) -> Dictionary:
 	var gear := {"finish": null, "equipment": null, "upgrade": null}
-	if config.enemy_gear == null:
+	var gear_config: EnemyGearConfig = config.ascension.gear if config.ascension != null and config.ascension.gear != null else config.enemy_gear
+	if gear_config == null:
 		return gear
-	var rates := config.enemy_gear.rates(act, tougher)
+	var rates := gear_config.rates(act, tougher)
 	if randf() < rates.finish:
 		gear.finish = GearRules.pick(config.finish_pool, figure)
 	if randf() < rates.equipment:

@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Engineer"
-description = "Tap an empty spot before flicking to place a turret that shoots the foe's nearest figure on their turn."
+description = "Tap an empty spot to place a turret (it can still flick). The turret nudges the nearest foe while figures are moving."
 rarity = 2
 label = "EN"
 icon = 23
