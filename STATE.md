@@ -36,7 +36,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 ### Win / loss
 - Win: every enemy is off the table. Mad Creator: the Creator off the table wins (summons vanish). Slime/Skull-o-tron: all pieces/balls off.
 - Loss: all player figures off, or (The Wall) any wall piece's front edge reaches the deck line.
-- On a combat win: money = $1 per own figure still on the table that "pays income" (Splitter minis do not) + each figure's `income_bonus` (Cha-ching 2, 3 upgraded; Ascension 4 makes it -1) + Coin Purse +$1 + Lucky Coin +$1 + node bonus (elite +$2, boss +$5).
+- On a combat win: money = $1 per own figure still on the table that "pays income" (Splitter minis do not) + each figure's `income_bonus` (Cha-ching 2, 3 upgraded) + Coin Purse +$1 + Lucky Coin +$1 + node bonus (elite +$2, boss +$5).
 
 ---
 
