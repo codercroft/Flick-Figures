@@ -185,6 +185,11 @@ func draws_own_body(_figure: Figure) -> bool:
 	return false
 
 
+## Cluster: true if the ability draws the figure\'s label / icon itself (or wants none).
+func draws_own_label(_figure: Figure) -> bool:
+	return false
+
+
 ## Called on every figure when a turn ends (the player's, and the enemy's): per-turn counters reset here.
 func on_turn_ended(_figure: Figure) -> void:
 	pass
@@ -246,7 +251,7 @@ func get_toss_stats(_figure: Figure) -> Dictionary:
 
 
 ## Clustling: asked of the cluster it touches; true if it takes the clustling back in.
-func accept_rejoin(_figure: Figure) -> bool:
+func accept_rejoin(_figure: Figure, _at: Vector2) -> bool:
 	return false
 
 

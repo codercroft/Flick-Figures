@@ -782,7 +782,9 @@ func _run_enemy_turn() -> void:
 			if serial != _turn_serial:
 				return
 			continue
-		if choice.has("spray_point"):  # an enemy Spitter sprays instead of moving
+		if choice.has("pass"):  # a taken-over boss with no safe shot: the flick is wasted
+			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
+		elif choice.has("spray_point"):  # an enemy Spitter sprays instead of moving
 			await _enemy_spray(choice.enemy, choice.spray_point, choice.spray_seconds)
 			if serial != _turn_serial:
 				return
@@ -820,7 +822,7 @@ func _run_enemy_turn() -> void:
 			extra = await _takeover_choice(extra, serial)
 			if serial != _turn_serial:
 				return
-			if not _is_alive(shooter):
+			if not _is_alive(shooter) or extra.has("pass"):
 				break
 			shooter.launch(extra.impulse)
 			await _wait_until_settled()
@@ -918,6 +920,9 @@ func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 	var shot := ai.choose_takeover(enemy, allies, board.get_table_rect(), max_flick_force)
 	if shot.is_empty():
 		return choice
+	if shot.get("pass", false):  # a boss body with no safe shot: the takeover just wastes the flick
+		enemy.show_popup("Passes", Color(0.8, 0.5, 1.0))
+		return {"enemy": enemy, "pass": true}
 	return {"enemy": enemy, "impulse": shot.impulse}
 
 

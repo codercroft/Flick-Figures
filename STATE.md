@@ -95,6 +95,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Crazy Man | 1 | 55 | 1 | 1 | 1 | 1 | - | - |
 | Common | Firecracker | 0.8 | 50 | 1 | 1 | 0.7 | 1 | - | explosive |
 | Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Goo Chain | - |
+| Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Big Gulp | - |
 | Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
 | Common | Magnet | 1.2 | 60 | 1 | 1 | 0.7 | 1 | Big Magnet | - |
 | Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | - | - |
@@ -102,8 +103,8 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Triple Split | - |
 | Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | - | - |
 | Uncommon | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
-| Uncommon | Cluster | 2.2 (3 x 0.73) | 74 (3 clustlings; 45 for one) | 1 | 1 | 0.7 | 1 | Big Bunch | - |
-| Uncommon | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Big Gulp | - |
+| Uncommon | Absorber | 2 | 66 | 0.8 | 1.1 | 0.5 | 1 | Big Belly | - |
+| Uncommon | Cluster | 2.2 (3 x 0.73) | ~97 round the three (circles of 45) | 1 | 1 | 0.7 | 1 | Big Bunch | - |
 | Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Bomb Shelter | - |
 | Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | - | - |
 | Uncommon | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Full Haunt | - |
@@ -116,7 +117,6 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Rare | Bloodluster | 1 | 58 | 1 | 1.667 | 0.7 | 1 | - | - |
 | Rare | Bombo | 1 | 55 | 1 | 1 | 0.7 | 1 | Boom Boom | explosive |
 | Rare | Bumper | 1.1 | 70 | 0.7 | 1.6 | 1 | 0.75 | - | - |
-| Rare | Absorber | 2 | 66 | 0.8 | 1.4 | 0.5 | 1 | Big Belly | - |
 | Rare | Eater | 0.9 | 54 | 1 | 1 | 0.6 | 1 | - | - |
 | Rare | Engineer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
 
@@ -133,11 +133,11 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
 | Firecracker | Explodes (radius 260, force 1500) when a teammate hits it (sparing that teammate) or when caught in an explosion (1.5 s re-arm). Its own flick hit detonates every other explosive teammate on the table once per flick. While on the table its whole team ignores its own team's explosions (orange ring). |
 | Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Goo Chain: several figures, stuck figures turn sticky, chain cap 5. |
-| Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures back the way it came (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. |
+| Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures back the way it came (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
 | Magnet | While on the board bends the path of moving OPPOSING figures within 500 px (none inside 150 px; up to 1600 px/s^2 at the edge). Implodes when knocked off (radius 300, strength 1800, 0.4 s; 440 / 2700 if wearing Short Fuse). Big Magnet: radius 700, 2300. |
 | Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. |
 | Alchemist | Tap empty board: debuff zone radius 150 (placing uses its action). Opposing figures inside take x1.5 knockback. Touching/passing through Douses an opposing figure for 2 rounds (keeps the x1.5). One zone per Alchemist. |
-| Bummer | Aura radius 180: an opposing figure whose body touches it loses control when its side tries to flick it: it auto-flicks with an AI "takeover" shot aimed to hurt itself/its friends (0.9 s delay). Boss bodies never aim themselves off the table. |
+| Bummer | Aura radius 180: an opposing figure whose body touches it loses control when its side tries to flick it: it auto-flicks with an AI "takeover" shot aimed to hurt itself/its friends (0.9 s delay). Boss bodies never aim themselves off the table: a taken-over boss body flicks at 25% of normal power (`takeover_boss_power_cap`) and only with shots whose predicted stopping point is at least 1.5 x its radius + 150 px from every table edge; if none is safe it passes and the flick is wasted. |
 | Duwall | Radius 70, mass 2.5, flick x1.5, takes half knockback. A shell absorbs impact damage (8000 = about 3 big hits); at the threshold it bursts and becomes a Grunt for the combat. Bomb Shelter: immune to explosion knockback. |
 | Energizer | The first allied figure it hits during its flick becomes flickable again (enemy: removed from the cycle). |
 | Ghost | During its own side's turn it wraps to the opposite edge whenever it leaves the table, keeping velocity (no limit). On the other side's turn it falls normally. Full Haunt: also wraps once per opponent turn. |
@@ -150,7 +150,7 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Bloodluster | Damping x1.667 (flicks about 60% as far). A flick that knocks an opposing figure off earns a bonus flick from where it stopped, chaining while each flick kills; each bonus adds +35% damping until the round ticks or it becomes flickable again (red pips + tint). |
 | Bombo | Explodes (radius 200, force 900) on its first hit after each flick and survives. Boom Boom: every hit. |
 | Bumper | Bounce 1, damping x1.6, flick x0.7, takes x0.75 knockback. Anything that bounces off it leaves 1.3x faster (not a pushing Pusher). |
-| Cluster | Starts as 3 clustlings in ONE body (radius 45 x (1 + 0.45 x sqrt(count - 1)), mass 0.73 each). Tap the board instead of flicking: tosses one clustling toward the spot at 700 px/s; it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Toss OR flick per turn; cannot toss the last one. A loose clustling that touches its own cluster (after 0.4 s) rejoins it (the cluster grows back). Big Bunch: starts with 4. |
+| Cluster | Starts as 3 clustlings in ONE rigid body: one circle collision shape of radius 45 per clustling (a tight triangle for 3, a diamond for 4), each drawn as its own small figure, mass 0.73 each (rotation locked). Tap the board instead of flicking: tosses the clustling nearest that direction at 950 px/s (its circle leaves the body, which re-centres); it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Toss OR flick per turn; cannot toss the last one. A loose clustling that touches its own cluster (after 0.4 s) rejoins it in the nearest free spot (the cluster grows back; a full cluster takes none). Big Bunch: starts with 4. |
 | Spitter | Select it, then press and hold ~0.25 s without moving (more than 40 px of movement is a normal flick drag) to spray toward the finger; the stream follows it; release stops it. Spraying is its action (spray OR flick). 20 drops/s, 800 px/s, range 450, each drop pushes 20 impulse (a 3 s spray slides a resting mass-1 figure about 280 px; it nudges and redirects, no more). 4 s of water per combat, shrinking size and mass in proportion down to 50% at empty; a blue arc shows the water. Big Gulp: radius 68, mass 1.6, 6 s of water. |
 | Absorber | Its OWN flick hitting an opposing figure with a smaller radius at 300 px/s or more absorbs it (one at a time): the figure leaves play at once (win/loss ignore it), is drawn shrinking inside, and shrinks for 3 rounds (counted at each round tick); then it counts as knocked off. A hit on the Absorber by a teammate of the held figure at 500 px/s or more frees it at its reduced size; if the Absorber falls off, the held figure pops out where it fell. Bosses, boss pieces and uneatable figures cannot be absorbed. Big Belly: radius 80, mass 3 (can absorb Duwall and Bumper, radius 70). |
 | Eater | Eats any figure of either team it touches with a smaller radius (not uneatable bosses/pieces): victim counts as knocked off; Eater grows (60% of victim's area, 70% of its mass; caps radius 110, mass 4). |

@@ -1,7 +1,7 @@
 class_name JuicerAbility
 extends FigureAbility
 ## While it moves, Juicer leaves a trail of sticky floor material. Each piece pushes any OPPOSING
-## figure that rolls over it (moving ones only) BACK the way Juicer came from. Its own team is not
+## figure that rolls over it (moving ones only) BACK the way Juicer came from, and lightly Douses any that touch it. Its own team is not
 ## affected. Pieces fade after a few rounds. The push is much weaker than an arena boost patch (470).
 
 ## Rounds a trail piece lasts (a round = until the player's next turn).
@@ -23,6 +23,11 @@ extends FigureAbility
 @export var splash_count := 6
 @export var splash_distance := 75.0
 @export var splash_min_speed := 150.0
+
+## Juice Douses: an opposing figure touching a trail piece or splash piece takes +20% knockback for 2 rounds (refreshed on
+## contact, not stacking; an Alchemist's stronger Douse wins if a figure has both).
+@export var douse_rounds := 2
+@export var douse_knockback := 1.2
 
 var _last_drop := Vector2.INF
 

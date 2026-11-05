@@ -580,13 +580,28 @@ func _apply_trail_piece(piece: Dictionary, figures: Array) -> void:
 	var ability: JuicerAbility = piece.ability
 	for node in figures:
 		var figure := node as Figure
-		# Like patches: only moving figures are pushed, so a resting one is never nudged.
-		if figure.on_deck or figure.knocked_off or figure.is_slow() or figure.team == piece.team:
+		if figure.on_deck or figure.knocked_off or figure.team == piece.team:
 			continue  # (only OPPOSING figures are affected by the juice)
-		if figure.global_position.distance_to(piece.center) > ability.segment_radius:
+		# Touching the juice (even at rest) Douses lightly.
+		if figure.global_position.distance_to(piece.center) <= ability.segment_radius + figure.radius:
+			figure.douse(ability.douse_rounds, ability.douse_knockback, true)
+		# Like patches: only moving figures are pushed, so a resting one is never nudged.
+		if figure.is_slow() or figure.global_position.distance_to(piece.center) > ability.segment_radius:
 			continue
 		if figure.linear_velocity.dot(piece.direction) < ability.boost_max_speed:
 			figure.apply_central_force(piece.direction * ability.boost_acceleration * figure.mass)
+
+
+## How many juice pieces of Juicers on `owner_team` a body of `radius` touches while moving along a to b (AI).
+func juice_pieces_on_path(a: Vector2, b: Vector2, radius: float, owner_team: int) -> int:
+	var count := 0
+	for piece in _trail:
+		if piece.team != owner_team:
+			continue
+		var ability: JuicerAbility = piece.ability
+		if Geometry2D.get_closest_point_to_segment(piece.center, a, b).distance_to(piece.center) <= ability.segment_radius + radius:
+			count += 1
+	return count
 
 
 # --- Power-placed things -----------------------------------------------------

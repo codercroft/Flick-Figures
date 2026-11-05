@@ -236,6 +236,10 @@ func draws_own_body(figure: Figure) -> bool:
 	return first.draws_own_body(figure) or second.draws_own_body(figure)
 
 
+func draws_own_label(figure: Figure) -> bool:
+	return first.draws_own_label(figure) or second.draws_own_label(figure)
+
+
 func on_turn_ended(figure: Figure) -> void:
 	first.on_turn_ended(figure)
 	second.on_turn_ended(figure)
@@ -270,8 +274,8 @@ func get_toss_stats(figure: Figure) -> Dictionary:
 	return stats if not stats.is_empty() else second.get_toss_stats(figure)
 
 
-func accept_rejoin(figure: Figure) -> bool:
-	return first.accept_rejoin(figure) or second.accept_rejoin(figure)
+func accept_rejoin(figure: Figure, at: Vector2) -> bool:
+	return first.accept_rejoin(figure, at) or second.accept_rejoin(figure, at)
 
 
 func get_rejoin_target(figure: Figure) -> Figure:

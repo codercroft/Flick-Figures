@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Juicer"
-description = "Leaves a trail (and a splash on hit) that pushes opposing figures back the way it came, and fades."
+description = "Leaves a trail (and a splash on hit) that pushes opposing figures back the way it came and lightly Douses them (+20% knockback)."
 rarity = 0
 label = "JU"
 icon = 21

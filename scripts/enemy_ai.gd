@@ -147,6 +147,10 @@ const TOUCH_MARGIN := 4.0
 @export var doused_target_bonus := 30.0
 ## Flicking one of our own figures through (or into) a player Alchemist's zone Douses it: penalty per zone crossed.
 @export var zone_path_penalty := 70.0
+## Juicer: a shot path through a PLAYER Juicer\'s juice (our figure gets Doused) costs this per piece (at most 3);
+## a player figure that our shot pushes through OUR juice earns this per piece (at most 3).
+@export var juice_path_penalty := 25.0
+@export var juice_push_bonus := 30.0
 ## Player turrets fire during the enemy turn too: penalty for each one whose range covers a shot's path (its
 ## pellets nudge and deflect the shooter)...
 @export var turret_path_penalty := 25.0
@@ -182,6 +186,13 @@ const TOUCH_MARGIN := 4.0
 @export var takeover_extra_directions := 24
 ## A BOSS BODY taken over by a Bummer never aims off the table: penalty per unit of chance it leaves (this wins over any
 ## ally hit), plus a reward for ending farther from the Bummer (per 300 px gained) and a flat one for ending outside its aura.
+## A boss body taken over by a Bummer must stay safe: its power is capped at this share of normal, only shots whose
+## predicted stopping point is at least `takeover_boss_edge_factor` x its radius plus `takeover_boss_safety_margin`
+## (px, for spin and arms the AI cannot predict) from every table edge are allowed, and if none is safe it passes.
+@export var takeover_boss_power_cap := 0.25
+@export var takeover_boss_power_levels: Array[float] = [0.4, 0.7, 1.0]
+@export var takeover_boss_edge_factor := 1.5
+@export var takeover_boss_safety_margin := 150.0
 @export var takeover_boss_self_penalty := 2500.0
 @export var takeover_boss_escape_bonus := 150.0
 @export var takeover_boss_exit_bonus := 250.0
@@ -544,6 +555,12 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score += turret_support_bonus * _turrets_covering(enemy.team, false, contact, other.global_position)
 	# Passing through a player Alchemist's zone Douses our own figure.
 	score -= zone_path_penalty * _zone_crossings(enemy, enemy.global_position, contact)
+	if _arena != null:
+		var their_team := Figure.Team.PLAYER if enemy.team == Figure.Team.ENEMY else Figure.Team.ENEMY
+		score -= juice_path_penalty * mini(_arena.juice_pieces_on_path(enemy.global_position, contact, enemy.radius, their_team), 3)
+		if other.team != enemy.team and target_velocity.length() > other.stop_speed:  # pushing the target through our own juice
+			var slide_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
+			score += juice_push_bonus * mini(_arena.juice_pieces_on_path(other.global_position, slide_end, other.radius, enemy.team), 3)
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
 	score -= _self_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
 	# Aim error can make the shot miss, and a shooter that misses just keeps sliding. Count that risk.
@@ -1341,13 +1358,15 @@ func choose_takeover(figure: Figure, allies: Array[Figure], table: Rect2, max_fo
 			if not stats.is_empty():
 				bummers.append({"position": other.global_position, "reach": stats.radius + figure.radius})
 	var best := {}
+	var boss: bool = figure.data.boss_body
 	for direction in directions:
-		for level in takeover_power_levels:
-			var shot := _score_takeover(figure, shape, direction, level * top_speed, allies, table, bummers)
+		for level in (takeover_boss_power_levels if boss else takeover_power_levels):
+			var speed: float = level * top_speed * (takeover_boss_power_cap if boss else 1.0)
+			var shot := _score_takeover(figure, shape, direction, speed, allies, table, bummers)
 			if not shot.is_empty() and (best.is_empty() or shot.score > best.score):
 				best = shot
 	if best.is_empty():
-		return {}
+		return {"enemy": figure, "pass": true} if boss else {}  # no safe shot: the boss just passes
 	var error := _aim_error(figure)
 	var aimed: Vector2 = best.direction.rotated(randf_range(-error, error))
 	return {"enemy": figure, "impulse": aimed * best.speed * figure.mass, "score": best.score}
@@ -1377,6 +1396,8 @@ func _score_takeover(figure: Figure, shape: CircleShape2D, direction: Vector2, s
 			var knocked_off := _leave_chance(other, other.global_position, outcome.target, table)
 			var pushed := _push_progress(other, other.global_position, outcome.target, table)
 			score += takeover_ally_hit_bonus + takeover_ally_kill_bonus * knocked_off + takeover_edge_bonus * pushed
+	if boss and _edge_margin(end_point, table) < figure.radius * takeover_boss_edge_factor + takeover_boss_safety_margin:
+		return {}  # a boss body only takes shots that end well inside the table
 	if boss:  # run away from the Bummer(s), ideally out of the aura
 		for bummer in bummers:
 			var from_start: float = figure.global_position.distance_to(bummer.position)

@@ -19,7 +19,7 @@ func on_hit(figure: Figure, other: Figure) -> void:
 		return
 	if Time.get_ticks_msec() - _born_ms < rejoin_delay_ms:
 		return
-	if not parent.ability.accept_rejoin(parent):
+	if not parent.ability.accept_rejoin(parent, figure.global_position):
 		return
 	var main := figure.get_tree().current_scene
 	if main != null and main.has_method("retire_figure"):

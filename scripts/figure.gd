@@ -104,6 +104,7 @@ var placed_this_turn := false
 var doused_rounds := 0
 var doused_full := 1
 var doused_multiplier := 1.0
+var doused_juice := false  # the weaker Juicer version (lighter tint); an Alchemist zone replaces it
 var _circle: CircleShape2D
 
 var _last_velocity := Vector2.ZERO
@@ -259,6 +260,13 @@ func _draw_doused() -> void:
 	if doused_rounds <= 0:
 		return
 	var fade := clampf(float(doused_rounds) / maxf(doused_full, 1), 0.0, 1.0)
+	if doused_juice:  # Juicer's juice: a lighter, greener tint
+		draw_circle(Vector2.ZERO, radius - 2.0, Color(0.65, 0.95, 0.2, 0.16 * fade))
+		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 48, Color(0.75, 1.0, 0.35, 0.4 * fade), 4.0, true)
+		for j in 3:
+			var jx := radius * (-0.45 + 0.45 * j)
+			draw_circle(Vector2(jx, radius * 0.7 + radius * 0.1 * (j % 2)), radius * 0.08, Color(0.8, 1.0, 0.4, 0.6 * fade))
+		return
 	draw_circle(Vector2.ZERO, radius - 2.0, Color(0.6, 0.25, 0.85, 0.35 * fade))
 	draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 48, Color(0.75, 0.4, 0.95, 0.7 * fade), 5.0, true)
 	for i in 3:
@@ -347,18 +355,19 @@ func _draw() -> void:
 	_draw_finish()
 	_draw_doused()
 	# A short label so you can tell figures apart (the first letter of the name by default).
-	var label := data.label if data.label != "" else data.display_name.left(1)
-	var font_size := int(radius * (1.0 if label.length() <= 1 else 0.75))
-	var ink := fill.darkened(0.5)
-	if data.icon == FigureIcons.Icon.NONE:
-		draw_string(ThemeDB.fallback_font, Vector2(-radius, font_size * 0.35), label,
-				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
-	else:
-		# Label above, little icon below.
-		font_size = int(font_size * 0.8)
-		draw_string(ThemeDB.fallback_font, Vector2(-radius, -radius * 0.08), label,
-				HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
-		FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
+	if not ability.draws_own_label(self):
+		var label := data.label if data.label != "" else data.display_name.left(1)
+		var font_size := int(radius * (1.0 if label.length() <= 1 else 0.75))
+		var ink := fill.darkened(0.5)
+		if data.icon == FigureIcons.Icon.NONE:
+			draw_string(ThemeDB.fallback_font, Vector2(-radius, font_size * 0.35), label,
+					HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
+		else:
+			# Label above, little icon below.
+			font_size = int(font_size * 0.8)
+			draw_string(ThemeDB.fallback_font, Vector2(-radius, -radius * 0.08), label,
+					HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
+			FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
 	if upgrade != null:
 		# A little gold pip in the upper right marks a figure-specific upgrade.
@@ -539,12 +548,15 @@ func zone_knockback_multiplier() -> float:
 
 
 ## Touched an Alchemist's zone: Doused for `rounds` rounds (touching again refreshes it back to the full amount).
-func douse(rounds: int, knockback: float) -> void:
-	if doused_rounds < rounds or doused_full != rounds:
+func douse(rounds: int, knockback: float, juice := false) -> void:
+	if doused_rounds > 0 and knockback < doused_multiplier:
+		return  # a stronger Douse is active: only the stronger effect applies
+	if doused_rounds < rounds or doused_full != rounds or doused_juice != juice:
 		queue_redraw()
 	doused_rounds = rounds
 	doused_full = rounds
 	doused_multiplier = knockback
+	doused_juice = juice
 
 
 func is_doused() -> bool:
@@ -894,6 +906,15 @@ func set_size(new_radius: float, new_mass: float) -> void:
 	if _circle != null:
 		_circle.radius = new_radius
 	queue_redraw()
+
+
+## A body made of its own collision shapes (Cluster): the usual circle goes, set_size no longer resizes it.
+func use_custom_shapes() -> void:
+	for child in get_children():
+		if child is CollisionShape2D:
+			remove_child(child)
+			child.queue_free()
+	_circle = null
 
 
 ## Called by main.gd at the start of each round: powers that last "a round" count down here.

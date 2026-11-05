@@ -1,54 +1,121 @@
 class_name ClusterAbility
 extends FigureAbility
-## Cluster starts as 3 small clustlings moving together as ONE body. Instead of flicking, a quick TAP on the board
-## tosses one clustling toward that spot: it becomes its own figure (a fresh, flickable one that counts for
-## win/loss) and the cluster gets smaller and lighter. Tossing uses the Cluster's action (toss OR flick). It
-## can't toss its last clustling. A loose clustling that touches its own cluster rejoins it (see ClustlingAbility).
-## Only the main cluster pays combat income (the clustling's data has pays_income off).
+## Cluster is `count` small clustlings packed tightly together and moving as ONE rigid body: one circle collision
+## shape per clustling (radius 45, a tight triangle for 3, a diamond for 4), each drawn as its own little figure.
+## Instead of flicking, a quick TAP on the board tosses one clustling toward that spot: its circle leaves the body
+## and it becomes its own figure (a fresh, flickable one that counts for win/loss); the cluster gets lighter. Tossing
+## uses the Cluster's action (toss OR flick). It can't toss its last clustling. A loose clustling that touches its
+## own cluster rejoins it in the free spot (ClustlingAbility). Only the main cluster pays combat income.
 
 ## What gets tossed out.
 @export var piece: FigureData
-## How many clustlings the FigureData's mass describes (its radius is recomputed from the count).
+## How many clustlings the FigureData's mass describes.
 @export var base_count := 3
 ## How many clustlings it starts with (the Big Bunch upgrade makes it 4).
 @export var start_count := 3
-## Size of one clustling; the cluster's radius is this x (1 + radius_growth x sqrt(count - 1)).
+## Radius of one clustling (also its collision circle in the body).
 @export var clustling_radius := 45.0
-@export var radius_growth := 0.45
 ## How fast (px/s) a tossed clustling leaves.
-@export var toss_speed := 700.0
+@export var toss_speed := 950.0
 
 var count := 3
 var _mass_each := 0.0
+var _slots: Array[Vector2] = []     # where each clustling sits (layout space)
+var _taken: Array[bool] = []        # is the slot filled right now
+var _shapes: Array[CollisionShape2D] = []
+var _origin := Vector2.ZERO         # the layout point that is the body's origin (the centre of the filled slots)
 
 
 func setup_body(figure: Figure) -> void:
 	_mass_each = figure.mass / float(base_count)
 	count = start_count
-	_apply_size(figure)
+	_slots = _layout(start_count)
+	_taken.clear()
+	_shapes.clear()
+	figure.use_custom_shapes()
+	figure.lock_rotation = true
+	for i in _slots.size():
+		_taken.append(true)
+		var shape := CollisionShape2D.new()
+		var circle := CircleShape2D.new()
+		circle.radius = clustling_radius
+		shape.shape = circle
+		figure.add_child(shape)
+		_shapes.append(shape)
+	_origin = _centroid()
+	_update_body(figure)
 
 
-func radius_for(clustlings: int) -> float:
-	return clustling_radius * (1.0 + radius_growth * sqrt(maxf(clustlings - 1, 0.0)))
+## Tight packings of touching circles: 1 centre, 2 side by side, 3 a triangle, 4 a diamond, more a ring.
+func _layout(n: int) -> Array[Vector2]:
+	var r := clustling_radius
+	var out: Array[Vector2] = []
+	match n:
+		1:
+			out.append(Vector2.ZERO)
+		2:
+			out.append(Vector2(-r, 0))
+			out.append(Vector2(r, 0))
+		3:
+			out.append(Vector2(0, -r * 1.1547))
+			out.append(Vector2(-r, r * 0.5774))
+			out.append(Vector2(r, r * 0.5774))
+		4:
+			out.append(Vector2(0, -r * 1.4142))
+			out.append(Vector2(r * 1.4142, 0))
+			out.append(Vector2(0, r * 1.4142))
+			out.append(Vector2(-r * 1.4142, 0))
+		_:
+			var ring := r / sin(PI / n)
+			for i in n:
+				out.append(Vector2.from_angle(TAU * i / n - PI / 2.0) * ring)
+	return out
 
 
-func _apply_size(figure: Figure) -> void:
-	figure.set_size(radius_for(count), _mass_each * count)
+func _centroid() -> Vector2:
+	var sum := Vector2.ZERO
+	var filled := 0
+	for i in _slots.size():
+		if _taken[i]:
+			sum += _slots[i]
+			filled += 1
+	return sum / maxf(filled, 1)
+
+
+## Re-centres the body on the filled slots, places the shapes and sets the size and mass.
+func _update_body(figure: Figure) -> void:
+	var centre := _centroid()
+	figure.global_position += centre - _origin  # the origin moves, the clustlings do not
+	_origin = centre
+	var reach := 0.0
+	for i in _slots.size():
+		_shapes[i].set_deferred("disabled", not _taken[i])
+		_shapes[i].position = _slots[i] - _origin
+		if _taken[i]:
+			reach = maxf(reach, (_slots[i] - _origin).length())
+	figure.set_size(reach + clustling_radius, _mass_each * count)  # (radius = a circle around all of them, for the AI)
 
 
 func get_toss_stats(_figure: Figure) -> Dictionary:
 	return {"speed": toss_speed, "can": count > 1 and piece != null, "piece": piece}
 
 
-## The tap action: toss one clustling toward `point`.
+## The tap action: toss the clustling that sits most toward `point`.
 func fire_shot_at(figure: Figure, point: Vector2) -> void:
 	if count <= 1 or piece == null:
 		return
 	var offset := point - figure.global_position
 	var direction := offset.normalized() if offset.length() > 1.0 else Vector2.UP
+	var best := -1
+	var best_dot := -INF
+	for i in _slots.size():
+		if _taken[i] and (_slots[i] - _origin).dot(direction) > best_dot:
+			best_dot = (_slots[i] - _origin).dot(direction)
+			best = i
+	var spawn_at := figure.global_position + (_slots[best] - _origin) + direction * 8.0
+	_taken[best] = false
 	count -= 1
-	_apply_size(figure)
-	var spawn_at := figure.global_position + direction * (figure.radius + piece.radius + 6.0)
+	_update_body(figure)
 	var parent := figure
 	figure.shed([{
 		"data": piece, "position": spawn_at, "velocity": direction * toss_speed, "flickable": true,
@@ -57,19 +124,44 @@ func fire_shot_at(figure: Figure, point: Vector2) -> void:
 	figure.show_popup("Toss!", Color(0.7, 0.9, 1.0))
 
 
-## A clustling of ours came home.
-func accept_rejoin(figure: Figure) -> bool:
+## A clustling of ours came home: it takes the free spot nearest to where it touched. False if the cluster is full.
+func accept_rejoin(figure: Figure, at: Vector2) -> bool:
+	var best := -1
+	var best_dist := INF
+	for i in _slots.size():
+		if not _taken[i]:
+			var d := (figure.global_position + _slots[i] - _origin).distance_to(at)
+			if d < best_dist:
+				best_dist = d
+				best = i
+	if best < 0:
+		return false
+	_taken[best] = true
 	count += 1
-	_apply_size(figure)
+	_update_body(figure)
 	figure.show_popup("+1", Color(0.7, 0.9, 1.0))
 	return true
 
 
-## Draws the clustlings inside the body.
-func draw_overlay(figure: Figure) -> void:
-	var small := minf(clustling_radius * 0.8, figure.radius * 0.55)
-	var ring := figure.radius - small - 3.0
-	for i in count:
-		var spot := Vector2.ZERO if count == 1 else Vector2.from_angle(TAU * i / count - PI / 2.0) * ring
-		figure.draw_circle(spot, small, Color(1, 1, 1, 0.22))
-		figure.draw_arc(spot, small, 0.0, TAU, 20, Color(1, 1, 1, 0.65), 3.0, true)
+func draws_own_body(_figure: Figure) -> bool:
+	return true
+
+
+func draws_own_label(_figure: Figure) -> bool:
+	return true
+
+
+## Each clustling is its own small figure.
+func draw_body(figure: Figure) -> void:
+	if _slots.is_empty():
+		return
+	var greyed := figure.team == Figure.Team.PLAYER and not figure.flickable
+	var fill := figure.data.color.lerp(Figure.GREYED_OUT, 0.85) if greyed else figure.data.color
+	var ring := Figure.ENEMY_RING if figure.team == Figure.Team.ENEMY else Figure.PLAYER_RING
+	for i in _slots.size():
+		if not _taken[i]:
+			continue
+		var spot := _slots[i] - _origin
+		figure.draw_circle(spot, clustling_radius, fill)
+		figure.draw_arc(spot, clustling_radius - 3.0, 0.0, TAU, 28, ring, 5.0, true)
+		figure.draw_circle(spot + Vector2(-1, -1) * clustling_radius * 0.3, clustling_radius * 0.2, fill.lightened(0.4))
