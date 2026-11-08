@@ -11,6 +11,12 @@ Full current behaviour lives in STATE.md.
 - Speedo: flick power 0.75 -> 0.525 (`flick_power_multiplier` in `speedo.tres`).
 - Open issue: the player's Spitter can spray repeatedly in one turn until its water is gone (no cap on sprays per turn).
 
+## 2026-11-09: Duplicates, 3 figure choices, flatter rarity curve
+- Duplicate figures: choosing (reward), buying (shop) or being offered (Trader) a figure you already own gives a Recruit / Upgrade choice. Recruit = the usual flow (pick which figure it replaces). Upgrade = an Upgrade step on your existing copy (pick which copy if you have several; both paths shown). Upgrade is disabled with a note when your copy has no tiers left. The shop charges the listed price for either; the Trader's Upgrade still takes the given figure(s) and money but you get the upgrade step instead of the new figure (interpretation: the trade cost stays the same). "Owned" badge on offered figures (reward cards, shop cards, Trader medium card; the high trade text says "[owned]").
+- Figure rewards: 3 choices in every act (`figure_choices_by_act` [3, 3, 3]); the bonus item steps (0 / 1 / 2) are unchanged. Elite fights use the same array, so they also offer 3 (they used 3 / 2 / 1 before); Trophy Case still +1, Ascension 6 still caps at 2.
+- Rarity per slot (Common / Uncommon / Rare): act 1 75 / 22 / 3, act 2 60 / 32 / 8, act 3 50 / 38 / 12 (`rarity_weights_by_act`; the shop's figure rolls use the same weights). Elite (60 / 35 / 5) and boss (Rare only) picks unchanged.
+- Headless-checked: Owned flags, the choice screen and its disabled state, copy picking, shop upgrade tree, Trader medium trade with an owned figure.
+
 ## 2026-11-08: Upgrade trees
 - Replaced the single figure-specific upgrade with UPGRADE TREES: every draftable figure has two paths of three tiers (180 upgrades, `resources/upgrades/<figure>/`, `UpgradeTree` + `UpgradeData`, all numbers and text editable in the .tres). Tiers in order; the first pick locks the other path; lost if the figure is replaced; finishes stay separate. Full table in STATE.md.
 - Getting upgrades: new "Upgrade" reward step (pick a figure, then a tier on a path; both paths shown until the first pick), elites 1, bosses 1 finish + 2 Upgrades (replacing the old finish-or-upgrade step), bonus items can roll an Upgrade (instead of upgrade_item), shop Upgrades $5 / $8 / $12 by tier (2 offers, before Ascension markups), the Trader's high trade grants an Upgrade step. Numbers in RewardConfig / ShopConfig.

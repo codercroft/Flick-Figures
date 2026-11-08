@@ -35,17 +35,18 @@ func _show_menu() -> void:
 	add_card("Low trade\nGive a power or an equipment item, get a different random one.\n%s" % (
 			"" if not gives.is_empty() else "You have no power or unequipped equipment."), null, 190.0, _show_low_picker, gives.is_empty())
 	if _medium_offer != null:
-		add_card("Medium trade\nGive one of your figures, get\n%s (%s)\n%s" % [_medium_offer.display_name, _medium_offer.rarity_name(), _medium_offer.description],
+		var medium_card := add_card("Medium trade\nGive one of your figures, get\n%s (%s)\n%s" % [_medium_offer.display_name, _medium_offer.rarity_name(), _medium_offer.description],
 				_medium_offer, 250.0, _show_medium_picker)
+		medium_card.owned = RunManager.owns(_medium_offer)
 	var cheap = _high_offers[1]  # (untyped: null if there is no figure of that rarity)
 	var rich = _high_offers[2]
 	var reason := ""
 	if RunManager.money < high_trade_cost:
 		reason = "Needs $%d." % high_trade_cost
 	if cheap != null and rich != null:
-		add_card("High trade\nGive $%d and 1 figure: get %s (%s) with %s.\nGive $%d and 2 figures: get %s (%s) with %s.\n%s" % [
-				high_trade_cost, cheap.figure.display_name, cheap.figure.rarity_name(), _gear_name(cheap),
-				high_trade_cost, rich.figure.display_name, rich.figure.rarity_name(), _gear_name(rich), reason],
+		add_card("High trade\nGive $%d and 1 figure: get %s (%s)%s with %s.\nGive $%d and 2 figures: get %s (%s)%s with %s.\n%s" % [
+				high_trade_cost, cheap.figure.display_name, cheap.figure.rarity_name(), " [owned]" if RunManager.owns(cheap.figure) else "", _gear_name(cheap),
+				high_trade_cost, rich.figure.display_name, rich.figure.rarity_name(), " [owned]" if RunManager.owns(rich.figure) else "", _gear_name(rich), reason],
 				null, 330.0, _show_high_picker, reason != "")
 	frame.add_action("Leave", leave)
 
@@ -106,6 +107,13 @@ func _show_medium_picker() -> void:
 
 
 func _do_medium(slot: int) -> void:
+	if RunManager.owns(_medium_offer):
+		_show_duplicate_choice(_medium_offer, [slot], _recruit_medium.bind(slot), 0)
+		return
+	_recruit_medium(slot)
+
+
+func _recruit_medium(slot: int) -> void:
 	var given: FigureData = RunManager.deck[slot]
 	RunManager.replace_figure(slot, _medium_offer)
 	show_result("You gave %s and got %s." % [given.display_name, _medium_offer.display_name])
@@ -146,6 +154,14 @@ func _toggle_high(slot: int) -> void:
 func _do_high() -> void:
 	if _high_picks.is_empty() or RunManager.money < high_trade_cost:
 		return
+	var wanted: Dictionary = _high_offers[_high_picks.size()]
+	if RunManager.owns(wanted.figure):
+		_show_duplicate_choice(wanted.figure, _high_picks.duplicate(), _recruit_high, high_trade_cost)
+		return
+	_recruit_high()
+
+
+func _recruit_high() -> void:
 	var offer: Dictionary = _high_offers[_high_picks.size()]
 	_high_picks.sort()
 	var keep: int = _high_picks[0]  # the new figure takes the first chosen slot
@@ -160,6 +176,36 @@ func _do_high() -> void:
 	if offer.equipment != null:
 		RunManager.deck_equipment[keep] = offer.equipment
 	show_result("You paid $%d and got %s with %s." % [high_trade_cost, offer.figure.display_name, _gear_name(offer)])
+
+
+# --- You already own the offered figure: Recruit it, or Upgrade your copy instead -------------------
+
+## `given` = the deck slots being given away, `recruit` does the normal trade, `cost` is the money it costs. The
+## Upgrade choice still pays the same price (the given figures and the money) but, instead of the new figure, you take
+## an Upgrade step on a copy you already have.
+func _show_duplicate_choice(figure: FigureData, given: Array[int], recruit: Callable, cost: int) -> void:
+	frame.clear()
+	frame.title.text = "You already have %s" % figure.display_name
+	frame.subtitle.text = "Same price either way."
+	var copies := RunManager.upgradable_copies(figure, given)
+	var can_upgrade := not copies.is_empty() and RunManager.deck.size() - given.size() >= 1
+	var note := "" if can_upgrade else ("No upgrade tiers left on your other copy." if copies.is_empty() else "Your deck would be empty.")
+	add_card("Recruit: %s joins your deck as usual." % figure.display_name, figure, 190.0, recruit)
+	add_card("Upgrade: take an upgrade step on your %s instead of recruiting.\n%s" % [figure.display_name, note], figure, 190.0,
+			_upgrade_instead.bind(figure, given, cost), not can_upgrade)
+	frame.add_action("Back", _show_menu)
+
+
+func _upgrade_instead(figure: FigureData, given: Array[int], cost: int) -> void:
+	if cost > 0 and not RunManager.spend(cost):
+		return
+	var sorted := given.duplicate()
+	sorted.sort()
+	sorted.reverse()
+	for slot in sorted:  # (highest first so the other slots keep their numbers)
+		RunManager.remove_deck_slot(slot)
+	follow_up_steps = [{"kind": "upgrade", "only_figure": figure}]
+	show_result("You paid the trade and take an upgrade step on your %s." % figure.display_name)
 
 
 # --- Helpers -----------------------------------------------------------------------------

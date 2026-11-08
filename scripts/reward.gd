@@ -91,13 +91,32 @@ func _show_offers() -> void:
 	var card_height := minf(OFFER_CARD_HEIGHT, 900.0 / maxi(_offers.size(), 1))
 	for offer in _offers:
 		var card := _add_card(offer, card_height)
+		card.owned = RunManager.owns(offer)
 		card.pressed.connect(_on_offer_chosen.bind(offer))
 	_add_button("Skip", _next_step)
 
 
 func _on_offer_chosen(offer: FigureData) -> void:
 	_chosen = offer
-	_show_replacements()
+	if RunManager.owns(offer):
+		_show_duplicate_choice()  # a copy you already own: recruit another, or upgrade the one you have
+	else:
+		_show_replacements()
+
+
+## You already own the figure on offer: Recruit it as usual, or Upgrade your copy instead.
+func _show_duplicate_choice() -> void:
+	_clear_cards()
+	title.text = "You already have %s" % _chosen.display_name
+	var copies := RunManager.upgradable_copies(_chosen)
+	_add_card(_chosen, 200.0, "Recruit: add it as a new figure\n(you pick which figure it replaces)").pressed.connect(_show_replacements)
+	var upgrade := _add_card(_chosen, 200.0, "Upgrade: take an upgrade step on your %s\n%s" % [
+			_chosen.display_name, "" if not copies.is_empty() else "No upgrade tiers left on your copy."])
+	upgrade.disabled = copies.is_empty()
+	upgrade.pressed.connect(func() -> void:
+		_relic_step = {"kind": "upgrade", "only_figure": _chosen}
+		_show_upgrade())
+	_add_button("Back", _show_offers)
 
 
 func _show_replacements() -> void:
@@ -232,6 +251,12 @@ func _show_upgrade() -> void:
 		_show_upgrade_tree(slot)
 		return
 	var slots := RunManager.upgradable_slots()
+	var only: FigureData = _relic_step.get("only_figure", null)
+	if only != null:  # a duplicate figure: just the copies of it
+		slots = RunManager.upgradable_copies(only)
+		if slots.size() == 1:
+			_show_upgrade_tree(slots[0])
+			return
 	if slots.is_empty():
 		_show_message("None of your figures can take an upgrade.")
 		return

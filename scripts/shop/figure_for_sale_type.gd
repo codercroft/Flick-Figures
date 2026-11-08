@@ -16,6 +16,7 @@ func create_offers(registry: FigureRegistry) -> Array[ShopOffer]:
 		offer.description = figure.description
 		offer.price = price_by_rarity[clampi(figure.rarity, 0, price_by_rarity.size() - 1)]
 		offer.figure = figure
+		offer.is_figure = true
 		offer.needs_slot = true
 		offer.slot_prompt = "Replace which figure with %s?" % figure.display_name
 		offer.on_buy = func(slot: int) -> String:

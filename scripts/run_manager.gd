@@ -755,6 +755,20 @@ func run_modifier(key: String) -> float:
 	return total
 
 
+## True if the deck already holds a copy of this figure.
+func owns(figure: FigureData) -> bool:
+	return deck.has(figure)
+
+
+## Deck slots that hold `figure` and can still take an upgrade (`excluding` = slots about to be given away).
+func upgradable_copies(figure: FigureData, excluding: Array[int] = []) -> Array[int]:
+	var slots: Array[int] = []
+	for slot in deck.size():
+		if deck[slot] == figure and not excluding.has(slot) and can_upgrade(slot):
+			slots.append(slot)
+	return slots
+
+
 ## "Fuse 2/3" style summary of a slot's upgrades ("" if none).
 func upgrade_summary(slot: int) -> String:
 	var state := deck_upgrade[slot]

@@ -3,6 +3,11 @@ extends Button
 ## A big tappable button showing a figure's picture, name and description.
 
 var data: FigureData
+## Draws a small "Owned" badge (the offered figure is already in the player's deck).
+var owned := false:
+	set(value):
+		owned = value
+		queue_redraw()
 
 
 ## `text_override` replaces the default "name + description" text (the shop adds prices).
@@ -44,6 +49,10 @@ func _box(background: Color, card_height: float) -> StyleBoxFlat:
 func _draw() -> void:
 	if data == null:
 		return
+	if owned:
+		var badge := Rect2(size.x - 150.0, 10.0, 138.0, 38.0)
+		draw_rect(badge, Color(0.2, 0.55, 0.3, 0.95))
+		draw_string(ThemeDB.fallback_font, badge.position + Vector2(0.0, 28.0), "Owned", HORIZONTAL_ALIGNMENT_CENTER, badge.size.x, 26, Color.WHITE)
 	var radius := size.y * 0.32
 	var center := Vector2(size.y * 0.55, size.y * 0.5)
 	draw_circle(center, radius, data.color)

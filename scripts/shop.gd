@@ -39,6 +39,7 @@ func _show_offers(message := "") -> void:
 			label = "%s - SOLD" % offer.title
 		var card := FigureCard.new()
 		card.setup(offer.figure, CARD_HEIGHT, label)
+		card.owned = offer.is_figure and RunManager.owns(offer.figure) and not offer.sold
 		card.disabled = offer.sold or offer.price > RunManager.money or reason != ""
 		card.pressed.connect(_on_offer_pressed.bind(offer))
 		column.add_child(card)
@@ -46,11 +47,71 @@ func _show_offers(message := "") -> void:
 
 
 func _on_offer_pressed(offer: ShopOffer) -> void:
-	if offer.needs_slot:
+	if offer.is_figure and RunManager.owns(offer.figure):
+		_show_duplicate_choice(offer)  # Recruit another copy, or Upgrade the one you have (the same price)
+	elif offer.needs_slot:
 		_pending = offer
 		_show_slots()
 	else:
 		_buy(offer, -1)
+
+
+## You already own the figure for sale: Recruit it as usual, or Upgrade your copy instead. Either costs the price.
+func _show_duplicate_choice(offer: ShopOffer) -> void:
+	frame.clear()
+	title.text = "You already have %s ($%d)" % [offer.figure.display_name, offer.price]
+	var copies := RunManager.upgradable_copies(offer.figure)
+	var recruit := FigureCard.new()
+	recruit.setup(offer.figure, 200.0, "Recruit: add it as a new figure\n(you pick which figure it replaces)", 32)
+	recruit.pressed.connect(func() -> void:
+		_pending = offer
+		_show_slots())
+	column.add_child(recruit)
+	var upgrade := FigureCard.new()
+	upgrade.setup(offer.figure, 200.0, "Upgrade: take an upgrade step on your %s\n%s" % [
+			offer.figure.display_name, "" if not copies.is_empty() else "No upgrade tiers left on your copy."], 32)
+	upgrade.disabled = copies.is_empty()
+	upgrade.pressed.connect(func() -> void:
+		if copies.size() == 1:
+			_show_upgrade_tree(offer, copies[0])
+		else:
+			_show_copy_picker(offer, copies))
+	column.add_child(upgrade)
+	frame.add_action("Back", _show_offers)
+
+
+## Several copies: pick which one gets the upgrade.
+func _show_copy_picker(offer: ShopOffer, copies: Array[int]) -> void:
+	frame.clear()
+	title.text = "Upgrade which %s?" % offer.figure.display_name
+	for slot in copies:
+		var summary := RunManager.upgrade_summary(slot)
+		var card := FigureCard.new()
+		card.setup(offer.figure, 150.0, "%s\n%s" % [offer.figure.display_name, summary if summary != "" else "no upgrades yet"], 32)
+		card.pressed.connect(_show_upgrade_tree.bind(offer, slot))
+		column.add_child(card)
+	frame.add_action("Back", _show_duplicate_choice.bind(offer))
+
+
+## Both upgrade paths: tap an available box, then Take it (this is where the price is paid).
+func _show_upgrade_tree(offer: ShopOffer, slot: int) -> void:
+	frame.clear()
+	title.text = "%s: choose an upgrade ($%d)" % [RunManager.deck[slot].display_name, offer.price]
+	var view := UpgradeTreeView.new()
+	column.add_child(view)
+	view.setup(RunManager.deck[slot], RunManager.deck_upgrade[slot])
+	frame.add_action("Take it", func() -> void:
+		if view.selected_state() != "available":
+			title.text = "Pick a gold (available) box first"
+			return
+		if not RunManager.spend(offer.price):
+			_show_offers("Not enough money.")
+			return
+		AudioManager.play_purchase()
+		RunManager.take_upgrade(slot, view.selected.x)
+		offer.sold = true
+		_show_offers("%s upgraded!" % RunManager.deck[slot].display_name))
+	frame.add_action("Back", _show_duplicate_choice.bind(offer))
 
 
 ## Pick which of your figures the offer applies to (grunts first, the usual sacrifice).
