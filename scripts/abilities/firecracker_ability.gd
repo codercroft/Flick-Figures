@@ -63,8 +63,9 @@ func _detonate_team(figure: Figure) -> void:
 			other.ability.detonate(other)
 
 
-func grants_explosion_immunity(_figure: Figure) -> bool:
-	return true
+## Only enemy Firecrackers shield their team (the player's side is immune to its own explosions by default).
+func grants_explosion_immunity(figure: Figure) -> bool:
+	return figure.team == Figure.Team.ENEMY
 
 
 func sets_off_team_explosives(_figure: Figure) -> bool:

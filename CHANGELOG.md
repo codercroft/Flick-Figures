@@ -4,6 +4,13 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-08: Friendly explosions, Firecracker, Spitter, Speedo
+- Player explosions and implosions (figures, Blastoid rockets, Short Fuse / Magnet implosions, Bomb Drop) now never push ANY player figure, on deck or on the board: `Figure.blast_immune` is true for every player victim of a player-side blast. Enemy explosions still push player figures and enemies' own explosions still affect enemies.
+- Firecracker: its team-immunity aura is now enemy-only (`grants_explosion_immunity` is true only for enemy Firecrackers, so enemy explosion builds such as Powder Keg still work; the orange ring shows on enemies only). Its other abilities are unchanged. The AI no longer gets `firecracker_target_bonus` for player Firecrackers (they shield nothing now). Description updated.
+- Spitter: spraying no longer uses its action. Release leaves it selected and flickable: spray first, then flick, or skip, or spray again. Enemy Spitters spray first and then take their normal flick (`spray_point` is attached to the chosen flick; with nothing to flick a good spray is the whole turn).
+- Speedo: flick power 0.75 -> 0.525 (`flick_power_multiplier` in `speedo.tres`).
+- Open issue: the player's Spitter can spray repeatedly in one turn until its water is gone (no cap on sprays per turn).
+
 ## 2026-11-05: Rarity, Absorber, Cluster body, Bummer vs bosses, Juicer Douse
 - Rarity: Absorber Rare -> Uncommon, Spitter Uncommon -> Common. Absorber damping multiplier 1.4 -> 1.1 (about 25% farther flicks; mass and flick power unchanged).
 - Cluster is now really 3 small units in one rigid body: one circle collision shape (radius 45) per clustling in a tight triangle (diamond for Big Bunch's 4), each drawn as its own little figure, rotation locked. A toss removes the nearest clustling's circle (the body re-centres) and a rejoining clustling takes the free spot nearest where it touched (a full cluster refuses it). Toss speed 700 -> 950. New hooks `draws_own_label`, `Figure.use_custom_shapes()`; `accept_rejoin` now takes the touch position. The FigureData radius is 97 (bounding circle of the three).

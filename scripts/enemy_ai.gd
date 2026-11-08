@@ -247,6 +247,19 @@ func clear_debug() -> void:
 ## With `min_score` set (extra flicks), only attacks scoring at least that are considered.
 func choose_flick(candidates: Array, players: Array[Figure], table: Rect2, max_force: float,
 		min_score := -INF) -> Dictionary:
+	var result := _choose_flick_core(candidates, players, table, max_force, min_score)
+	# Spitter: spraying does not use its action, so a good spray comes before whatever it flicks.
+	if not result.is_empty() and not result.has("spray_point") and not result.has("pin_only") and is_instance_valid(result.enemy) \
+			and not result.enemy.ability.get_spray_stats(result.enemy).is_empty():
+		var spray := _best_spray(result.enemy, players, table)
+		if not spray.is_empty() and spray.score >= min_attack_score:
+			result["spray_point"] = spray.point
+			result["spray_seconds"] = spray.seconds
+	return result
+
+
+func _choose_flick_core(candidates: Array, players: Array[Figure], table: Rect2, max_force: float,
+		min_score := -INF) -> Dictionary:
 	_prepare()
 	var best := {}
 	var best_enemy: Figure = null
@@ -426,12 +439,6 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 		if not toss.is_empty() and toss.score >= min_attack_score and (best.is_empty() or toss.score > best.score):
 			best = toss
 
-	# Spitter: spraying a player figure toward the edge.
-	if not enemy.ability.get_spray_stats(enemy).is_empty():
-		var spray := _best_spray(enemy, players, table)
-		if not spray.is_empty() and spray.score >= min_attack_score and (best.is_empty() or spray.score > best.score):
-			best = spray
-
 	if best.is_empty() or best.score < min_attack_score:
 		# A loose clustling with nothing better walks home to its cluster.
 		var home := _rejoin_move(enemy)
@@ -442,6 +449,11 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 			best = move
 		elif best.is_empty() or best.score <= 0.0:
 			best = {"kind": "pass", "score": 0.0}
+			# Spitter with nothing to flick: a spray alone is still worth doing.
+			if not enemy.ability.get_spray_stats(enemy).is_empty():
+				var lone := _best_spray(enemy, players, table)
+				if not lone.is_empty() and lone.score >= min_attack_score:
+					best = lone
 	return best
 
 

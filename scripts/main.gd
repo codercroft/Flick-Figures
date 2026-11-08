@@ -549,30 +549,18 @@ func _start_spray() -> void:
 	ui.show_your_turn("Spraying: release to stop")
 
 
-## Spitter: the finger lifted. Spraying was its action for this cycle (spray OR flick).
+## Spitter: the finger lifted. Spraying does NOT use up its action: it can spray again, flick, or you can pick another figure.
 func _end_spray() -> void:
 	var figure := _aim_figure
 	_spraying = false
 	if is_instance_valid(figure):
 		figure.ability.set_spray(figure, false)
-		_take_snapshot()
-		player_flicks += 1
-		_update_status()
-		figure.flickable = false
-		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
-		_on_any_flick(figure, Vector2.ZERO)
-		_last_player_flicker = figure
-	_bonus_figure = null
 	_cancel_aim()
-	_deselect()
-	_state = State.SETTLING
-	_finish_player_turn()
+	ui.show_your_turn("Drag to flick, or hold to spray again")
 
 
-## Enemy Spitter: sprays toward `point` for a while; that is its action.
+## Enemy Spitter: sprays toward `point` for a while (before its flick, which it still takes).
 func _enemy_spray(enemy: Figure, point: Vector2, seconds: float) -> void:
-	enemy.turn_flicks = enemy.ability.get_flicks_per_turn(enemy)
-	_on_any_flick(enemy, Vector2.ZERO)
 	enemy.show_popup("Spray!", Color(0.5, 0.75, 1.0))
 	enemy.ability.set_spray(enemy, true, point)
 	await get_tree().create_timer(seconds).timeout
@@ -782,12 +770,20 @@ func _run_enemy_turn() -> void:
 			if serial != _turn_serial:
 				return
 			continue
+		if choice.has("spray_point") and (choice.has("impulse") or choice.has("shot_point")):
+			# an enemy Spitter sprays first and then still flicks
+			await _enemy_spray(choice.enemy, choice.spray_point, choice.spray_seconds)
+			if serial != _turn_serial or not _is_alive(choice.enemy):
+				return
 		if choice.has("pass"):  # a taken-over boss with no safe shot: the flick is wasted
 			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
-		elif choice.has("spray_point"):  # an enemy Spitter sprays instead of moving
+		elif choice.has("spray_point") and not choice.has("impulse") and not choice.has("shot_point"):
+			# an enemy Spitter with nothing to flick: spray only (that counts as its turn)
 			await _enemy_spray(choice.enemy, choice.spray_point, choice.spray_seconds)
 			if serial != _turn_serial:
 				return
+			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
+			_on_any_flick(choice.enemy, Vector2.ZERO)
 		elif choice.has("shot_point"):  # an enemy Blastoid fires (or a Cluster tosses) instead of moving
 			choice.enemy.shoot_at(choice.shot_point)
 			_on_any_flick(choice.enemy, Vector2.ZERO)

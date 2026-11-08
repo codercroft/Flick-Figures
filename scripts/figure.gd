@@ -821,13 +821,13 @@ static func team_has_firecracker(tree: SceneTree, team: int) -> bool:
 
 
 ## True if an explosion (or implosion) set off by `source_team` does not push `victim`: the player's own blasts never
-## push the player's unflicked figures on deck, and a Firecracker (`team_protected`) shields its whole team from its own
-## team's blasts. Blasts from the other side always push.
+## push any player figure (the base rule), and an ENEMY Firecracker (`team_protected`) shields the enemy team from its
+## own team's blasts. Blasts from the other side always push.
 static func blast_immune(victim: Figure, source_team: int, team_protected: bool) -> bool:
 	if source_team < 0:
 		return false
-	if source_team == Team.PLAYER and victim.team == Team.PLAYER and victim.on_deck:
-		return true
+	if source_team == Team.PLAYER and victim.team == Team.PLAYER:
+		return true  # the player's own explosions never push any player figure
 	return team_protected and victim.team == source_team
 
 

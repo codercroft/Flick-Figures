@@ -17,5 +17,5 @@ color = Color(0.2, 0.85, 0.95, 1)
 radius = 45.0
 mass = 0.6
 bounce = 0.7
-flick_power_multiplier = 0.75
+flick_power_multiplier = 0.525
 ability = SubResource("Resource_1")
