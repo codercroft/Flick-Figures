@@ -19,6 +19,13 @@ extends FigureAbility
 @export var light_crack_at := 1.0 / 3.0
 @export var heavy_crack_at := 2.0 / 3.0
 
+## Shell path: +x knockback dealt while the shell holds, the shell regrows this share of its strength every round, and
+## when it bursts it explodes outward (force 0 = no).
+@export var shell_knockback := 0.0
+@export var regrow_per_round := 0.0
+@export var burst_explosion_force := 0.0
+@export var burst_explosion_radius := 220.0
+
 var damage := 0.0
 var broken := false
 
@@ -50,7 +57,19 @@ func _add_damage(figure: Figure, amount: float) -> void:
 		_break(figure)
 
 
+func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
+	return 0.0 if broken else shell_knockback
+
+
+func on_round_ticked(figure: Figure) -> void:
+	if not broken and regrow_per_round > 0.0 and damage > 0.0:
+		damage = maxf(damage - regrow_per_round * shell_strength, 0.0)
+		figure.queue_redraw()
+
+
 func _break(figure: Figure) -> void:
+	if burst_explosion_force > 0.0:
+		figure.explode(burst_explosion_radius, burst_explosion_force)
 	broken = true
 	if broken_form != null:
 		figure.transform_into(broken_form)

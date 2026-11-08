@@ -39,7 +39,10 @@ func _run() -> void:
 	_pool("powers", config.power_pool, 10)
 	_pool("equipment", config.equipment_pool, 10)
 	_pool("finishes", config.finish_pool, 5)
-	_pool("upgrades", config.upgrade_pool, 5)
+	_pool("upgrade trees", config.upgrade_trees, 30)
+	for tree in config.upgrade_trees:  # every draftable figure: two paths of three tiers
+		_check(tree.figure != null and tree.path_a.size() == 3 and tree.path_b.size() == 3 and not tree.path_a.has(null) \
+				and not tree.path_b.has(null), "an upgrade tree is incomplete (%s)" % tree.resource_path)
 	_pool("relics", config.relic_pool, 10)
 	_pool("regular encounters", config.regular_encounters, 11)
 	_pool("events", config.event_pool, 1)
@@ -72,7 +75,7 @@ func _run() -> void:
 	if config.shop != null:
 		_pool("shop item types", config.shop.item_types, 6)
 	# Every scene loads and instantiates.
-	for scene_name in ["map", "main", "shop", "reward", "equip", "upgrade"]:
+	for scene_name in ["map", "main", "shop", "reward", "equip"]:
 		var packed = load("res://scenes/%s.tscn" % scene_name)
 		_check(packed != null, "scene %s did not load" % scene_name)
 		if packed != null:

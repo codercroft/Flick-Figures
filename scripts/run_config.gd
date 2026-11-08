@@ -51,11 +51,10 @@ extends Resource
 @export var starting_equipment_count := 2
 ## Every equipment item that exists (add new EquipmentData resources here).
 @export var equipment_pool: Array[EquipmentData] = []
-## Every general toy finish and every figure-specific upgrade that exists.
+## Every general toy finish that exists.
 @export var finish_pool: Array[FinishData] = []
-@export var upgrade_pool: Array[UpgradeData] = []
-## For testing only (off by default): a free "Upgrades" button on the map to put finishes and upgrades on your figures.
-@export var show_upgrade_screen := false
+## One upgrade tree (two paths of three tiers) per draftable figure.
+@export var upgrade_trees: Array[UpgradeTree] = []
 ## For testing only (off by default): start with some random relics.
 @export var start_with_relics := false
 @export var starting_relic_count := 3

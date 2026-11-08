@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Building Speed"
+description = "Each flick in a turn is 15% stronger than the last."
+ability_overrides = {"power_per_flick": 0.15}

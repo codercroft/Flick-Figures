@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Aura of Dread"
+description = "Opponents in the aura have -50% flick power."
+ability_overrides = {"enemy_flick_power": 0.5}

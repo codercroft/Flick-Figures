@@ -7,9 +7,12 @@ var center := Vector2.ZERO
 var radius := 300.0
 var strength := 1800.0  # px/s per second at the center
 var seconds := 0.4
+## Black Hole (Magnet upgrade): it never pulls figures of the source's own team.
+var friendly_safe := false
 var source: Figure  # never pulls itself (it is already off the table)
 
 var _age := 0.0
+var _source_team := -1
 
 
 func _ready() -> void:
@@ -18,11 +21,15 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_age += delta
-	var source_team: int = source.team if is_instance_valid(source) else -1
+	if is_instance_valid(source):
+		_source_team = source.team
+	var source_team := _source_team
 	var protected := Figure.team_has_firecracker(get_tree(), source_team)
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
 		if figure == source or figure.knocked_off or figure.is_frozen() or Figure.blast_immune(figure, source_team, protected):
+			continue
+		if friendly_safe and figure.team == source_team:
 			continue
 		var offset := center - figure.global_position
 		var distance := offset.length()

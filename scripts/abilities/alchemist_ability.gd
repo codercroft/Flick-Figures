@@ -15,7 +15,13 @@ extends FigureAbility
 
 ## How many rounds a figure stays Doused (a round = one player turn plus one enemy turn).
 @export var douse_rounds := 2
+## Potency path: Doused figures flick with this share of power (0.75 = 25% weaker).
+@export var douse_flick := 1.0
+## Brew path: placing a zone does not use up the flick (Quick Mix), and how many zones it keeps at once (Double Zones).
+@export var place_and_flick := false
+@export var max_zones := 1
 
 
 func get_zone_stats(_figure: Figure) -> Dictionary:
-	return {"radius": zone_radius, "knockback": knockback_multiplier, "douse_rounds": douse_rounds}
+	return {"radius": zone_radius, "knockback": knockback_multiplier, "douse_rounds": douse_rounds,
+			"flick": douse_flick, "keeps_action": place_and_flick, "max_zones": max_zones}

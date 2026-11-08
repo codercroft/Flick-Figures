@@ -28,6 +28,8 @@ extends FigureAbility
 ## contact, not stacking; an Alchemist's stronger Douse wins if a figure has both).
 @export var douse_rounds := 2
 @export var douse_knockback := 1.2
+## Slick path (Edge Steering): trail pieces push toward the nearest table edge instead of back the way Juicer came.
+@export var steer_to_edge := false
 
 var _last_drop := Vector2.INF
 
@@ -45,7 +47,10 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 	if figure.global_position.distance_to(_last_drop) < segment_spacing:
 		return
 	_last_drop = figure.global_position
-	combat.arena.add_trail_segment(figure, figure.global_position, -figure.linear_velocity.normalized(), self)
+	var push := -figure.linear_velocity.normalized()
+	if steer_to_edge:
+		push = _toward_nearest_edge(figure.global_position, combat.board.get_table_rect())
+	combat.arena.add_trail_segment(figure, figure.global_position, push, self)
 
 
 func on_impact(figure: Figure, other: Figure, speed: float, point: Vector2) -> void:
@@ -55,3 +60,16 @@ func on_impact(figure: Figure, other: Figure, speed: float, point: Vector2) -> v
 	for i in splash_count:
 		var outward := Vector2.from_angle(TAU * i / splash_count)
 		combat.arena.add_trail_segment(figure, point + outward * splash_distance, outward, self)
+
+
+func _toward_nearest_edge(point: Vector2, table: Rect2) -> Vector2:
+	var options := {
+		Vector2.LEFT: point.x - table.position.x, Vector2.RIGHT: table.end.x - point.x,
+		Vector2.UP: point.y - table.position.y, Vector2.DOWN: table.end.y - point.y}
+	var best := Vector2.UP
+	var best_distance := INF
+	for direction in options:
+		if options[direction] < best_distance:
+			best_distance = options[direction]
+			best = direction
+	return best

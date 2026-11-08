@@ -18,13 +18,14 @@ const BACKGROUND := Color(0.08, 0.09, 0.13)
 
 @export var tile_size := 210.0
 @export var roster_height := 190.0
-@export var details_height := 280.0
+@export var details_height := 660.0
 
 var _tab := 0
 var _pages: Array[Control] = []
 var _tab_buttons: Array[Button] = []
 var _note := Label.new()
 var _details := Label.new()
+var _tree_view := UpgradeTreeView.new()  # the selected figure's two upgrade paths
 var _unequip_button := Button.new()
 var _strip := DeckStrip.new()
 var _equipment_grid := GridContainer.new()
@@ -93,13 +94,21 @@ func _ready() -> void:
 	box.set_content_margin_all(14.0)
 	details_panel.add_theme_stylebox_override("panel", box)
 	column.add_child(details_panel)
+	var details_scroll := ScrollContainer.new()
+	details_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	details_panel.add_child(details_scroll)
 	var details_row := VBoxContainer.new()
 	details_row.add_theme_constant_override("separation", 8)
-	details_panel.add_child(details_row)
+	details_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details_scroll.add_child(details_row)
 	_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_details.add_theme_font_size_override("font_size", 28)
 	details_row.add_child(_details)
+	_tree_view.box_height = 84.0
+	_tree_view.font_size = 22
+	_tree_view.hide()
+	details_row.add_child(_tree_view)
 	_unequip_button.text = "Unequip"
 	_unequip_button.custom_minimum_size = Vector2(0.0, 70.0)
 	_unequip_button.add_theme_font_size_override("font_size", 30)
@@ -121,6 +130,7 @@ func open(tab := 0, selected = null) -> void:
 	refresh()
 	_select_tab(clampi(tab, 0, TAB_NAMES.size() - 1))
 	_details.text = "Tap a figure to see all about it."
+	_tree_view.hide()
 	_strip.selected = -1
 	_unequip_button.hide()
 	if selected is RelicData:
@@ -190,7 +200,7 @@ func _fill_equipment(equip_locked: bool) -> void:
 		var tile := EquipTile.new()
 		tile.setup(item, tile_size)
 		tile.locked = equip_locked
-		tile.pressed.connect(func(): _details.text = _equipment_text(item))
+		tile.pressed.connect(func(): _details.text = _equipment_text(item); _tree_view.hide())
 		_equipment_grid.add_child(tile)
 
 
@@ -240,14 +250,20 @@ func _fill_relics() -> void:
 			box.set_border_width_all(8)
 			box.border_color = relic.rarity_color()
 			button.add_theme_stylebox_override(state, box)
-		button.pressed.connect(func(): _details.text = _relic_text(relic))
+		button.pressed.connect(func(): _details.text = _relic_text(relic); _tree_view.hide())
 		_relics_grid.add_child(button)
 
 
 # --- Actions ---------------------------------------------------------------------------
 
+func _show_tree(slot: int) -> void:
+	_tree_view.show()
+	_tree_view.setup(RunManager.deck[slot], RunManager.deck_upgrade[slot])
+
+
 func _on_slot_pressed(slot: int) -> void:
 	_details.text = _figure_text(slot)
+	_show_tree(slot)
 	_update_unequip_button()
 
 
@@ -260,6 +276,7 @@ func _on_item_dropped(slot: int, item: EquipmentData) -> void:
 		refresh()
 		_strip.selected = slot
 		_details.text = "%s equipped.\n\n%s" % [item.display_name, _figure_text(slot)]
+		_show_tree(slot)
 		_update_unequip_button()
 
 
@@ -285,6 +302,7 @@ func _unequip(slot: int) -> void:
 		refresh()
 		_strip.selected = slot
 		_details.text = "%s is back in storage.\n\n%s" % [item.display_name, _figure_text(slot)]
+		_show_tree(slot)
 		_update_unequip_button()
 
 
@@ -324,12 +342,12 @@ func _update_unequip_button() -> void:
 func _figure_text(slot: int) -> String:
 	var figure: FigureData = RunManager.deck[slot]
 	var finish: FinishData = RunManager.deck_finish[slot]
-	var upgrade: UpgradeData = RunManager.deck_upgrade[slot]
 	var item: EquipmentData = RunManager.deck_equipment[slot]
 	var lines: Array[String] = ["%s (%s)" % [figure.display_name, figure.rarity_name()], figure.description,
 			"Mass %.1f, size %d, flick power x%.1f, bounce %.1f" % [figure.mass, figure.radius, figure.flick_power_multiplier, figure.bounce]]
 	lines.append("Finish: %s" % ("%s - %s" % [finish.display_name, finish.description] if finish else "none"))
-	lines.append("Upgrade: %s" % ("%s - %s" % [upgrade.display_name, upgrade.description] if upgrade else "none"))
+	var summary := RunManager.upgrade_summary(slot)
+	lines.append("Upgrades: %s" % (summary if summary != "" else "none"))
 	lines.append("Equipment: %s" % ("%s - %s" % [item.display_name, item.description] if item else "none"))
 	return "\n".join(lines)
 

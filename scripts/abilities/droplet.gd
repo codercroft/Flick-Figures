@@ -10,6 +10,8 @@ var range_left := 450.0
 var impulse := 35.0
 var radius := 8.0
 var owner_figure: Figure
+## Douse knockback multiplier the drops give (1.0 = none).
+var douse := 1.0
 
 
 func _ready() -> void:
@@ -43,6 +45,8 @@ func _on_body_entered(body: Node) -> void:
 			return
 		if figure.is_slow():
 			figure.last_pellet_ms = Time.get_ticks_msec()
+		if douse > 1.0:
+			figure.douse(2, douse, douse < 1.4)
 		figure.take_knockback.call_deferred(direction * impulse, owner_figure if is_instance_valid(owner_figure) else null)
 	queue_free()
 

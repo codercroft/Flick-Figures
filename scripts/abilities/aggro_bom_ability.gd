@@ -13,9 +13,31 @@ extends FigureAbility
 @export var explosion_radius := 320.0
 @export var explosion_force := 1500.0
 @export var pip_color := Color(1.0, 0.85, 0.3)
+## Rage path: extra knockback dealt, and extra mass and flick power, for each hit counted so far.
+@export var rage_knockback_per_hit := 0.0
+@export var rage_power_per_hit := 0.0
 
 var _count := 0
+var _base_mass := 0.0
 var _last_hit_ms := {}  # other figure's instance id -> when it last counted
+
+
+func setup_body(figure: Figure) -> void:
+	_base_mass = figure.mass
+
+
+func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
+	return rage_knockback_per_hit * _count
+
+
+func get_flick_power_multiplier(_figure: Figure) -> float:
+	return 1.0 + rage_power_per_hit * _count
+
+
+func _apply_rage(figure: Figure) -> void:
+	if rage_power_per_hit > 0.0 and _base_mass > 0.0:
+		figure.set_size(figure.radius, _base_mass * (1.0 + rage_power_per_hit * _count))
+	figure.queue_redraw()
 
 
 func on_hit(figure: Figure, other: Figure) -> void:
@@ -27,9 +49,10 @@ func on_hit(figure: Figure, other: Figure) -> void:
 		return  # the same contact still grinding
 	_last_hit_ms[id] = now
 	_count += 1
-	figure.queue_redraw()
+	_apply_rage(figure)
 	if _count >= collisions_needed:
 		_count = 0
+		_apply_rage(figure)
 		figure.show_popup("Aggro!", Color(1.0, 0.5, 0.2))
 		figure.explode(explosion_radius, explosion_force)
 

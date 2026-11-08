@@ -155,8 +155,8 @@ func _do_high() -> void:
 	RunManager.replace_figure(keep, offer.figure)
 	if offer.finish != null:
 		RunManager.set_finish(keep, offer.finish)
-	if offer.upgrade != null:
-		RunManager.set_upgrade(keep, offer.upgrade)
+	if offer.upgrade:  # an Upgrade step for the new figure (shown after the trade)
+		follow_up_steps = [{"kind": "upgrade", "slot": keep}]
 	if offer.equipment != null:
 		RunManager.deck_equipment[keep] = offer.equipment
 	show_result("You paid $%d and got %s with %s." % [high_trade_cost, offer.figure.display_name, _gear_name(offer)])
@@ -179,15 +179,17 @@ func _gear_summary(slot: int) -> String:
 	var parts: Array[String] = []
 	if RunManager.deck_finish[slot] != null:
 		parts.append(RunManager.deck_finish[slot].display_name)
-	if RunManager.deck_upgrade[slot] != null:
-		parts.append(RunManager.deck_upgrade[slot].display_name)
+	if RunManager.upgrade_summary(slot) != "":
+		parts.append(RunManager.upgrade_summary(slot))
 	if RunManager.deck_equipment[slot] != null:
 		parts.append(RunManager.deck_equipment[slot].display_name)
 	return "Gear: " + (", ".join(parts) if not parts.is_empty() else "none")
 
 
 func _gear_name(offer: Dictionary) -> String:
-	for key in ["finish", "upgrade", "equipment"]:
+	if offer.upgrade:
+		return "an Upgrade to pick"
+	for key in ["finish", "equipment"]:
 		if offer[key] != null:
 			return "%s (%s)" % [offer[key].display_name, key]
 	return "nothing"
@@ -212,20 +214,19 @@ func _roll_high_offer(given: int) -> Variant:
 	var finish: FinishData = GearRules.pick(RunManager.config.finish_pool, figure)
 	if finish != null:
 		options.append("finish")
-	var upgrades := RunManager.upgrades_for(figure)
-	if not upgrades.is_empty():
+	if RunManager.tree_for(figure) != null:
 		options.append("upgrade")
 	var item: EquipmentData = GearRules.pick(RunManager.config.equipment_pool, figure)
 	if item != null:
 		options.append("equipment")
-	var offer := {"figure": figure, "finish": null, "upgrade": null, "equipment": null}
+	var offer := {"figure": figure, "finish": null, "upgrade": false, "equipment": null}
 	if options.is_empty():
 		return offer
 	match options.pick_random():
 		"finish":
 			offer.finish = finish
 		"upgrade":
-			offer.upgrade = upgrades.pick_random()
+			offer.upgrade = true
 		"equipment":
 			offer.equipment = item
 	return offer

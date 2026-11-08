@@ -12,6 +12,14 @@ extends FigureAbility
 ## than this (px/s).
 @export var move_tolerance := 6.0
 @export var move_speed := 30.0
+## Spikes path: the wall's bounce (x), launch (x speed after bouncing off it) and whether it Douses opponents that hit it.
+@export var wall_bounce_multiplier := 1.0
+@export var wall_launch := 1.0
+@export var wall_douses := false
+## Bulwark path (Wall Chain): the nearest teammate also sets up a wall, pointed at its nearest opponent.
+@export var ally_wall := false
+
+var _ally_walled: Figure
 
 var _flicking := false
 var _heading := Vector2.ZERO
@@ -46,9 +54,37 @@ func on_stopped(figure: Figure) -> void:
 		return
 	var center := figure.global_position + facing * (figure.radius + wall_gap + wall_thickness / 2.0)
 	# Wall across the facing: its long side is perpendicular to the direction of the nearest enemy.
-	if combat.arena.place_shield_wall(figure, center, Vector2(wall_length, wall_thickness), facing.angle() - PI / 2.0):
+	if combat.arena.place_shield_wall(figure, center, Vector2(wall_length, wall_thickness), facing.angle() - PI / 2.0, _wall_props()):
 		_spot = figure.global_position
 		figure.show_popup("Wall up!", Color(0.8, 0.9, 1.0))
+		if ally_wall:
+			_wall_for_ally(figure, combat)
+
+
+func _wall_props() -> Dictionary:
+	return {"bounce": wall_bounce_multiplier, "launch": wall_launch, "douses": wall_douses}
+
+
+## Wall Chain: the nearest teammate on the board props up a wall toward its own nearest opponent.
+func _wall_for_ally(figure: Figure, combat) -> void:
+	var best: Figure = null
+	var best_distance := INF
+	for node in figure.get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == null or other == figure or other.knocked_off or other.team != figure.team or other.on_deck:
+			continue
+		var d := other.global_position.distance_to(figure.global_position)
+		if d < best_distance:
+			best_distance = d
+			best = other
+	if best == null:
+		return
+	var facing := _toward_nearest_enemy(best)
+	if facing == Vector2.ZERO:
+		return
+	var center := best.global_position + facing * (best.radius + wall_gap + wall_thickness / 2.0)
+	if combat.arena.place_shield_wall(best, center, Vector2(wall_length, wall_thickness), facing.angle() - PI / 2.0, _wall_props()):
+		_ally_walled = best
 
 
 ## Direction to the closest opposing figure still on the table (zero if there is none).
@@ -76,6 +112,9 @@ func has_active_wall(_figure: Figure) -> bool:
 
 func _remove_wall(figure: Figure) -> void:
 	_spot = Vector2.INF
+	if is_instance_valid(_ally_walled) and RunManager.combat != null:
+		RunManager.combat.arena.remove_shield_wall(_ally_walled)
+	_ally_walled = null
 	var combat = RunManager.combat
 	if combat != null:
 		combat.arena.remove_shield_wall(figure)

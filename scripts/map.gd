@@ -5,7 +5,6 @@ extends Control
 ## Equipment / Upgrades buttons pinned at the bottom.
 
 const EQUIP_SCENE := "res://scenes/equip.tscn"
-const UPGRADE_SCENE := "res://scenes/upgrade.tscn"
 ## Height reserved at the bottom for the hint and buttons (before the gesture-bar inset).
 const BOTTOM_AREA := 200.0
 
@@ -55,8 +54,6 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 16)
 	column.add_child(buttons)
-	if RunManager.config.show_upgrade_screen:
-		_bottom_button(buttons, "Upgrades", UPGRADE_SCENE)
 	_scroll_to_position.call_deferred()
 
 

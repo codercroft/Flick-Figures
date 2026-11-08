@@ -11,6 +11,8 @@ var range_left := 520.0
 var impulse := 260.0
 var radius := 9.0
 var owner_figure: Figure  # the Engineer (credited as the source of the knockback)
+var douse := 1.0  # Tech path: a light Douse on a hit
+var slow := 1.0  # Tech path: a moving figure it hits keeps this share of its speed
 
 
 func _ready() -> void:
@@ -43,6 +45,10 @@ func _on_body_entered(body: Node) -> void:
 			return
 		if figure.is_slow():
 			figure.last_pellet_ms = Time.get_ticks_msec()  # a nudge of a resting figure: not "movement in progress"
+		if douse > 1.0:
+			figure.douse(2, douse, true)
+		if slow < 1.0 and not figure.is_slow():
+			figure.linear_velocity *= slow
 		figure.take_knockback.call_deferred(direction * impulse, owner_figure if is_instance_valid(owner_figure) else null)
 	queue_free()  # a figure, a wall or a pin
 

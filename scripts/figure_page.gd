@@ -41,12 +41,13 @@ func show_figure(data: FigureData) -> void:
 	]:
 		add_child(_label(line, 32, Color(0.78, 0.81, 0.9)))
 
-	add_child(_label("Upgrade", 38, Color(0.9, 0.92, 0.98)))
-	var upgrades := RunManager.upgrades_for(data)
-	if upgrades.is_empty():
-		add_child(_label("No figure-specific upgrade yet.", 32, Color(0.6, 0.63, 0.72)))
-	for upgrade in upgrades:
-		add_child(_label("%s: %s" % [upgrade.display_name, upgrade.description], 32, Color(1.0, 0.82, 0.25)))
+	add_child(_label("Upgrades", 38, Color(0.9, 0.92, 0.98)))
+	if RunManager.tree_for(data) == null:
+		add_child(_label("No upgrades for this figure.", 32, Color(0.6, 0.63, 0.72)))
+	else:
+		var view := UpgradeTreeView.new()
+		add_child(view)
+		view.setup(data, Vector2i(-1, 0))  # (everything shows as available / locked: tap a box to read it)
 
 	add_child(_label("Your stats", 38, Color(0.9, 0.92, 0.98)))
 	var stats := RunHistory.stats_for(data)

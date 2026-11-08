@@ -367,7 +367,7 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var shape := CircleShape2D.new()
 	shape.radius = enemy.radius
 	_self_penalty = self_knock_off_penalty
-	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier()
+	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier() * enemy.ability.get_flick_power_multiplier(enemy)
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
 	var tier := _tier(enemy)
@@ -1015,7 +1015,7 @@ func _best_pin_setup(pinhead: Figure, players: Array[Figure], table: Rect2, max_
 			for shooter in shooters:
 				var shape := CircleShape2D.new()
 				shape.radius = shooter.radius
-				var power := shooter.data.flick_power_multiplier * shooter.aura_flick_multiplier()
+				var power := shooter.data.flick_power_multiplier * shooter.aura_flick_multiplier() * shooter.ability.get_flick_power_multiplier(shooter)
 				var top_speed := minf(max_force * power / shooter.mass, reference_speed * power)
 				for target in players:
 					var shot := _bank_shot_via(shooter, shape, pin, pin_radius, pin_radius + shooter.radius, target, table, top_speed, tier)
@@ -1284,7 +1284,7 @@ func choose_turret_spot(engineer: Figure, players: Array[Figure], enemies: Array
 				lanes.append(PackedVector2Array([player.global_position, enemy.global_position]))
 	var space := engineer.get_world_2d().direct_space_state
 	var radius: float = stats.radius
-	var current := arena_node.turret_of(engineer)
+	var current := arena_node.turret_of(engineer)  # (with two turrets: the first one)
 	var best := Vector2.INF
 	var best_score := 0.0
 	var spot_area := board_rect.grow(-radius)
@@ -1348,7 +1348,7 @@ func choose_takeover(figure: Figure, allies: Array[Figure], table: Rect2, max_fo
 	_prepare()
 	var shape := CircleShape2D.new()
 	shape.radius = figure.radius
-	var power := figure.data.flick_power_multiplier * figure.aura_flick_multiplier()
+	var power := figure.data.flick_power_multiplier * figure.aura_flick_multiplier() * figure.ability.get_flick_power_multiplier(figure)
 	var max_speed := max_force * power / figure.mass
 	var top_speed := minf(max_speed, reference_speed * power)
 	var directions: Array[Vector2] = []

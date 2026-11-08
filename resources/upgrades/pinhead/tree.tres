@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UpgradeTree" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_tree.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/figures/pinhead.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/a1.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/a2.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/a3.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/b1.tres" id="13"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/b2.tres" id="14"]
+[ext_resource type="Resource" path="res://resources/upgrades/pinhead/b3.tres" id="15"]
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="4"]
+
+[resource]
+script = ExtResource("1")
+figure = ExtResource("3")
+path_a_name = "Pin Count"
+path_b_name = "Bumper Pins"
+path_a = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12")])
+path_b = Array[ExtResource("4")]([ExtResource("13"), ExtResource("14"), ExtResource("15")])

@@ -41,9 +41,9 @@ price = 5
 [sub_resource type="Resource" id="upgrades_for_sale"]
 script = ExtResource("8")
 display_name = "Upgrades for sale"
-specific_count = 1
+upgrade_count = 2
 finish_count = 1
-specific_price = 6
+upgrade_price_by_tier = Array[int]([5, 8, 12])
 finish_price = 7
 
 [resource]

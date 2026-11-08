@@ -58,9 +58,9 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 ### Rewards per node (all chances in `reward_config.tres`)
 | Node | Rewards |
 |---|---|
-| Regular combat | Money (above). Figure draft: pick 1 of 3 (act 1) / 2 (act 2) / 1 (act 3) figures, rarity rolled per slot by act: act 1 80/18/2, act 2 35/50/15, act 3 20/50/30 (Common/Uncommon/Rare %). Bonus items after the draft: 0 / 1 / 2 by act, each a random power, equipment item, or upgrade/finish ("upgrade_item"). Chance drops: 15% power, 10% equipment. Every step has a skip. |
-| Elite | Money +$2. 1 guaranteed random relic (act 3: pick 1 of 3 relics). Figure draft as above but rarity 60/35/5 in every act. Bonus items as above. Chance drops: 40% power, 30% equipment, 20% finish. |
-| Boss | Money +$5. Pick 1 of 3 relics (Boss and Rare relics first, then others). One finish or figure-specific upgrade (50% specific, only fits its own figure) for a figure you choose. Pick 1 of 3 figures (Rare only, ones you do not own; falls back down in rarity). One guaranteed power (50%) or equipment (50%). |
+| Regular combat | Money (above). Figure draft: pick 1 of 3 (act 1) / 2 (act 2) / 1 (act 3) figures, rarity rolled per slot by act: act 1 80/18/2, act 2 35/50/15, act 3 20/50/30 (Common/Uncommon/Rare %). Bonus items after the draft: 0 / 1 / 2 by act, each a random power, equipment item or Upgrade step. Chance drops: 15% power, 10% equipment. Every step has a skip. |
+| Elite | Money +$2. 1 guaranteed random relic (act 3: pick 1 of 3 relics). Figure draft as above but rarity 60/35/5 in every act. Bonus items as above. 1 Upgrade step (pick a figure, then the next tier of one of its paths). Chance drops: 40% power, 30% equipment, 20% finish. |
+| Boss | Money +$5. Pick 1 of 3 relics (Boss and Rare relics first, then others). One finish (for a figure you choose) AND 2 Upgrade steps. Pick 1 of 3 figures (Rare only, ones you do not own; falls back down in rarity). One guaranteed power (50%) or equipment (50%). |
 | Treasure chest | A relic (rarity weights 65/30/5 Common/Uncommon/Rare; never Boss). The act 1 chest always gives a Rare relic. Equipment only if every relic is held. |
 | Fight made harder by a lost minigame | +$5 and one extra item step (power/equipment/finish) before the normal rewards. |
 - Trophy Case relic: +1 figure choice. Ascension 6: figure choices capped at 2 (also the boss pick) and all chance drops x0.5.
@@ -74,7 +74,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 | Relic (never Boss) | 1 | Common $10, Uncommon $12, Rare $14 |
 | Power (needs a free slot) | 1 | $4 |
 | Equipment | 1 | $5 |
-| Figure-specific upgrade for a figure you hold (applies at once) | 1 | $6 |
+| Upgrade for a figure you hold (the next tier of an open path, applies at once): tier 1 $5, tier 2 $8, tier 3 $12 (before Ascension markups and Discount upgrades) | 2 | by tier |
 | Finish (you pick the figure) | 1 | $7 |
 Ascension 4: every price x1.5, rounded up.
 
@@ -87,38 +87,38 @@ Ascension 4: every price x1.5, rounded up.
 Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2400), damping multiplier, bounce, knockback-taken multiplier (data value; abilities add more, listed below). Every figure works on either side (white ring = player, red = enemy). "Explosive" = registry tag: a Firecracker's hit sets it off. "Economy" = enemies never get it.
 
 ### Draftable figures
-| Rarity | Figure | Mass | Radius | Flick power | Damping x | Bounce | KB taken x | Upgrade | Tags |
+| Rarity | Figure | Mass | Radius | Flick power | Damping x | Bounce | KB taken x | Upgrade paths | Tags |
 |---|---|---|---|---|---|---|---|---|---|
-| Common | Aggro-bom | 1 | 56 | 1 | 1 | 0.7 | 1 | Hair Trigger | explosive |
-| Common | Blastoid | 1 | 56 | 1 | 1 | 0.7 | 1 | - | explosive |
-| Common | Cha-ching | 1 | 55 | 1 | 1 | 0.7 | 1 | Big Spender | economy |
-| Common | Crazy Man | 1 | 55 | 1 | 1 | 1 | 1 | - | - |
-| Common | Firecracker | 0.8 | 50 | 1 | 1 | 0.7 | 1 | - | explosive |
-| Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Goo Chain | - |
-| Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Big Gulp | - |
-| Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
-| Common | Magnet | 1.2 | 60 | 1 | 1 | 0.7 | 1 | Big Magnet | - |
-| Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | - | - |
-| Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | - | - |
-| Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Triple Split | - |
-| Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | - | - |
-| Uncommon | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
-| Uncommon | Absorber | 2 | 66 | 0.8 | 1.1 | 0.5 | 1 | Big Belly | - |
-| Uncommon | Cluster | 2.2 (3 x 0.73) | ~97 round the three (circles of 45) | 1 | 1 | 0.7 | 1 | Big Bunch | - |
-| Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Bomb Shelter | - |
-| Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | - | - |
-| Uncommon | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Full Haunt | - |
-| Uncommon | Piggy Bank | 1.3 | 62 | 1 | 1 | 0.7 | 1 | - | economy |
-| Uncommon | Pinhead | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
-| Uncommon | Powerhouse | 1 | 60 | 2 | 1 | 0.7 | 1 | Mega Power | - |
-| Uncommon | Pusher | 1 | 60 | 0.8 | 1.3 | 0.7 | 1 | Long Haul | - |
-| Uncommon | Sneaky Bomber | 0.9 | 55 | 1 | 1 | 0.7 | 1 | Long Fuse | explosive |
-| Uncommon | Speedo | 0.6 | 45 | 0.525 | 1 | 0.7 | 1 | Triple Dash | - |
-| Rare | Bloodluster | 1 | 58 | 1 | 1.667 | 0.7 | 1 | - | - |
-| Rare | Bombo | 1 | 55 | 1 | 1 | 0.7 | 1 | Boom Boom | explosive |
-| Rare | Bumper | 1.1 | 70 | 0.7 | 1.6 | 1 | 0.75 | - | - |
-| Rare | Eater | 0.9 | 54 | 1 | 1 | 0.6 | 1 | - | - |
-| Rare | Engineer | 1 | 60 | 1 | 1 | 0.7 | 1 | - | - |
+| Common | Aggro-bom | 1 | 56 | 1 | 1 | 0.7 | 1 | Fuse / Rage | explosive |
+| Common | Blastoid | 1 | 56 | 1 | 1 | 0.7 | 1 | Artillery / Nuke | explosive |
+| Common | Cha-ching | 1 | 55 | 1 | 1 | 0.7 | 1 | Savings / Bounty | economy |
+| Common | Crazy Man | 1 | 55 | 1 | 1 | 1 | 1 | Frenzy / Hype | - |
+| Common | Firecracker | 0.8 | 50 | 1 | 1 | 0.7 | 1 | Blast Master / Safety Officer | explosive |
+| Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Sticky / Tar | - |
+| Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Firehose / Sprinkler | - |
+| Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
+| Common | Magnet | 1.2 | 60 | 1 | 1 | 0.7 | 1 | Field / Collapse | - |
+| Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | Charge / Formation | - |
+| Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | Bulwark / Spikes | - |
+| Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Brood / Shrapnel | - |
+| Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | Potency / Brew | - |
+| Uncommon | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | Gloom / Downer | - |
+| Uncommon | Absorber | 2 | 66 | 0.8 | 1.1 | 0.5 | 1 | Gut / Spit | - |
+| Uncommon | Cluster | 2.2 (3 x 0.73) | ~97 round the three (circles of 45) | 1 | 1 | 0.7 | 1 | Swarm / Rebound | - |
+| Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Shell / Ram | - |
+| Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | Charge / Shock | - |
+| Uncommon | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Haunt / Phase | - |
+| Uncommon | Piggy Bank | 1.3 | 62 | 1 | 1 | 0.7 | 1 | Hoard / Spender | economy |
+| Uncommon | Pinhead | 1 | 60 | 1 | 1 | 0.7 | 1 | Pin Count / Bumper Pins | - |
+| Uncommon | Powerhouse | 1 | 60 | 2 | 1 | 0.7 | 1 | Might / Grit | - |
+| Uncommon | Pusher | 1 | 60 | 0.8 | 1.3 | 0.7 | 1 | Drive / Shove | - |
+| Uncommon | Sneaky Bomber | 0.9 | 55 | 1 | 1 | 0.7 | 1 | Fuse / Stealth | explosive |
+| Uncommon | Speedo | 0.6 | 45 | 0.525 | 1 | 0.7 | 1 | Dash / Zip | - |
+| Rare | Bloodluster | 1 | 58 | 1 | 1.667 | 0.7 | 1 | Frenzy / Predator | - |
+| Rare | Bombo | 1 | 55 | 1 | 1 | 0.7 | 1 | Boom / Shrapnel | explosive |
+| Rare | Bumper | 1.1 | 70 | 0.7 | 1.6 | 1 | 0.75 | Spring / Bulk | - |
+| Rare | Eater | 0.9 | 54 | 1 | 1 | 0.6 | 1 | Appetite / Digest | - |
+| Rare | Engineer | 1 | 60 | 1 | 1 | 0.7 | 1 | Turret / Tech | - |
 
 Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Economy": Cha-ching, Piggy Bank. Grunt is the starter-only figure (4 in the starting deck).
 
@@ -172,28 +172,192 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Trangle | 8 | 120 | 2.8 | 1 | 0.5 | 1 | 0.75 | uneatable, boss body |
 | Wall Piece | 6 | 88 | 1 | 1.5 | 0.6 | 1 | 0.8 | uneatable, boss body |
 
-### Figure-specific upgrades
-| Upgrade | Figure | Effect |
-|---|---|---|
-| Hair Trigger | Aggro Bom | Only needs 3 collisions to explode. |
-| Twin Rockets | Blastoid | Every shot fires 2 rockets. |
-| Big Bunch | Cluster | Starts with 4 clustlings. |
-| Big Gulp | Spitter | Starts bigger and heavier, with more water. |
-| Big Belly | Absorber | Bigger, so it can absorb Duwalls and Bumpers. |
-| Rallying Cry | Rally | Also makes your other figures flickable again. |
-| Boom Boom | Bombo | Explodes on every hit, not just the first. |
-| Big Spender | Cha Ching | Pays +$3 instead of +$2. |
-| Bomb Shelter | Duwall | Also immune to explosion knockback. |
-| Full Haunt | Ghost | Also wraps once per opponent turn. |
-| Goo Chain | Glue Guy | Sticks to several figures; stuck figures turn sticky too (chains of up to 5). |
-| Big Magnet | Magnet | Larger radius and a stronger curve on passing shots. |
-| Mega Power | Powerhouse | Flick power 2.5x. |
-| Long Haul | Pusher | Keeps pushing for 2 seconds instead of 1. |
-| Long Fuse | Sneaky Bomber | Explosion radius grows with the distance travelled. |
-| Triple Dash | Speedo | Three flicks per turn. |
-| Triple Split | Splitter | Splits into three minis. |
+### Upgrade trees
+Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades/<figure>/tree.tres`, listed in `RunConfig.upgrade_trees`): two paths of three tiers (`a1`..`a3`, `b1`..`b3`; each tier is an `UpgradeData` with a name, a description, stat overrides / multipliers and an optional effect script). Rules: tiers are taken in order; the figure's FIRST upgrade picks its path and locks the other (at most 3 upgrades per figure); upgrades belong to the figure and are lost if it is replaced; finishes are a separate slot. Tier effects are cumulative (tier 2 on top of tier 1...; multipliers compound). The Upgrade reward step shows both paths until the first pick, then only the chosen path (owned / available / locked boxes, tap for the description). Sources: elites 1 Upgrade step, bosses 2 (plus 1 finish), bonus items after combats can roll one, shops sell them ($5 / $8 / $12 by tier), the Trader's high trade grants one for the new figure. Enemies: the Ascension 1 enemy upgrade chance rolls tier 1 on a random path; from Ascension 5 elite and boss enemies can roll up to tier 2 on it; Mirror Match copies your tiers exactly. Upgrade pips (one per tier owned) show on figures and on the deck strip; the Inventory figure details and the Compendium figure page show the tree. Saved runs migrate the old single upgrades to tiers (Hair Trigger = Fuse 1, Twin Rockets = Artillery 2, Boom Boom = Boom 2, Bomb Shelter = Shell 2, Full Haunt = Haunt 3, Rallying Cry = Charge 3, Long Fuse = Fuse 2, ... lower tiers of the path are filled in).
 
-Every draftable figure without an upgrade above can only take a finish.
+| Figure | Path | Tier | Name | Effect |
+|---|---|---|---|---|
+| Aggro-bom | Fuse | 1 | Hair Trigger | Explodes every 3 hits. |
+| Aggro-bom | Fuse | 2 | Overcharge | Explosion power +25%. |
+| Aggro-bom | Fuse | 3 | Two-Hit Fuse | Explodes every 2 hits. |
+| Aggro-bom | Rage | 1 | Hit Fury | +10% knockback for each hit counted. |
+| Aggro-bom | Rage | 2 | Hit Bulk | +10% mass and flick power for each hit counted. |
+| Aggro-bom | Rage | 3 | Big Bang | Takes 5 hits to explode; the explosion has +50% power. |
+| Blastoid | Artillery | 1 | Big Rockets | Rocket radius +25%. |
+| Blastoid | Artillery | 2 | Twin Rockets | 2 rockets per shot. |
+| Blastoid | Artillery | 3 | Rocket Ring | Firing a rocket fires rockets all around him. |
+| Blastoid | Nuke | 1 | Hot Warheads | Rocket power +25%. |
+| Blastoid | Nuke | 2 | Dense Warheads | Rocket radius -50%, rocket power +50%. |
+| Blastoid | Nuke | 3 | Quake Warheads | Rocket power +50%, radius -20%; a rocket that hits an opponent gives every enemy the Earthquake shove. |
+| Cha-ching | Savings | 1 | Big Spender | +$5 survival bonus. |
+| Cha-ching | Savings | 2 | Extra Option | After surviving a combat, gain an extra option when choosing a figure. |
+| Cha-ching | Savings | 3 | Discount Card | Shop prices -15% while it is in your deck. |
+| Cha-ching | Bounty | 1 | Kill Bounty | Its own kills pay +$3. |
+| Cha-ching | Bounty | 2 | Bounty Hunter | +$2 per enemy knocked off while it is on the table. |
+| Cha-ching | Bounty | 3 | Big Bounty | +$3 per enemy knocked off while it is on the table. |
+| Crazy Man | Frenzy | 1 | Wide Aura | Aura radius +30%. |
+| Crazy Man | Frenzy | 2 | Rattled Foes | Opponents in the aura take +25% knockback. |
+| Crazy Man | Frenzy | 3 | Aura of Dread | Opponents in the aura have -50% flick power. |
+| Crazy Man | Hype | 1 | Wider Aura | Aura radius +30%. |
+| Crazy Man | Hype | 2 | Pep Talk | Teammates in the aura gain +25% flick power. |
+| Crazy Man | Hype | 3 | Thick Skin | Teammates in the aura gain +30% knockback resistance. |
+| Firecracker | Blast Master | 1 | Big Boom | Explosion radius +25%. |
+| Firecracker | Blast Master | 2 | Full Chains | Its explosion also sets off the team's explosives (full chains). |
+| Firecracker | Blast Master | 3 | Heavy Charges | Explosives it sets off get +30% force. |
+| Firecracker | Safety Officer | 1 | Padded Team | Team takes 25% less knockback from enemy explosions. |
+| Firecracker | Safety Officer | 2 | Lingering Cover | The cover lasts 1 round after it is knocked off. |
+| Firecracker | Safety Officer | 3 | Full Immunity | Team is fully immune to enemy explosions too. |
+| Glue Guy | Sticky | 1 | Goo Chain | Chains of up to 5. |
+| Glue Guy | Sticky | 2 | Sticky Flicks | +1 flick for every figure he is stuck to. |
+| Glue Guy | Sticky | 3 | Thin Prey | Opponents stuck to him lose 50% mass while stuck. |
+| Glue Guy | Tar | 1 | Tar Drag | An enemy stuck to it flicks 30% weaker. |
+| Glue Guy | Tar | 2 | Locked Down | An enemy stuck to it can't flick. |
+| Glue Guy | Tar | 3 | Heavy Tar | +100% mass and +100% flick power while stuck. |
+| Juicer | Slick | 1 | Long Trail | Trail lasts 5 rounds. |
+| Juicer | Slick | 2 | Strong Push | Trail push +50%. |
+| Juicer | Slick | 3 | Edge Steering | The trail always steers toward the edge. |
+| Juicer | Squeeze | 1 | Stickier Juice | Juice Douse +30% (from +20%). |
+| Juicer | Squeeze | 2 | Big Splash | The splash radius is 50% bigger. |
+| Juicer | Squeeze | 3 | Sticky Max | Juice Douse +50% (from +30%). |
+| Magnet | Field | 1 | Big Magnet | Bigger, stronger pull. |
+| Magnet | Field | 2 | Repel Pulse | Once per combat, after flicking, tap it to briefly reverse the pull and push opponents away. |
+| Magnet | Field | 3 | Repel Pulses | The push can be used once per turn. |
+| Magnet | Collapse | 1 | Big Implosion | Implosion radius +30%. |
+| Magnet | Collapse | 2 | Collapse Now | Once per combat, tap to implode on command (uses its action; it stays). |
+| Magnet | Collapse | 3 | Black Hole | After it dies it leaves a pull that never affects friendly figures. |
+| Rally | Charge | 1 | Quick Nudge | Nudge speed +40%. |
+| Rally | Charge | 2 | Hard Hitters | Nudged teammates deal +20% knockback that turn. |
+| Rally | Charge | 3 | Rallying Cry | Also makes your team flickable again (resets the flick cycle). |
+| Rally | Formation | 1 | Edge Guard | Teammates near an edge are nudged inward instead. |
+| Rally | Formation | 2 | Padded Ranks | Nudged teammates take 25% less knockback until your next turn. |
+| Rally | Formation | 3 | Rally Hits | Its hits also trigger the rally. |
+| Shieldon Ooper | Bulwark | 1 | Wide Wall | Wall 50% wider. |
+| Shieldon Ooper | Bulwark | 2 | Sturdy Wall | The wall survives small nudges (breaks past 40 px). |
+| Shieldon Ooper | Bulwark | 3 | Wall Chain | When it sets up a wall, the nearest teammate also sets one up, pointed at its nearest opponent. |
+| Shieldon Ooper | Spikes | 1 | Bouncy Wall | Wall bounce +50%. |
+| Shieldon Ooper | Spikes | 2 | Bumper Wall | The wall launches figures like a Bumper (x1.3). |
+| Shieldon Ooper | Spikes | 3 | Wet Wall | Enemies that hit the wall get Doused. |
+| Splitter | Brood | 1 | Triple Split | 3 minis. |
+| Splitter | Brood | 2 | Big Minis | Minis 25% bigger. |
+| Splitter | Brood | 3 | Re-Split | Minis can split once more. |
+| Splitter | Shrapnel | 1 | Fast Burst | Minis burst out 50% faster. |
+| Splitter | Shrapnel | 2 | Full Force | Minis deal full knockback. |
+| Splitter | Shrapnel | 3 | Splinter Blast | The split makes a small explosion. |
+| Spitter | Firehose | 1 | Big Gulp | Bigger and heavier, with more water. |
+| Spitter | Firehose | 2 | Pressure | Push per drop +50%. |
+| Spitter | Firehose | 3 | Steady Size | Doesn't shrink while spraying. |
+| Spitter | Sprinkler | 1 | Wet Spray | The spray lightly Douses (+20%). |
+| Spitter | Sprinkler | 2 | Refill | Refills 1 s of water per round. |
+| Spitter | Sprinkler | 3 | Soaking Spray | The spray heavily Douses (+50%). |
+| Absorber | Gut | 1 | Big Belly | Bigger: can swallow Duwalls and Bumpers. |
+| Absorber | Gut | 2 | Quick Digest | Immediately shrinks the absorbed unit by 50%. |
+| Absorber | Gut | 3 | Three Stomachs | Can hold 3 figures. |
+| Absorber | Spit | 1 | Tight Grip | Escape threshold +50%. |
+| Absorber | Spit | 2 | Spit Out | Tap to spit the held figure out at high speed (uses its action). |
+| Absorber | Spit | 3 | Spit Bomb | Spat figures explode on impact. |
+| Alchemist | Potency | 1 | Strong Brew | Douse +75% (from +50%). |
+| Alchemist | Potency | 2 | Wide Zone | Zone radius +40%. |
+| Alchemist | Potency | 3 | Weakening Brew | Doused enemies also flick 25% weaker. |
+| Alchemist | Brew | 1 | Long Douse | Douse lasts 3 rounds. |
+| Alchemist | Brew | 2 | Quick Mix | Can place a zone and flick in the same turn. |
+| Alchemist | Brew | 3 | Double Zones | Keeps 2 zones at once. |
+| Bummer | Gloom | 1 | Wide Gloom | Aura radius +30%. |
+| Bummer | Gloom | 2 | Rough Takeover | Takeover shots deal +25% knockback. |
+| Bummer | Gloom | 3 | Lingering Gloom | Taken-over figures stay bummed for one more flick. |
+| Bummer | Downer | 1 | Weak Aura | Enemies in its aura flick 20% weaker. |
+| Bummer | Downer | 2 | Slowing Aura | The aura slows moving enemies. |
+| Bummer | Downer | 3 | Painful Gloom | Enemies in its aura take +25% knockback. |
+| Cluster | Swarm | 1 | Big Bunch | Starts with 4 clustlings. |
+| Cluster | Swarm | 2 | Hard Hitters | Clustlings deal +25% knockback. |
+| Cluster | Swarm | 3 | Full Swarm | 5 clustlings. |
+| Cluster | Rebound | 1 | Hard Toss | Toss speed +30%. |
+| Cluster | Rebound | 2 | Toss and Flick | Can toss and flick in the same turn. |
+| Cluster | Rebound | 3 | Homing Pieces | Loose clustlings slide home at the end of your turn. |
+| Duwall | Shell | 1 | Thick Shell | Shell 50% tougher. |
+| Duwall | Shell | 2 | Bomb Shelter | Immune to explosions. |
+| Duwall | Shell | 3 | Regrowth | The shell regrows 25% per round. |
+| Duwall | Ram | 1 | Heavy Ram | Flick power x1.75 (from x1.5). |
+| Duwall | Ram | 2 | Shell Smash | +30% knockback dealt while the shell holds. |
+| Duwall | Ram | 3 | Shrapnel Shell | The shell bursting explodes outward. |
+| Energizer | Charge | 1 | Recharge All | Recharges every ally it hits. |
+| Energizer | Charge | 2 | Overcharge | Recharged allies get +25% power on their next flick. |
+| Energizer | Charge | 3 | Instant Recharge | Recharged allies can flick immediately. |
+| Energizer | Shock | 1 | Static Hit | Enemies it hits have reduced flick power. |
+| Energizer | Shock | 2 | Chain Lightning | The shock chains to nearby enemies. |
+| Energizer | Shock | 3 | Stun | Enemies it hits can't flick next round. |
+| Ghost | Haunt | 1 | Spooky Gains | +10% knockback for the combat each time it wraps. |
+| Ghost | Haunt | 2 | Spirit Power | +10% flick power for the combat each time it wraps. |
+| Ghost | Haunt | 3 | Full Haunt | Also wraps once per opponent turn. |
+| Ghost | Phase | 1 | Ghost Walk | Passes through allies. |
+| Ghost | Phase | 2 | Teleport | Tap to teleport to another spot; it can still flick that turn. |
+| Ghost | Phase | 3 | Wrap Gift | Allies it passes through can wrap around once on either turn. |
+| Piggy Bank | Hoard | 1 | Strong Savings | Scales its flick power along with its mass. |
+| Piggy Bank | Hoard | 2 | Bigger Vault | Soft cap 5x (from 4x). |
+| Piggy Bank | Hoard | 3 | Interest | Gains +1% knockback for every $ you have. |
+| Piggy Bank | Spender | 1 | Strong Wallet | Scales its flick power along with its mass. |
+| Piggy Bank | Spender | 2 | Receipts | Counts 50% of the money spent this run as held. |
+| Piggy Bank | Spender | 3 | Big Spender | Shops cost -15%, and it counts 75% of the money spent this run. |
+| Pinhead | Pin Count | 1 | Fat Pins | Pin radius +50%. |
+| Pinhead | Pin Count | 2 | Two Pins | Places 2 pins per turn. |
+| Pinhead | Pin Count | 3 | Lasting Pins | Pins last the whole combat (max 4). |
+| Pinhead | Bumper Pins | 1 | Springy Pins | Pin kick x1.5 (from x1.3). |
+| Pinhead | Bumper Pins | 2 | Wet Pins | Enemies that hit its pins get Doused. |
+| Pinhead | Bumper Pins | 3 | Bomb Pins | A pin explodes the first time an enemy hits it. |
+| Powerhouse | Might | 1 | Mega Power | Flick power x2.5. |
+| Powerhouse | Might | 2 | Giga Power | Flick power x3. |
+| Powerhouse | Might | 3 | Heavy First Hit | The first hit of each flick lands as if 2x heavier. |
+| Powerhouse | Grit | 1 | Normal Skin | Takes normal knockback. |
+| Powerhouse | Grit | 2 | Thick Skin | Takes half knockback. |
+| Powerhouse | Grit | 3 | Parachute | Saves itself the first time it would fall off each combat. |
+| Pusher | Drive | 1 | Long Haul | Pushes for 2 s. |
+| Pusher | Drive | 2 | Longer Haul | Pushes for 3 s. |
+| Pusher | Drive | 3 | Endless Push | Pushes for 5 s. |
+| Pusher | Shove | 1 | Long Range | Range +30%. |
+| Pusher | Shove | 2 | Heavy Shove | Hits as if 2.25x heavier (from 1.75x). |
+| Pusher | Shove | 3 | Kick Back | Does a small flick away from the edge after a kill. |
+| Sneaky Bomber | Fuse | 1 | Friendly Fuse | Still explodes if it only touched allies. |
+| Sneaky Bomber | Fuse | 2 | Long Fuse | The explosion radius grows with distance travelled. |
+| Sneaky Bomber | Fuse | 3 | Hot Fuse | Explosion force +40%. |
+| Sneaky Bomber | Stealth | 1 | Blur | Enemy shots at it are less accurate. |
+| Sneaky Bomber | Stealth | 2 | Ambush | If no enemy hits it during the enemy's turn, it explodes. |
+| Sneaky Bomber | Stealth | 3 | Big Stealth Blast | Explosion force and radius +25%. |
+| Speedo | Dash | 1 | Triple Dash | 3 flicks per turn. |
+| Speedo | Dash | 2 | Building Speed | Each flick in a turn is 15% stronger than the last. |
+| Speedo | Dash | 3 | Quad Dash | 4 flicks per turn. |
+| Speedo | Zip | 1 | Quick Legs | +25% flick power. |
+| Speedo | Zip | 2 | Heavy Legs | +50% mass. |
+| Speedo | Zip | 3 | Kill Rush | A knockoff earns an extra flick. |
+| Bloodluster | Frenzy | 1 | Light Stacks | Damping stacks +20% per kill (from +35%). |
+| Bloodluster | Frenzy | 2 | First Blood | Its first kill each combat recharges an ally. |
+| Bloodluster | Frenzy | 3 | Stackless | No damping stacks. |
+| Bloodluster | Predator | 1 | Edge Hunter | +25% knockback against Doused or near-edge enemies. |
+| Bloodluster | Predator | 2 | Blood Scent | +15% knockback per kill this combat. |
+| Bloodluster | Predator | 3 | Pack Hunter | An ally's kill gives it a bonus flick (once per turn). |
+| Bombo | Boom | 1 | Wide Blast | Explosion radius +25%. |
+| Bombo | Boom | 2 | Boom Boom | Explodes on every hit. |
+| Bombo | Boom | 3 | Heavy Charge | Explosion force +40%. |
+| Bombo | Shrapnel | 1 | Chain Blast | Its explosion sets off allied explosives. |
+| Bombo | Shrapnel | 2 | Boom Boom | Explodes on every hit. |
+| Bombo | Shrapnel | 3 | Last Gasp | Also explodes when knocked off. |
+| Bumper | Spring | 1 | Springier | Launch x1.5 (from x1.3). |
+| Bumper | Spring | 2 | Springiest | Launch x1.8 and increased flick power. |
+| Bumper | Spring | 3 | Ultra Spring | Launch x2. |
+| Bumper | Bulk | 1 | Heavy Frame | +30% mass. |
+| Bumper | Bulk | 2 | Armored | Takes half knockback. |
+| Bumper | Bulk | 3 | Easy Rolling | Normal flick power and damping. |
+| Eater | Appetite | 1 | Tasty Treats | +$1 per meal. |
+| Eater | Appetite | 2 | Bigger Belly | Growth cap radius 140 (from 110). |
+| Eater | Appetite | 3 | Equal Eater | Can eat figures its own size. |
+| Eater | Digest | 1 | Slow Digest | Keeps 80% of a meal's mass (from 70%). |
+| Eater | Digest | 2 | Meal Muscle | +10% knockback dealt per meal. |
+| Eater | Digest | 3 | Minion Muncher | Can eat boss minions (medium and small slimes, Skull Balls...). |
+| Engineer | Turret | 1 | Rapid Fire | Fires every 1 s (from 1.5 s). |
+| Engineer | Turret | 2 | Two Turrets | 2 turrets. |
+| Engineer | Turret | 3 | Heavy Turrets | Heavier turrets with stronger pellets. |
+| Engineer | Tech | 1 | Wet Pellets | Pellets Douse. |
+| Engineer | Tech | 2 | Slowing Pellets | Pellets also slow moving enemies. |
+| Engineer | Tech | 3 | Rocket Turret | The turret also fires a small rocket every 4 s. |
+
 
 ---
 
@@ -365,7 +529,7 @@ Selector on New Run; highest unlocked level saved in `user://ascension.json`; wi
 ### Levels (each includes all lower ones)
 | Lvl | Name | Effect |
 |---|---|---|
-| 1 | Geared Enemies | Regular enemies roll gear (act 2: 25% finish, 15% equipment; act 3: 50% / 35% / 10% figure upgrade); elites and bosses roll at the next act's rates. Always compatible. |
+| 1 | Geared Enemies | Regular enemies roll gear (act 2: 25% finish, 15% equipment; act 3: 50% / 35% / 10% a tier 1 upgrade on a random path); elites and bosses roll at the next act's rates, and from Ascension 5 they can roll tier 2 upgrades. Always compatible. |
 | 2 | Harsher Events | A lost minigame gives BOTH penalties: extra Grunt AND gear on an enemy. |
 | 3 | Rising Threat | Act multipliers return: accuracy x1.05/1.1, flick power x1.1/1.2, mass x1.1/1.25 (acts 2/3); bosses accuracy x1.05/1.1, power x1.1/1.2, mass x1.15/1.3; regular combats 4/5/6 enemies. |
 | 4 | Leaner Economy | Shop prices x1.5 (rounded up). |
@@ -382,7 +546,7 @@ Selector on New Run; highest unlocked level saved in `user://ascension.json`; wi
 Events sit on map nodes (1-3 per act); each event appears once per run until all have been seen. All use the shared top bar. A minigame WIN gives $6 plus one random power/equipment/finish; a LOSS sets the minigame penalty (the next combat gets +1 Grunt OR one enemy gets compatible gear; Ascension 2: both; the fight then pays +$5 and an extra item); a tie gives nothing.
 | Event | What it is |
 |---|---|
-| The Trader | Three trades: LOW give a power or an unequipped equipment item for a different random one; MEDIUM give a figure for a random Common/Uncommon figure (shown first); HIGH pay $6 and give 1 figure (get an Uncommon) or 2 (get a Rare) for a figure that comes with a fitting finish, upgrade or item. Deck never below 1 figure. |
+| The Trader | Three trades: LOW give a power or an unequipped equipment item for a different random one; MEDIUM give a figure for a random Common/Uncommon figure (shown first); HIGH pay $6 and give 1 figure (get an Uncommon) or 2 (get a Rare) for a figure that comes with a fitting finish, an Upgrade step (pick the first tier afterwards) or item. Deck never below 1 figure. |
 | Bocce | 3 Grunts each (3.5x heavier, bounce 0.1), a real flicked jack (radius 24, mass 0.4), coin flip for first throw, closest Grunt to the jack wins. AI opponent. |
 | Curling | 2 Banana Peel Grunts each slid at a ring target near the top (rings 250/175/100/35); closest to centre wins. |
 | Bowling | 10 pins (4-3-2-1), 3 rounds of 2 flicks each side with a 1.6x heavy ball; most pins wins; a tie goes to the player. |
@@ -393,12 +557,12 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 
 ## 11. Menus and screens
 - **Main menu**: Continue (if a save exists), New Run (confirm if it would replace a save) -> Ascension selector (unlocked levels, description, stacked summary, Start), Compendium, Run History, Settings (game/menu sound sliders, mute).
-- **Map**: scrolling act map, tap a glowing next node; shows a "next fight will be harder" warning when a minigame penalty is set; Upgrades button only if `show_upgrade_screen` is on (off). Autosaves each time it opens.
+- **Map**: scrolling act map, tap a glowing next node; shows a "next fight will be harder" warning when a minigame penalty is set; Autosaves each time it opens.
 - **Top bar** (map, combat, shop, reward, event screens): Map button, Inventory button, sound button, "Act n/3  Row r  An", money.
 - **Map overlay** (top bar): view-only map with your position and tap-for-description; Close returns.
 - **Inventory** (top bar, full screen): roster along the bottom in deck order (tap = full details; drag to reorder outside combat), details box above it, tabs Equipment (drag an item onto a figure to equip, tap an equipped item's badge or the Unequip button to store it), Powers (Discard with confirm, works in combat), Relics (read-only). In combat reordering is locked, and equipping too unless you hold Costume Change (then on your own idle turn). Header has Main menu and Close.
 - **Combat**: board, deck strip, turn label, power bar (3 slots), enemy relic line if any, banner (encounter, arena, penalty). Win/loss panel.
-- **Reward screen**: steps one at a time (figures draft -> which figure to replace on a deck strip, relics, power, equipment, finish, upgrade_item), each skippable; lucky drops get a flourish.
+- **Reward screen**: steps one at a time (figures draft -> which figure to replace on a deck strip, relics, power, equipment, finish, upgrade), each skippable; lucky drops get a flourish.
 - **Shop**, **Trader/minigame event screens** as above; "which figure?" picker uses the deck strip (tap a slot then confirm).
 - **Run History**: overall stats, per-Ascension wins, figure stats (most picked / win rate), runs newest first (tap to expand deck, relics, picks).
 - **Compendium**: Grunt + every draftable figure by rarity; unseen figures are silhouettes; figure page with a "3D model viewer (coming soon)" placeholder.
@@ -415,9 +579,21 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 - **Encounter-forced gear stays at Ascension 0** (The Setup's Skull, Mirror Match's copies): treated as encounter design, not random enemy gear.
 - **Shops/events start in the 4th row**, not the 3rd (the 3rd row is the chest row).
 - **Top bar**: includes a sound button (not in the prompt) and no relic icons (relics live in the Inventory only; there is no relic display during combat).
-- **Map screen**: the old "Equipment (N)" button was removed (Inventory replaces it); `equip.tscn` / `upgrade.tscn` still exist but are unlinked (equip) or testing-only (upgrade).
+- **Map screen**: the old "Equipment (N)" button was removed (Inventory replaces it); `equip.tscn` still exists but is unlinked. The old testing-only Upgrades screen and `show_upgrade_screen` toggle were removed.
 - **Ascension 10** does not save state between the two bosses: quitting during the second boss and continuing replays the first boss.
 - **Run info "Main menu" button** moved from the old overlay into the Inventory header.
+
+### Upgrade trees: interpretations and gaps (2026-11-08)
+- Tier effects are cumulative; "x%" changes compound (Blastoid Nuke: power x1.25 then x1.5 then x1.5, radius x0.5 then x0.8). Absolute values ("from +20%") are set, not added.
+- Firecracker: the team immunity is now the player's base rule, so Safety Officer reduces ENEMY explosion knockback (25%, 100%), keeps that cover 1 round after it is knocked off, and Full Chains means a teammate-triggered explosion also sets off the team's explosives. Blast Master tier 3 marks explosives it sets off (+30% force once).
+- Cha-ching: Extra Option = +1 figure choice on the next regular reward screen if it survived; Big Bounty / Bounty Hunter set the knock-off bonus to $4 / $3 (base $1 plus the listed amount); Discount Card is a run modifier while it is in the deck.
+- Magnet: Repel Pulse is an instant outward shove (650 px/s at the magnet, fading to half at the edge of its pull range), used by tapping the greyed Magnet after it flicked (once per combat, once per turn with tier 3); Collapse Now is a tap on a flickable Magnet; Black Hole lasts 6 s.
+- Piggy Bank: flick power scales by half of the scale gained; Receipts / Big Spender count the share of the money spent this run (`RunManager.money_spent`, saved).
+- Splitter Re-Split: a mini splits into 2 smaller minis (80% size) on its first impact after a flick. Juicer Big Splash makes the splash ring 50% wider. Pinhead Two Pins: 2 per turn and 2 on the table; Lasting Pins stay through cycle resets (up to 4); Wet Pins use the normal Alchemist Douse; Bomb Pins: radius 180, force 800, once per pin.
+- Absorber Spit: tap the Absorber (uses its action) to spit the oldest held figure at 1500 px/s toward the nearest other figure of ITS OWN team; Spit Bomb: it explodes (radius 170, force 900) on its first impact. Three Stomachs holds 3 (the newest escapes first).
+- Ghost: Wrap Gift gives one wrap to every ally the Ghost overlaps during its flick; Teleport is once per turn (tap an empty spot). Energizer: Instant Recharge and Bloodluster Pack Hunter queue a bonus flick that only the player side gets (`Main.grant_bonus_flick`); enemy Energizers just recharge. Stun is "can't flick for a round".
+- Enemy AI: it uses Magnet push / implode, Absorber spit and Ghost teleport at the start of its turn (simple rules in `ai_wants_tap` / `ai_tap_point`), plans with `get_flick_power_multiplier` (Speedo, Piggy, Ghost, Aggro Rage...) and extra flicks, and sprays/tosses as before. It does NOT model: Rally Edge Guard's inward nudges, Energizer / Bloodluster bonus flicks, Cluster's slide home, Pinhead pin explosions, Engineer rockets, Ghost Wrap Gift.
+- Bonus items after combats can no longer roll a finish (the old "upgrade_item" gave a finish or an upgrade); finishes still come from the shop, bosses, elites and chance drops.
 
 ### Inconsistencies and rough edges
 - Static descriptions do not mention Ascension changes (Slime "two", Skull-o-tron "three arms", Trangle "twice a turn", Sniper "Five").

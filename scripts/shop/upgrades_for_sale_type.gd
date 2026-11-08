@@ -1,35 +1,41 @@
 class_name UpgradesForSaleType
 extends ShopItemType
-## Sells figure upgrades: figure-specific ones for figures you hold (they apply right away), and
-## toy finishes (you pick which figure gets it).
+## Sells Upgrades (the next tier on a figure's upgrade tree, applied right away) and toy finishes (you pick the
+## figure). An Upgrade offer is for one of your figures: if it has no upgrade yet the offer is tier 1 of a random
+## path, otherwise the next tier of its chosen path. The price depends on the tier you would take.
 
-## How many figure-specific upgrades and how many finishes are offered.
-@export var specific_count := 1
+## How many Upgrade offers and how many finishes are offered.
+@export var upgrade_count := 2
 @export var finish_count := 1
-@export var specific_price := 6
+## Price of an Upgrade by the tier it would take (tier 1, 2, 3), before Ascension markups.
+@export var upgrade_price_by_tier: Array[int] = [5, 8, 12]
 @export var finish_price := 7
 
 
 func create_offers(_registry: FigureRegistry) -> Array[ShopOffer]:
 	var offers: Array[ShopOffer] = []
-	var candidates: Array[UpgradeData] = []
-	for slot in RunManager.deck.size():
-		for upgrade in RunManager.upgrades_for(RunManager.deck[slot]):
-			if RunManager.deck_upgrade[slot] != upgrade and not candidates.has(upgrade):
-				candidates.append(upgrade)
-	candidates.shuffle()
-	for i in mini(specific_count, candidates.size()):
-		var upgrade: UpgradeData = candidates[i]
+	var slots := RunManager.upgradable_slots()
+	slots.shuffle()
+	for i in mini(upgrade_count, slots.size()):
+		var slot: int = slots[i]
+		var figure: FigureData = RunManager.deck[slot]
+		var before: Vector2i = RunManager.deck_upgrade[slot]
+		var path := before.x if before.x >= 0 else randi_range(0, 1)
+		var tier := RunManager.next_tier(slot, path)
+		var tree := RunManager.tree_for(figure)
+		var upgrade: UpgradeData = tree.tiers(path)[tier - 1]
 		var offer := ShopOffer.new()
-		offer.title = "Upgrade: %s (%s)" % [upgrade.display_name, upgrade.figure.display_name]
+		offer.title = "Upgrade: %s (%s, %s tier %d)" % [upgrade.display_name, figure.display_name, tree.path_name(path), tier]
 		offer.description = upgrade.description
-		offer.price = specific_price
-		offer.figure = upgrade.figure
+		offer.price = upgrade_price_by_tier[clampi(tier - 1, 0, upgrade_price_by_tier.size() - 1)]
+		offer.figure = figure
 		offer.blocked = func() -> String:
-			return "" if _slot_for(upgrade) != -1 else "You no longer have %s" % upgrade.figure.display_name
+			if slot >= RunManager.deck.size() or RunManager.deck[slot] != figure or RunManager.deck_upgrade[slot] != before:
+				return "That figure has changed"
+			return ""
 		offer.on_buy = func(_slot: int) -> String:
-			RunManager.set_upgrade(_slot_for(upgrade), upgrade)
-			return "%s got %s!" % [upgrade.figure.display_name, upgrade.display_name]
+			RunManager.take_upgrade(slot, path)
+			return "%s got %s!" % [figure.display_name, upgrade.display_name]
 		offers.append(offer)
 	var finishes := RunManager.config.finish_pool.duplicate()
 	finishes.shuffle()
@@ -46,11 +52,3 @@ func create_offers(_registry: FigureRegistry) -> Array[ShopOffer]:
 			return "%s is now %s!" % [RunManager.deck[slot].display_name, finish.display_name]
 		offers.append(offer)
 	return offers
-
-
-## The first deck slot that holds the upgrade's figure and doesn't have the upgrade yet, or -1.
-func _slot_for(upgrade: UpgradeData) -> int:
-	for slot in RunManager.deck.size():
-		if RunManager.deck[slot] == upgrade.figure and RunManager.deck_upgrade[slot] != upgrade:
-			return slot
-	return -1

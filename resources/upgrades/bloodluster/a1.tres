@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Light Stacks"
+description = "Damping stacks +20% per kill (from +35%)."
+ability_overrides = {"damping_per_stack": 0.2}

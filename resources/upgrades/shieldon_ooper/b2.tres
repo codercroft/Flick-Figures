@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Bumper Wall"
+description = "The wall launches figures like a Bumper (x1.3)."
+ability_overrides = {"wall_launch": 1.3}

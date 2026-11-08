@@ -5,6 +5,9 @@ extends StaticBody2D
 
 var size := Vector2(170.0, 24.0)
 var owner_figure: Figure
+## Spikes path: x speed a figure leaves with after it hits the wall; whether opponents that hit it get Doused.
+var launch := 1.0
+var douses := false
 var _pop := 1.0  # 0 to 1: the pop-up animation (only the picture grows, the collision shape is there at once)
 
 
@@ -25,3 +28,13 @@ func _draw() -> void:
 	draw_rect(rect, Color(0.8, 0.88, 1.0), false, 4.0)
 	draw_rect(rect.grow(-7.0), Color(0.3, 0.4, 0.55), false, 3.0)
 	draw_line(Vector2(-size.x / 2.0, size.y / 2.0 + 6.0), Vector2(size.x / 2.0, size.y / 2.0 + 6.0), Color(team_color, 0.7), 4.0)
+
+
+## A figure touched the wall (called by Figure).
+func on_figure_hit(figure: Figure) -> void:
+	if not is_instance_valid(owner_figure) or figure.team == owner_figure.team:
+		return
+	if douses:
+		figure.douse(2, 1.5)
+	if launch > 1.0:
+		figure.linear_velocity *= launch

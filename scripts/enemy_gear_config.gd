@@ -8,7 +8,7 @@ extends Resource
 @export var finish_chance: Array[float] = [0.0, 0.25, 0.5]
 ## Chance (per enemy) of an equipment item.
 @export var equipment_chance: Array[float] = [0.0, 0.15, 0.35]
-## Chance (per enemy) of a figure-specific upgrade, if one exists for that figure.
+## Chance (per enemy) of a tier 1 upgrade on a random path (Ascension 5: elites and bosses may roll tier 2), if the figure has a tree.
 @export var upgrade_chance: Array[float] = [0.0, 0.0, 0.1]
 ## Elites and bosses roll at the rates of the act this many steps later (capped at the last act).
 @export var elite_boss_act_shift := 1

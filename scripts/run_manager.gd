@@ -16,7 +16,9 @@ var equipment_inventory: Array[EquipmentData] = []
 ## The toy finish and the figure-specific upgrade on each deck figure (same slots as `deck`).
 ## They belong to the figure: replacing the figure removes them.
 var deck_finish: Array[FinishData] = []
-var deck_upgrade: Array[UpgradeData] = []
+var deck_upgrade: Array[Vector2i] = []  # per slot: (path, tier): path -1 = none yet, 0 / 1 = path A / B, tier 0-3
+## (path, tier) of an unupgraded figure.
+const NO_UPGRADE := Vector2i(-1, 0)
 ## Which act the run is in (0 = act 1). A run is config.acts acts, each with its own map and boss.
 var act := 0
 ## The boss of each act (different bosses, picked when the run starts).
@@ -62,7 +64,7 @@ var enemy_gear: Array[Dictionary] = []
 var enemy_forced_equipment: Array[EquipmentData] = []
 ## A finish / upgrade an encounter forces onto an enemy (parallel to `enemies`, null = none).
 var enemy_forced_finish: Array[FinishData] = []
-var enemy_forced_upgrade: Array[UpgradeData] = []
+var enemy_forced_upgrade: Array[Vector2i] = []
 ## True while the current combat is an elite encounter, and the relics the enemy side carries in it (act 3 elites).
 var elite_encounter := false
 var enemy_relics: Array[RelicData] = []
@@ -99,6 +101,10 @@ var powers: Array[PowerData] = []
 ## The run's random seed: the act maps come from it, and each map node's lineup/shop/event is rolled from
 ## a seed made of it, so Continue re-enters a node with the same enemies (see enter_node).
 var run_seed := 0
+## Extra figure choices for the reward screen after this combat (Cha-ching's Extra Option).
+var pending_choice_bonus := 0
+## Money spent so far this run (the Piggy Bank's Spender path counts part of it).
+var money_spent := 0
 ## Every figure the player took during this run (drafted, bought, traded for), in order. Saved with the run
 ## and recorded in the run history when the run ends.
 var picked_figures: Array[FigureData] = []
@@ -130,13 +136,14 @@ func start_new_run(ascension_level := 0) -> void:
 		deck.append(config.starting_figure)
 		deck_equipment.append(null)
 		deck_finish.append(null)
-		deck_upgrade.append(null)
+		deck_upgrade.append(NO_UPGRADE)
 	if config.start_with_equipment:
 		var items := config.equipment_pool.duplicate()
 		items.shuffle()
 		for i in mini(config.starting_equipment_count, items.size()):
 			equipment_inventory.append(items[i])
 	money = config.starting_money
+	money_spent = 0
 	last_income = {"figures": 0, "base": 0, "bonus": 0, "total": 0}
 	shop_offers.clear()
 	reward_steps.clear()
@@ -185,7 +192,7 @@ func add_deck_slot() -> void:
 	deck.append(config.starting_figure)
 	deck_equipment.append(null)
 	deck_finish.append(null)
-	deck_upgrade.append(null)
+	deck_upgrade.append(NO_UPGRADE)
 
 
 func random_power() -> PowerData:
@@ -422,9 +429,12 @@ func enter_node(id: int) -> bool:
 			RunHistory.mark_seen_all(enemies)  # (faced as an enemy: unlocks it in the Compendium)
 		MapNode.Type.SHOP:
 			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
-			if asc(4):  # Leaner Economy
-				for offer in shop_offers:
-					offer.price = ceili(offer.price * config.ascension.shop_price_multiplier)
+			var discount := clampf(run_modifier("shop_discount"), 0.0, 0.8)  # upgrades like Cha-ching's Discount Card
+			for offer in shop_offers:
+				var price := float(offer.price)
+				if asc(4):  # Leaner Economy
+					price *= config.ascension.shop_price_multiplier
+				offer.price = ceili(price * (1.0 - discount))
 		MapNode.Type.TREASURE:
 			reward_steps = [{"kind": "treasure"}]
 		MapNode.Type.EVENT:
@@ -466,13 +476,18 @@ func build_rewards() -> void:
 				for i in rewards.elite_guaranteed_relics:
 					reward_steps.append({"kind": "relic"})
 			reward_steps.append({"kind": "figures"})
+			for i in rewards.elite_upgrades:
+				reward_steps.append({"kind": "upgrade"})
 			_add_bonus_items()
 			_roll_drop("power", rewards.elite_power_chance)
 			_roll_drop("equipment", rewards.elite_equipment_chance)
 			_roll_drop("finish", rewards.elite_finish_chance)
 		MapNode.Type.BOSS:
 			reward_steps.append({"kind": "relics"})
-			reward_steps.append({"kind": "upgrade_item"})
+			for i in rewards.boss_finishes:
+				reward_steps.append({"kind": "finish"})
+			for i in rewards.boss_upgrades:
+				reward_steps.append({"kind": "upgrade"})
 			reward_steps.append({"kind": "figures", "boss": true})
 			# One guaranteed extra: a power or an equipment item.
 			reward_steps.append({"kind": "power" if randf() < rewards.boss_power_chance else "equipment"})
@@ -497,10 +512,10 @@ func _add_harder_fight_bonus() -> void:
 	harder_note = "Harder fight bonus: +$%d and an extra item" % rewards.harder_fight_bonus_money
 
 
-## The act's bonus rewards after the figure draft: each a random power, equipment item or upgrade.
+## The act's bonus rewards after the figure draft: each a random power, equipment item or Upgrade (RewardConfig.bonus_item_kinds).
 func _add_bonus_items() -> void:
 	for i in config.rewards.bonus_items(act):
-		reward_steps.append({"kind": ["power", "equipment", "upgrade_item"].pick_random()})
+		reward_steps.append({"kind": config.rewards.bonus_item_kinds.pick_random()})
 
 
 ## Adds a "lucky" drop step with the given chance.
@@ -514,6 +529,7 @@ func _roll_drop(kind: String, chance: float) -> void:
 ## Called when the reward screens are done. After a boss the run moves on to the next act.
 func finish_rewards() -> void:
 	reward_steps.clear()
+	pending_choice_bonus = 0
 	harder_note = ""
 	if node != null and node.type == MapNode.Type.BOSS:
 		act += 1
@@ -609,20 +625,6 @@ func random_finish() -> FinishData:
 	return config.finish_pool.pick_random() if not config.finish_pool.is_empty() else null
 
 
-## For the boss reward: a figure-specific upgrade that one of your figures can take (chance from
-## RewardConfig), otherwise a finish. Returns an UpgradeData, a FinishData or null.
-func random_upgrade_item() -> Resource:
-	if randf() < config.rewards.boss_specific_upgrade_chance:
-		var options: Array[UpgradeData] = []
-		for slot in deck.size():
-			for upgrade in upgrades_for(deck[slot]):
-				if deck_upgrade[slot] != upgrade and not options.has(upgrade):
-					options.append(upgrade)
-		if not options.is_empty():
-			return options.pick_random()
-	return random_finish()
-
-
 func has_free_power_slot() -> bool:
 	return powers.has(null)
 
@@ -636,6 +638,8 @@ func offer_rewards(boss := false) -> Array[FigureData]:
 	for relic in relics:
 		if relic.effect != null:
 			count += relic.effect.get_reward_choice_bonus()
+	if not boss:
+		count += pending_choice_bonus
 	if boss:
 		# Boss rewards: Rare figures you don't own (Uncommon, then Common, only if there are not enough).
 		var owned: Array[FigureData] = []
@@ -662,19 +666,10 @@ func replace_figure(slot: int, new_figure: FigureData) -> void:
 		equipment_inventory.append(deck_equipment[slot])
 		deck_equipment[slot] = null
 	deck_finish[slot] = null
-	deck_upgrade[slot] = null
+	deck_upgrade[slot] = NO_UPGRADE
 	deck[slot] = new_figure
 	picked_figures.append(new_figure)
 	RunHistory.mark_seen(new_figure)
-
-
-## The figure-specific upgrades in the pool that fit this figure.
-func upgrades_for(figure: FigureData) -> Array[UpgradeData]:
-	var found: Array[UpgradeData] = []
-	for upgrade in config.upgrade_pool:
-		if upgrade.figure == figure:
-			found.append(upgrade)
-	return found
 
 
 ## Puts a toy finish on the figure in `slot` (null removes it). It replaces any earlier finish.
@@ -682,13 +677,99 @@ func set_finish(slot: int, finish: FinishData) -> void:
 	deck_finish[slot] = finish
 
 
-## Puts a figure-specific upgrade on the figure in `slot` (null removes it). Returns false if the
-## upgrade is not for that figure.
-func set_upgrade(slot: int, upgrade: UpgradeData) -> bool:
-	if upgrade != null and upgrade.figure != deck[slot]:
-		return false
-	deck_upgrade[slot] = upgrade
-	return true
+# --- Upgrade trees -------------------------------------------------------------------
+
+## The upgrade tree of a figure, or null (Grunt and anything without one).
+func tree_for(figure: FigureData) -> UpgradeTree:
+	for tree in config.upgrade_trees:
+		if tree.figure == figure:
+			return tree
+	return null
+
+
+## The upgrades a figure with `state` (path, tier) owns, in order (tier 1 first).
+func owned_upgrades(figure: FigureData, state: Vector2i) -> Array[UpgradeData]:
+	var owned: Array[UpgradeData] = []
+	var tree := tree_for(figure)
+	if tree == null or state.x < 0:
+		return owned
+	var tiers := tree.tiers(state.x)
+	for i in mini(state.y, tiers.size()):
+		owned.append(tiers[i])
+	return owned
+
+
+## What a slot could take next: [{path, tier, upgrade, state}] with state "owned", "available" or "locked", for every
+## box of both paths (an empty list if the figure has no tree). Before the first pick both paths show their tier 1 as
+## available; afterwards only the chosen path is open and the other is locked.
+func upgrade_boxes(figure: FigureData, state: Vector2i) -> Array[Dictionary]:
+	var boxes: Array[Dictionary] = []
+	var tree := tree_for(figure)
+	if tree == null:
+		return boxes
+	for path in 2:
+		var tiers := tree.tiers(path)
+		for i in tiers.size():
+			var box_state := "locked"
+			if state.x == path or state.x == -1:
+				if i < state.y and state.x == path:
+					box_state = "owned"
+				elif (state.x == -1 and i == 0) or (state.x == path and i == state.y):
+					box_state = "available"
+			boxes.append({"path": path, "tier": i + 1, "upgrade": tiers[i], "state": box_state})
+	return boxes
+
+
+## True if the figure in `slot` can still take an upgrade.
+func can_upgrade(slot: int) -> bool:
+	for box in upgrade_boxes(deck[slot], deck_upgrade[slot]):
+		if box.state == "available":
+			return true
+	return false
+
+
+## The deck slots that can still take an upgrade.
+func upgradable_slots() -> Array[int]:
+	var slots: Array[int] = []
+	for slot in deck.size():
+		if can_upgrade(slot):
+			slots.append(slot)
+	return slots
+
+
+## Takes the next tier of `path` on the figure in `slot` (the first pick chooses the path). False if it is not allowed.
+func take_upgrade(slot: int, path: int) -> bool:
+	for box in upgrade_boxes(deck[slot], deck_upgrade[slot]):
+		if box.path == path and box.state == "available":
+			deck_upgrade[slot] = Vector2i(path, box.tier)
+			return true
+	return false
+
+
+## Sum of a run-wide modifier (UpgradeData.run_modifiers) over every upgrade the deck's figures own.
+func run_modifier(key: String) -> float:
+	var total := 0.0
+	for slot in deck.size():
+		for upgrade in owned_upgrades(deck[slot], deck_upgrade[slot]):
+			total += float(upgrade.run_modifiers.get(key, 0.0))
+	return total
+
+
+## "Fuse 2/3" style summary of a slot's upgrades ("" if none).
+func upgrade_summary(slot: int) -> String:
+	var state := deck_upgrade[slot]
+	var tree := tree_for(deck[slot])
+	if tree == null or state.x < 0:
+		return ""
+	return "%s %d/3" % [tree.path_name(state.x), state.y]
+
+
+## The tier the next upgrade on `path` would be (1-3), or 0 if that path is not open.
+func next_tier(slot: int, path: int) -> int:
+	for box in upgrade_boxes(deck[slot], deck_upgrade[slot]):
+		if box.path == path and box.state == "available":
+			return box.tier
+	return 0
 
 
 ## Attaches an inventory item to the figure in `slot`. If that figure already holds one, the old
@@ -748,6 +829,7 @@ func spend(amount: int) -> bool:
 	if amount > money:
 		return false
 	money -= amount
+	money_spent += amount
 	return true
 
 
@@ -855,11 +937,11 @@ func _build_lineup() -> void:
 	while enemy_forced_finish.size() < enemies.size():
 		enemy_forced_finish.append(null)
 	while enemy_forced_upgrade.size() < enemies.size():
-		enemy_forced_upgrade.append(null)
+		enemy_forced_upgrade.append(NO_UPGRADE)
 	# Ascension 5 (Hardened Elites): every enemy of an elite carries a fitting item.
 	var guaranteed: bool = asc(5) and elite_encounter and config.elite_config != null and config.elite_config.gear_guaranteed(act)
 	for i in enemies.size():
-		var gear := {"finish": null, "equipment": null, "upgrade": null}
+		var gear := {"finish": null, "equipment": null, "upgrade": NO_UPGRADE}
 		if asc(1):  # Geared Enemies (the base game has no random gear)
 			gear = _roll_enemy_gear(enemies[i], tougher)
 		if guaranteed:
@@ -868,7 +950,7 @@ func _build_lineup() -> void:
 			gear.equipment = enemy_forced_equipment[i]
 		if enemy_forced_finish[i] != null:
 			gear.finish = enemy_forced_finish[i]
-		if enemy_forced_upgrade[i] != null:
+		if enemy_forced_upgrade[i].x >= 0:
 			gear.upgrade = enemy_forced_upgrade[i]
 		enemy_gear.append(gear)
 	if elite_encounter and asc(7):  # Elite Relics
@@ -967,7 +1049,7 @@ func _start_second_boss() -> bool:
 ## Elite encounters in acts 2-3: one compatible gear item that suits this figure's role (equipment or a finish,
 ## never economy / player-only equipment).
 func _guaranteed_gear(figure: FigureData) -> Dictionary:
-	var gear := {"finish": null, "equipment": null, "upgrade": null}
+	var gear := {"finish": null, "equipment": null, "upgrade": NO_UPGRADE}
 	var items: Array[EquipmentData] = []
 	for item in config.equipment_pool:
 		if not item.economy and not item.player_only:
@@ -999,7 +1081,7 @@ func _pick_enemy_relics() -> void:
 ## Rolls what one enemy carries. Never economy or player-only equipment, and only gear that does
 ## something for this figure (GearRules), preferring gear that fits its role.
 func _roll_enemy_gear(figure: FigureData, tougher: bool) -> Dictionary:
-	var gear := {"finish": null, "equipment": null, "upgrade": null}
+	var gear := {"finish": null, "equipment": null, "upgrade": NO_UPGRADE}
 	var gear_config: EnemyGearConfig = config.ascension.gear if config.ascension != null and config.ascension.gear != null else config.enemy_gear
 	if gear_config == null:
 		return gear
@@ -1013,9 +1095,13 @@ func _roll_enemy_gear(figure: FigureData, tougher: bool) -> Dictionary:
 				items.append(item)
 		gear.equipment = GearRules.pick(items, figure)
 	if randf() < rates.upgrade:
-		var upgrades := upgrades_for(figure)  # only upgrades made for this exact figure
-		if not upgrades.is_empty():
-			gear.upgrade = upgrades.pick_random()
+		var tree := tree_for(figure)
+		if tree != null:
+			# A tier 1 upgrade on a random path; from Ascension 5, elite and boss enemies can go up to tier 2 on it.
+			var tier := 1
+			if tougher and asc(5) and randf() < 0.5:
+				tier = 2
+			gear.upgrade = Vector2i(randi_range(0, 1), tier)
 	return gear
 
 
@@ -1059,7 +1145,7 @@ func _build_encounter(encounter: EncounterData) -> void:
 			enemy_boosts.append(entry.boost())
 			enemy_forced_equipment.append(entry.equipment)
 			enemy_forced_finish.append(entry.finish)
-			enemy_forced_upgrade.append(entry.upgrade)
+			enemy_forced_upgrade.append(Vector2i(entry.upgrade_path, entry.upgrade_tier))
 			enemy_positions.append(entry.positions[i] if i < entry.positions.size() else Vector2.INF)
 			if elite_encounter and asc(5) and config.elite_config != null:  # the act's elite stat boost (small in act 1)
 				var extra := config.elite_config.boost_for(act)
@@ -1095,7 +1181,7 @@ func _add_mirror_enemies(encounter: EncounterData) -> void:
 		var item := deck_equipment[slot]
 		enemy_forced_equipment.append(item if item != null and not economy and not item.economy and not item.player_only else null)
 		enemy_forced_finish.append(null if economy else deck_finish[slot])
-		enemy_forced_upgrade.append(null if economy else deck_upgrade[slot])
+		enemy_forced_upgrade.append(NO_UPGRADE if economy else deck_upgrade[slot])
 
 
 ## Tops the lineup up to the act's enemy count with Grunts in free spots: the spot farthest from
@@ -1133,7 +1219,7 @@ func _add_grunt(arena_data: ArenaData) -> void:
 	if enemy_forced_equipment.size() == enemies.size() - 1:  # (the forced lists are padded together)
 		enemy_forced_equipment.append(null)
 		enemy_forced_finish.append(null)
-		enemy_forced_upgrade.append(null)
+		enemy_forced_upgrade.append(NO_UPGRADE)
 
 
 ## The minigame penalty, if set: the next combat gets +1 Grunt or one enemy gets a compatible finish,
@@ -1157,7 +1243,7 @@ func _apply_minigame_penalty() -> void:
 		choices.append("finish")
 	if enemy_gear[index].equipment == null:
 		choices.append("equipment")
-	if enemy_gear[index].upgrade == null and not upgrades_for(figure).is_empty():
+	if enemy_gear[index].upgrade.x < 0 and tree_for(figure) != null:
 		choices.append("upgrade")
 	if choices.is_empty():
 		if can_add_grunt and not asc(2):
@@ -1175,13 +1261,13 @@ func _apply_minigame_penalty() -> void:
 			if picked != null:
 				enemy_gear[index].equipment = picked
 		"upgrade":
-			enemy_gear[index].upgrade = upgrades_for(figure).pick_random()
+			enemy_gear[index].upgrade = Vector2i(randi_range(0, 1), 1)
 	penalty_text = ("Penalty: +1 Grunt and a %s is upgraded" if asc(2) and can_add_grunt else "Penalty: a %s is upgraded") % figure.display_name
 
 
 func _add_penalty_grunt() -> void:
 	_add_grunt(encounter_arena)
-	enemy_gear.append({"finish": null, "equipment": null, "upgrade": null})  # (this runs after the gear rolls)
+	enemy_gear.append({"finish": null, "equipment": null, "upgrade": NO_UPGRADE})  # (this runs after the gear rolls)
 	penalty_text = "Penalty: +1 Grunt"
 
 

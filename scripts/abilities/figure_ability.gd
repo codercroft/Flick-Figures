@@ -74,6 +74,76 @@ func get_incoming_aim_error_degrees(_figure: Figure) -> float:
 	return 0.0
 
 
+## Extra knockback this figure's hits deal to `other` as a share (0.2 = +20% of the speed the victim gained). Summed
+## over abilities; applied by Figure for every figure-on-figure hit.
+func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
+	return 0.0
+
+
+## An aura that affects OPPOSING figures near this one: {"radius", "knockback" (x taken), "flick" (x flick power)}, or {}.
+func get_enemy_aura(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## A tap ability: {"kind": "self" (tap this selected figure again) or "point" (tap empty board), "ready": bool,
+## "uses_action": bool (it uses up the figure's action for the cycle), "hint": text}; {} = none. `use_tap_ability`
+## runs it and returns true if it happened.
+func get_tap_ability(_figure: Figure) -> Dictionary:
+	return {}
+
+
+func use_tap_ability(_figure: Figure, _point: Vector2) -> bool:
+	return false
+
+
+## Pinhead's upgrades: {"per_turn", "max", "permanent", "kick" (x launch), "douse", "explode_radius", "explode_force"}.
+func get_pin_options(_figure: Figure) -> Dictionary:
+	return {}
+
+
+## Enemy AI: should this (enemy) figure use its "self" tap ability now, given the player's figures?
+func ai_wants_tap(_figure: Figure, _opponents: Array) -> bool:
+	return false
+
+
+## Enemy AI: where this (enemy) figure wants to use its "point" tap ability (Vector2.INF = not now).
+func ai_tap_point(_figure: Figure, _opponents: Array) -> Vector2:
+	return Vector2.INF
+
+
+## Extra figure choices after this figure survives a won combat (Cha-ching's Extra Option).
+func get_reward_choice_bonus(_figure: Figure) -> int:
+	return 0
+
+
+## A projectile this figure fired hit `target` (a figure).
+func on_projectile_hit(_figure: Figure, _target: Figure) -> void:
+	pass
+
+
+## Flick-power factor on an OPPOSING figure that is glued to this one (Glue Guy's Tar).
+func get_stuck_enemy_flick_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
+## Share (0-1) of enemy explosion knockback this figure's whole team ignores while it is on the table.
+func get_team_explosion_reduction(_figure: Figure) -> float:
+	return 0.0
+
+
+## Helper: sets off every other explosive teammate on the table (the registry's "explosive" tag).
+func detonate_allies(figure: Figure) -> void:
+	var registry := RunManager.config.registry if RunManager.config != null else null
+	if registry == null:
+		return
+	for node in figure.get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == figure or other.knocked_off or other.team != figure.team or other.on_deck:
+			continue
+		if registry.is_explosive(other.base_data):
+			other.ability.detonate(other)
+
+
 ## Modifier for collisions only (not explosions): how much of a hit from `other` this figure
 ## takes, given the relative `impact_speed`. 0 = ignores it (Anchor).
 func get_hit_multiplier(_figure: Figure, _other: Figure, _impact_speed: float) -> float:

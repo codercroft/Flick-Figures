@@ -54,7 +54,7 @@ func refresh() -> void:
 	for slot in RunManager.deck.size():
 		var badge := FigureBadge.new()
 		badge.data = RunManager.deck[slot]
-		badge.upgraded = RunManager.deck_upgrade[slot] != null
+		badge.upgraded = maxi(RunManager.deck_upgrade[slot].y, 0)
 		badge.item_label = RunManager.deck_equipment[slot].label if RunManager.deck_equipment[slot] != null else ""
 		add_child(badge)
 		_badges.append(badge)
@@ -186,8 +186,8 @@ static func describe_slot(slot: int, replacing := true) -> String:
 	var extras: Array[String] = []
 	if RunManager.deck_finish[slot] != null:
 		extras.append("finish " + RunManager.deck_finish[slot].display_name)
-	if RunManager.deck_upgrade[slot] != null:
-		extras.append("upgrade " + RunManager.deck_upgrade[slot].display_name)
+	if RunManager.upgrade_summary(slot) != "":
+		extras.append("upgrades " + RunManager.upgrade_summary(slot))
 	var text := "%s (%s)" % [figure.display_name, figure.rarity_name()]
 	if replacing:
 		if not extras.is_empty():

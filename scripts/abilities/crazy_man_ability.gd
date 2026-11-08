@@ -13,6 +13,9 @@ extends FigureAbility
 @export var aura_flick_power := 1.5
 ## Knockback taken by teammates inside the aura is divided by this (1.5 = +50% resistance).
 @export var aura_knockback_resistance := 1.5
+## Frenzy path: OPPOSING figures in the aura take this much more knockback (1.25 = +25%) and flick with this share of power.
+@export var enemy_knockback_taken := 1.0
+@export var enemy_flick_power := 1.0
 
 
 func on_hit(figure: Figure, _other: Figure) -> void:
@@ -29,3 +32,9 @@ func get_aura_flick_multiplier(_figure: Figure) -> float:
 
 func get_aura_knockback_multiplier(_figure: Figure) -> float:
 	return 1.0 / aura_knockback_resistance
+
+
+func get_enemy_aura(_figure: Figure) -> Dictionary:
+	if is_equal_approx(enemy_knockback_taken, 1.0) and is_equal_approx(enemy_flick_power, 1.0):
+		return {}
+	return {"radius": aura_radius, "knockback": enemy_knockback_taken, "flick": enemy_flick_power}

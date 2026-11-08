@@ -19,6 +19,8 @@ extends FigureAbility
 ## Bounce it has during its own flick. Godot adds the two bounce values, so 0 would make every hit nearly
 ## inelastic and weaken the push; a little keeps the transfer full. It still never rebounds (see above).
 @export var flick_bounce := 0.3
+## Shove path (Kick Back): after a flick that knocked something off, a small flick away from the nearest table edge.
+@export var kick_back_after_kill := false
 
 var _pushing := false
 var _got_going := false  # the flick's speed shows up a physics step after launch()
@@ -123,3 +125,15 @@ func draw_overlay(figure: Figure) -> void:
 	figure.draw_circle(Vector2.ZERO, figure.radius * 1.15, color)
 	color.a = 0.8 * strength
 	figure.draw_arc(Vector2.ZERO, figure.radius * 1.15, 0.0, TAU, 48, color, 4.0, true)
+
+
+func on_stopped(figure: Figure) -> void:
+	if not kick_back_after_kill or figure.knocked_off:
+		return
+	var main := figure.get_tree().current_scene
+	if main == null or not ("_flick_kills" in main) or main._flicker != figure or main._flick_kills <= 0:
+		return
+	var table: Rect2 = main.board.get_table_rect()
+	if table.grow(-260.0).has_point(figure.global_position):
+		return  # not near an edge
+	figure.nudge((table.get_center() - figure.global_position).normalized() * 320.0)

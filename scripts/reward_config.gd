@@ -10,8 +10,12 @@ extends Resource
 @export var boss_figure_choices := 3
 @export var figure_choices_by_act: Array[int] = [3, 2, 1]
 ## Extra random rewards after a regular combat's or elite's figure draft, one entry per act. Each is
-## one of: a power, an equipment item or an upgrade (a figure-specific upgrade or a finish).
+## one of `bonus_item_kinds`.
 @export var bonus_items_by_act: Array[int] = [0, 1, 2]
+## What a bonus item can be: "power", "equipment" or "upgrade" (an Upgrade step: pick a figure, then its next tier).
+@export var bonus_item_kinds: Array[String] = ["power", "equipment", "upgrade"]
+## Upgrade steps after an ELITE fight (after the figure draft).
+@export var elite_upgrades := 1
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
 ## Figure choices after an ELITE fight roll each slot's rarity with these weights (common, uncommon, rare) in every act.
@@ -48,9 +52,9 @@ extends Resource
 @export var boss_bonus_money := 5
 ## Pick 1 of this many relics.
 @export var boss_relic_choices := 3
-## One finish or figure-specific upgrade for a figure of the player's choice: chance that it is a
-## figure-specific upgrade (otherwise a finish; falls back to a finish if no held figure can take one).
-@export_range(0.0, 1.0) var boss_specific_upgrade_chance := 0.5
+## A boss gives this many finishes and this many Upgrade steps.
+@export var boss_finishes := 1
+@export var boss_upgrades := 2
 ## The guaranteed extra item is a power or an equipment item: this is the power chance.
 @export_range(0.0, 1.0) var boss_power_chance := 0.5
 

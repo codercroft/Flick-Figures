@@ -17,6 +17,10 @@ extends FigureAbility
 @export var drop_impulse := 20.0
 ## Random spread of the stream (degrees either side).
 @export var spread_degrees := 5.0
+## Sprinkler path: the spray Douses what it hits (1.0 = no Douse; 1.2 lightly, 1.5 heavily) and water refills this much
+## (seconds) every round.
+@export var spray_douse := 1.0
+@export var water_per_round := 0.0
 
 var water := 0.0
 var spraying := false
@@ -73,6 +77,7 @@ func _emit(figure: Figure) -> void:
 	drop.speed = drop_speed
 	drop.range_left = drop_range
 	drop.impulse = drop_impulse
+	drop.douse = spray_douse
 	drop.position = figure.position + direction * (figure.radius + 6.0)
 	figure.get_parent().add_child(drop)
 
@@ -87,3 +92,10 @@ func draw_overlay(figure: Figure) -> void:
 	var fraction := water / maxf(max_water, 0.01)
 	figure.draw_arc(Vector2.ZERO, figure.radius + 7.0, -PI / 2.0, -PI / 2.0 + TAU * fraction, 32,
 			Color(0.4, 0.75, 1.0, 0.9), 6.0, true)
+
+
+func on_round_ticked(figure: Figure) -> void:
+	if water_per_round > 0.0 and not spraying:
+		water = minf(water + water_per_round, max_water)
+		_resize(figure)
+		figure.queue_redraw()

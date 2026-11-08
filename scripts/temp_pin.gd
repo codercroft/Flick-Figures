@@ -8,6 +8,7 @@ extends StaticBody2D
 var radius := 28.0
 var color := Color(0.85, 0.75, 0.3)
 var owner_figure: Figure  # the Pinhead that placed it
+var permanent := false  # Lasting Pins: not removed when its side's flick cycle resets
 
 
 func _process(_delta: float) -> void:

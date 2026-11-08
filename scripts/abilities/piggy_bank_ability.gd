@@ -12,6 +12,12 @@ extends FigureAbility
 @export var max_scale := 4.0
 ## How much its radius grows per +1.0 of scale (0.12: 1.3x as wide at 3.5x).
 @export var size_per_scale := 0.12
+## Hoard path: its flick power scales with it too (this share of the scale gained: 0.5 = x2.5 at scale 4), and +x
+## knockback dealt for every $ held (0.01 = +1%).
+@export var flick_scale_share := 0.0
+@export var interest_per_dollar := 0.0
+## Spender path: this share of the money spent this run counts as held.
+@export var spent_share := 0.0
 
 var _base_mass := 0.0
 var _base_radius := 0.0
@@ -31,7 +37,7 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 	if _base_mass == 0.0:
 		_base_mass = figure.mass
 		_base_radius = figure.radius
-	var scale := scale_for(RunManager.money)
+	var scale := scale_for(_money())
 	if absf(scale - _applied) < 0.01:
 		return
 	_applied = scale
@@ -43,7 +49,7 @@ func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> 
 	# Only when the Piggy Bank is the one doing the hitting.
 	if figure._prev_velocity.dot(direction) + other._prev_velocity.dot(direction) <= 0.0:
 		return
-	var scale := scale_for(RunManager.money)
+	var scale := scale_for(_money())
 	if scale <= 1.01 or _base_mass == 0.0:
 		return
 	# The extra mass already gives a bigger push; add just enough on top so the knockback dealt is about
@@ -54,3 +60,16 @@ func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> 
 	if extra <= 0.0:
 		return
 	other.take_knockback(direction * speed * share_now * extra * other.mass, figure)
+
+
+## The money that counts: what you hold plus the Spender path's share of what was spent.
+func _money() -> float:
+	return float(RunManager.money) + spent_share * float(RunManager.money_spent)
+
+
+func get_flick_power_multiplier(_figure: Figure) -> float:
+	return 1.0 + (scale_for(_money()) - 1.0) * flick_scale_share
+
+
+func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
+	return interest_per_dollar * float(RunManager.money)

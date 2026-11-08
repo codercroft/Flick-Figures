@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Big Bang"
+description = "Takes 5 hits to explode; the explosion has +50% power."
+ability_overrides = {"collisions_needed": 5}
+ability_multipliers = {"explosion_force": 1.5}

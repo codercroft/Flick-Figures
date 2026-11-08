@@ -1,16 +1,20 @@
 class_name UpgradeData
 extends Resource
-## A figure-specific upgrade: only for the one `figure` it names. It is described by property
-## overrides (new values for FigureData or ability properties) and an optional extra effect.
-## Add one by duplicating a .tres in resources/upgrades/ and listing it in RunConfig.upgrade_pool.
+## ONE tier of a figure's upgrade tree (see UpgradeTree). It is described by plain stat changes and an optional
+## extra effect. Edit the numbers and text in the .tres files in resources/upgrades/<figure>/.
+## Everything is cumulative: tier 2 is applied on top of tier 1, tier 3 on top of both.
 
-## The figure this upgrade is for.
-@export var figure: FigureData
 @export var display_name := "Upgrade"
 @export_multiline var description := ""
-## New values for the figure's stats, by FigureData property name (e.g. {"flick_power_multiplier": 2.5}).
+## New absolute values for FigureData properties (e.g. {"radius": 80.0}).
 @export var data_overrides := {}
-## New values for the figure's ability, by property name (e.g. {"flicks_per_turn": 3}).
+## Multipliers on FigureData properties, applied after the overrides (e.g. {"mass": 1.3}).
+@export var data_multipliers := {}
+## New absolute values for the figure's ability properties (e.g. {"collisions_needed": 3}).
 @export var ability_overrides := {}
+## Multipliers on the figure's ability properties, applied after the overrides (e.g. {"explosion_force": 1.25}).
+@export var ability_multipliers := {}
 ## Optional extra behavior (any FigureAbility), run next to the figure's own ability.
 @export var extra_effect: FigureAbility
+## Run-wide effects while a figure with this upgrade is in the deck, summed over the deck (e.g. {"shop_discount": 0.15}).
+@export var run_modifiers := {}

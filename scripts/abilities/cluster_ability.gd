@@ -17,6 +17,11 @@ extends FigureAbility
 @export var clustling_radius := 45.0
 ## How fast (px/s) a tossed clustling leaves.
 @export var toss_speed := 950.0
+## Swarm path: clustlings (the cluster and the loose ones) deal this much more knockback (0.25 = +25%).
+@export var clustling_knockback := 0.0
+## Rebound path: tossing does not use up the flick (Toss and Flick); loose clustlings slide home when your turn ends.
+@export var toss_keeps_action := false
+@export var slide_home := false
 
 var count := 3
 var _mass_each := 0.0
@@ -97,7 +102,11 @@ func _update_body(figure: Figure) -> void:
 
 
 func get_toss_stats(_figure: Figure) -> Dictionary:
-	return {"speed": toss_speed, "can": count > 1 and piece != null, "piece": piece}
+	return {"speed": toss_speed, "can": count > 1 and piece != null, "piece": piece, "keeps_action": toss_keeps_action}
+
+
+func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
+	return clustling_knockback
 
 
 ## The tap action: toss the clustling that sits most toward `point`.
@@ -119,7 +128,10 @@ func fire_shot_at(figure: Figure, point: Vector2) -> void:
 	var parent := figure
 	figure.shed([{
 		"data": piece, "position": spawn_at, "velocity": direction * toss_speed, "flickable": true,
-		"on_spawn": func(spawned: Figure) -> void: spawned.ability.parent = parent,
+		"on_spawn": func(spawned: Figure) -> void:
+			spawned.ability.parent = parent
+			spawned.ability.knockback_bonus = clustling_knockback
+			spawned.ability.slide_home = slide_home,
 	}])
 	figure.show_popup("Toss!", Color(0.7, 0.9, 1.0))
 

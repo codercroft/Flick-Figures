@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Tar Drag"
+description = "An enemy stuck to it flicks 30% weaker."
+ability_overrides = {"stuck_enemy_flick": 0.7}

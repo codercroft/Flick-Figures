@@ -75,6 +75,9 @@ var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
 var _busy_time := 0.0  # seconds spent settling or in the enemy turn
+var _lingering_cover := {}  # team -> {reduction, rounds}
+var _bonus_queue: Array = []  # player figures that get a flick right after the current one settles
+var _press_on_selected := false  # the current press landed on the figure that was already selected
 var _hold_pending := false  # Spitter: this touch may turn into a spray if it is held still
 var _hold_time := 0.0
 var _spraying := false
@@ -283,6 +286,7 @@ func _on_press(index: int, pos: Vector2) -> void:
 ## doesn't advance.
 func _start_player_turn(new_round := true) -> void:
 	_end_turn_for_all()  # (the enemy's turn is over)
+	_clear_temp_buffs(Figure.Team.PLAYER)
 	arena.remove_starter_walls()  # Starter Walls: they only last through the enemy turn
 	_cancel_power()
 	if new_round:
@@ -290,6 +294,10 @@ func _start_player_turn(new_round := true) -> void:
 			if _is_alive(figure):
 				figure.tick_round()
 		arena.tick_round()
+		for team in _lingering_cover.keys():
+			_lingering_cover[team].rounds -= 1
+			if _lingering_cover[team].rounds <= 0:
+				_lingering_cover.erase(team)
 	for figure in _players:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
@@ -324,7 +332,7 @@ func _make_all_flickable() -> void:
 	arena.remove_team_pins(Figure.Team.PLAYER)  # the player side's flick cycle reset: its Pinhead pins go
 	for figure in _players:
 		if _is_alive(figure):
-			figure.flickable = true
+			figure.flickable = figure.stunned_rounds == 0
 			figure.ability.on_became_flickable(figure)
 
 
@@ -340,7 +348,14 @@ func _try_reload(pos: Vector2) -> void:
 ## Press on a figure: it is selected and aimed in one motion. Press anywhere else: aims the
 ## already selected figure. The drag is measured from where this touch started.
 func _begin_aim(index: int, pos: Vector2) -> void:
+	var previous := _selected
 	var figure := _player_figure_at(pos, true) if _bonus_figure == null else null
+	if figure == null and _bonus_figure == null:
+		# A figure that already went can still be selected for a "tap again" ability (Magnet's push, Absorber's spit).
+		var tapped := _any_player_figure_at(pos)
+		if tapped != null and _tap_ability_ready(tapped, "self"):
+			figure = tapped
+	_press_on_selected = figure != null and figure == previous
 	if figure != null:
 		_select(figure)
 	elif _selected == null:
@@ -380,6 +395,8 @@ func _update_aim(pos: Vector2) -> void:
 	if _state != State.AIMING:
 		return
 	_last_touch = pos
+	if not _aim_figure.flickable:
+		return
 	if _spraying:  # Spitter: the stream follows the finger
 		_aim_figure.ability.set_spray(_aim_figure, true, pos)
 		return
@@ -412,9 +429,15 @@ func _release_aim(pos: Vector2) -> void:
 		if _bonus_figure != null:
 			_skip_bonus_flick()  # a tap: no extra flick
 		else:
+			var tapped := _aim_figure
 			_cancel_aim()
 			if _press_was_empty:
 				_tap_empty_board(pos)
+			elif is_instance_valid(tapped) and _tap_ability_ready(tapped, "self") and (_press_on_selected or not tapped.flickable):
+				_try_self_tap(tapped)
+		return
+	if not _aim_figure.flickable:  # (selected only for a tap ability: dragging does not flick it)
+		_cancel_aim()
 		return
 	aim_line.clear()
 	_bonus_figure = null
@@ -466,6 +489,7 @@ func _takeover_player_flick(figure: Figure) -> void:
 	player_flicks += 1
 	flick_boost = 1.0
 	_update_status()
+	_on_takeover(figure)
 	figure.launch(impulse)
 	_last_player_flicker = figure
 	_deselect()
@@ -538,6 +562,47 @@ func _fire_shot(figure: Figure, pos: Vector2) -> void:
 	_finish_player_turn()
 
 
+func _any_player_figure_at(pos: Vector2) -> Figure:
+	var best: Figure = null
+	var best_distance := INF
+	for figure in _players:
+		var distance := figure.global_position.distance_to(pos)
+		if _is_alive(figure) and distance <= figure.radius + grab_padding and distance < best_distance:
+			best = figure
+			best_distance = distance
+	return best
+
+
+func _tap_ability_ready(figure: Figure, kind: String) -> bool:
+	var tap := figure.ability.get_tap_ability(figure)
+	return not tap.is_empty() and tap.kind == kind and tap.ready
+
+
+## Magnet's push, Absorber's spit, ...: tapping the selected figure again uses its ability.
+func _try_self_tap(figure: Figure) -> void:
+	var tap := figure.ability.get_tap_ability(figure)
+	if figure.ability.use_tap_ability(figure, figure.global_position):
+		_after_tap_ability(figure, tap)
+
+
+## After a tap ability ran: if it uses the action the turn goes on like after a flick, otherwise nothing is used up.
+func _after_tap_ability(figure: Figure, tap: Dictionary) -> void:
+	if tap.get("uses_action", false):
+		_take_snapshot()
+		figure.flickable = false
+		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+		_on_any_flick(figure, Vector2.ZERO)
+		_last_player_flicker = figure
+		_bonus_figure = null
+		_cancel_aim()
+		_deselect()
+		_state = State.SETTLING
+		_finish_player_turn()
+	else:
+		_cancel_aim()
+		ui.show_your_turn(tap.get("hint", "Done. Drag anywhere to flick"))
+
+
 ## Spitter: the touch was held still: start spraying toward the finger (instead of flicking).
 func _start_spray() -> void:
 	_hold_pending = false
@@ -587,6 +652,7 @@ func _tap_empty_board(pos: Vector2) -> void:
 	if not _is_alive(_selected) or not _selected.flickable:
 		return
 	var turret := _selected.ability.get_turret_stats(_selected)
+	var pin_options := _selected.ability.get_pin_options(_selected)
 	var places := not turret.is_empty() or not _selected.ability.get_zone_stats(_selected).is_empty() \
 			or _selected.ability.get_pin_radius(_selected) > 0.0
 	if places and _selected.placed_this_turn:  # one placement per turn, and it can't be moved again
@@ -595,16 +661,28 @@ func _tap_empty_board(pos: Vector2) -> void:
 	if not turret.is_empty():  # Engineer
 		match arena.toggle_turret(_selected, pos, turret, board.board_rect):
 			"placed":
-				_selected.placed_this_turn = true
+				_selected.placed_count += 1
+				if _selected.placed_count >= int(turret.get("max_turrets", 1)):
+					_selected.placed_this_turn = true
 				ui.show_your_turn("Turret placed. Drag anywhere to flick")
 			"removed":
 				ui.show_your_turn("Turret removed. Drag anywhere to flick")
 			_:
 				ui.show_your_turn("Can't place a turret there")
 		return
+	var tap := _selected.ability.get_tap_ability(_selected)
+	if not tap.is_empty() and tap.kind == "point":  # Ghost's teleport...
+		if tap.ready and _selected.ability.use_tap_ability(_selected, pos):
+			_after_tap_ability(_selected, tap)
+		else:
+			ui.show_your_turn("Not ready")
+		return
 	var toss := _selected.ability.get_toss_stats(_selected)
 	if not toss.is_empty():  # Cluster: tap = toss a clustling toward that spot (instead of flicking)
-		if toss.can:
+		if toss.can and toss.get("keeps_action", false):
+			_selected.ability.fire_shot_at(_selected, pos)  # Rebound: tossing does not use up the flick
+			ui.show_your_turn("Tossed. Drag anywhere to flick")
+		elif toss.can:
 			_fire_shot(_selected, pos)
 		else:
 			ui.show_your_turn("Can't toss its last clustling")
@@ -616,16 +694,21 @@ func _tap_empty_board(pos: Vector2) -> void:
 	if not zone.is_empty():  # Alchemist: placing a zone is its action (it cannot also flick); one per turn
 		if arena.place_zone(_selected, pos, zone, board.board_rect):
 			_selected.placed_this_turn = true
-			_use_up_turn_placing(_selected)
+			if zone.get("keeps_action", false):  # Quick Mix: place a zone and still flick
+				ui.show_your_turn("Zone placed. Drag anywhere to flick")
+			else:
+				_use_up_turn_placing(_selected)
 		else:
 			ui.show_your_turn("Can't place a zone there")
 		return
 	var radius := _selected.ability.get_pin_radius(_selected)  # Pinhead: placing the pin does NOT use its flick
 	if radius <= 0.0:
 		return
-	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect):
+	match arena.toggle_temp_pin(_selected, pos, radius, board.board_rect, pin_options):
 		"placed":
-			_selected.placed_this_turn = true
+			_selected.placed_count += 1
+			if _selected.placed_count >= int(pin_options.get("per_turn", 1)):
+				_selected.placed_this_turn = true
 			ui.show_your_turn("Pin placed. Drag anywhere to flick")
 		"removed":
 			ui.show_your_turn("Pin removed. Drag anywhere to flick")
@@ -689,6 +772,13 @@ func _finish_player_turn() -> void:
 	if _bonus_available(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
 		_offer_bonus_flick(_last_player_flicker)
 		return
+	while not _bonus_queue.is_empty():  # figures granted a flick right now (Energizer's Instant Recharge...)
+		var queued = _bonus_queue.pop_front()
+		if _is_alive(queued) and queued.team == Figure.Team.PLAYER:
+			queued.turn_flicks = 0
+			queued.flickable = true
+			_offer_bonus_flick(queued)
+			return
 	if extra_turns > 0:
 		extra_turns -= 1
 		_update_status()
@@ -703,15 +793,25 @@ func _is_alive(figure) -> bool:  # untyped on purpose: a freed Figure can't be p
 
 
 ## A turn ended (the player's or the enemy's): per-turn counters (Aggro-bom) reset.
+func _clear_temp_buffs(team: int) -> void:
+	for figure in _all_figures():
+		if _is_alive(figure) and figure.temp_taken_team == team:
+			figure.temp_dealt = 0.0
+			figure.temp_taken = 1.0
+			figure.temp_taken_team = -1
+
+
 func _end_turn_for_all() -> void:
 	for figure in _all_figures():
 		if _is_alive(figure):
 			figure.ability.on_turn_ended(figure)
 			figure.placed_this_turn = false  # pins, zones and turrets can be placed again next turn
+			figure.placed_count = 0
 
 
 func _run_enemy_turn() -> void:
 	_end_turn_for_all()  # (the player's turn is over)
+	_clear_temp_buffs(Figure.Team.ENEMY)
 	var serial := _turn_serial
 	_state = State.ENEMY_TURN
 	turret_side = Figure.Team.ENEMY
@@ -726,6 +826,7 @@ func _run_enemy_turn() -> void:
 		return
 	_place_enemy_turrets()
 	_place_enemy_zones()
+	_enemy_tap_abilities()
 	if _enemy_turns_taken == 0:
 		var wait := RunManager.relic_first_enemy_turn(self)  # Starter Walls: walls pop up before the first shot
 		if wait > 0.0:
@@ -762,7 +863,7 @@ func _run_enemy_turn() -> void:
 			return
 		if choice.has("pin_only"):
 			# An enemy Pinhead's whole action is placing a pin (for an ally's bank shot): no flick this time.
-			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect)
+			arena.place_temp_pin(choice.enemy, choice.pin, choice.pin_radius, board.board_rect, choice.enemy.ability.get_pin_options(choice.enemy))
 			choice.enemy.placed_this_turn = true
 			choice.enemy.show_popup("Pin!", Color(0.75, 0.85, 0.95))
 			choice.enemy.turn_flicks = choice.enemy.ability.get_flicks_per_turn(choice.enemy)
@@ -882,7 +983,7 @@ func _creator_turn(serial: int) -> bool:
 	if spot == Vector2.INF:
 		return false
 	creator.show_popup("Summon: %s!" % summoned.display_name, Color(0.85, 0.6, 1.0))
-	_enemies.append(_spawn_figure(Figure.Team.ENEMY, summoned, spot, null, null, null, RunManager.enemy_scale(0)))
+	_enemies.append(_spawn_figure(Figure.Team.ENEMY, summoned, spot, null, null, RunManager.NO_UPGRADE, RunManager.enemy_scale(0)))
 	await get_tree().create_timer(enemy_think_time).timeout
 	return serial != _turn_serial
 
@@ -899,6 +1000,21 @@ func _enemy_flicks_now() -> int:
 	return clampi(units, 1, max_enemy_flicks)
 
 
+## A taken-over flick starts: Gloom's bonuses (more knockback, staying bummed one more flick).
+func _on_takeover(figure: Figure) -> void:
+	var in_aura := not figure.bummer_effect_at(figure.global_position).is_empty()
+	var stats := figure.bummer_effect()
+	if in_aura:
+		figure.bummed_extra = stats.get("linger", 0)
+		figure.bummed_stats = stats
+	elif figure.bummed_extra > 0:
+		figure.bummed_extra -= 1
+	var bonus: float = stats.get("knockback", 0.0)
+	if bonus > 0.0:
+		figure.temp_dealt = maxf(figure.temp_dealt, bonus)
+		figure.temp_taken_team = figure.team
+
+
 ## An enemy figure touching a player Bummer's aura is taken over when the AI goes to flick it: "Bummed out!",
 ## then a shot that tries to knock itself off and hit its own teammates replaces the planned one.
 func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
@@ -913,6 +1029,7 @@ func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 	for other in _enemies:
 		if other != enemy and _is_alive(other):
 			allies.append(other)
+	_on_takeover(enemy)
 	var shot := ai.choose_takeover(enemy, allies, board.get_table_rect(), max_flick_force)
 	if shot.is_empty():
 		return choice
@@ -920,6 +1037,32 @@ func _takeover_choice(choice: Dictionary, serial: int) -> Dictionary:
 		enemy.show_popup("Passes", Color(0.8, 0.5, 1.0))
 		return {"enemy": enemy, "pass": true}
 	return {"enemy": enemy, "impulse": shot.impulse}
+
+
+## Enemy figures with a tap ability (Magnet's push / implode, Absorber's spit, Ghost's teleport) use it at the start of
+## their turn when the AI thinks it pays (the abilities' `ai_wants_tap` / `ai_tap_point`).
+func _enemy_tap_abilities() -> void:
+	var opponents: Array = []
+	for player in _players:
+		if _is_alive(player):
+			opponents.append(player)
+	for enemy in _enemies:
+		if not _is_alive(enemy):
+			continue
+		var tap: Dictionary = enemy.ability.get_tap_ability(enemy)
+		if tap.is_empty() or not tap.ready:
+			continue
+		var used := false
+		if tap.kind == "self" and enemy.ability.ai_wants_tap(enemy, opponents):
+			used = enemy.ability.use_tap_ability(enemy, enemy.global_position)
+		elif tap.kind == "point":
+			var point: Vector2 = enemy.ability.ai_tap_point(enemy, opponents)
+			if point != Vector2.INF:
+				used = enemy.ability.use_tap_ability(enemy, point)
+		if used and tap.get("uses_action", false):
+			_enemy_cycle[enemy.get_instance_id()] = true
+			enemy.turn_flicks = enemy.ability.get_flicks_per_turn(enemy)
+	_refresh_enemy_cycle()
 
 
 ## Enemy Engineers put their turret where it covers the player's flick lanes (before the flicks).
@@ -948,7 +1091,8 @@ func _place_enemy_zones() -> void:
 		var spot := ai.choose_zone_spot(enemy, _players)
 		if spot != Vector2.INF and arena.place_zone(enemy, spot, stats, board.board_rect):
 			enemy.placed_this_turn = true
-			_enemy_cycle[enemy.get_instance_id()] = true  # placing is its action this cycle (it does not flick too)
+			if not stats.get("keeps_action", false):
+				_enemy_cycle[enemy.get_instance_id()] = true  # placing is its action this cycle (it does not flick too)
 			enemy.show_popup("Zone!", Color(0.8, 0.6, 1.0))
 			_refresh_enemy_cycle()
 
@@ -973,7 +1117,7 @@ func _refresh_enemy_cycle() -> void:
 func _flick_candidates() -> Array:
 	var able: Array = []
 	for enemy in _enemies:
-		if _is_alive(enemy) and enemy.data.can_flick and not enemy.is_frozen():
+		if _is_alive(enemy) and enemy.data.can_flick and not enemy.is_frozen() and enemy.stunned_rounds == 0:
 			if _creator_box != null and enemy == _creator_box.creator and _creator_box.creator_inside():
 				continue  # the Creator in its box only makes its own summon flick (_creator_turn)
 			able.append(enemy)
@@ -1096,6 +1240,10 @@ func _end_game(won: bool) -> void:
 				on_table.append(figure.data)
 			if figure.equipment != null:
 				equipment_bonus += figure.equipment.income_bonus
+		RunManager.pending_choice_bonus = 0
+		for figure in _players:  # Cha-ching's Extra Option: extra figure choices for surviving
+			if _is_alive(figure):
+				RunManager.pending_choice_bonus += figure.ability.get_reward_choice_bonus(figure)
 		RunManager.award_income(on_table, equipment_bonus)
 		RunManager.notify_combat_won({"figures_lost": _figures_lost})
 		var income: int = RunManager.last_income.total
@@ -1151,10 +1299,11 @@ func _spawn_enemies() -> void:
 
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
-		finish: FinishData = null, upgrade: UpgradeData = null, scale := {}, elite := false) -> Figure:
+		finish: FinishData = null, upgrade_state := Vector2i(-1, 0), scale := {}, elite := false) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
 	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else RunManager.enemy_relic_damping())
-	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, upgrade, scale, elite)
+	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, RunManager.owned_upgrades(data, upgrade_state), scale, elite)
+	figure.upgrade_state = upgrade_state
 	figure.flicked.connect(game_feel.on_flicked)
 	figure.flicked.connect(_on_any_flick)
 	figure.impacted.connect(game_feel.on_impact)
@@ -1172,7 +1321,7 @@ func _on_shed_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> v
 	if not _is_alive(parent):
 		return
 	for piece in pieces:
-		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, null, parent.scale_factors)
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, RunManager.NO_UPGRADE, parent.scale_factors)
 		spawned.apply_central_impulse(piece.velocity * spawned.mass)
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)
@@ -1191,7 +1340,7 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 	if not _is_alive(parent):
 		return
 	for piece in pieces:
-		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, null, parent.scale_factors)
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, RunManager.NO_UPGRADE, parent.scale_factors)
 		spawned.apply_central_impulse(piece.velocity * spawned.mass)
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)
@@ -1201,6 +1350,8 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 			spawned.flickable = true
 			spawned.deck_position = parent.deck_position
 			_players.append(spawned)
+		if piece.has("on_spawn"):
+			piece.on_spawn.call(spawned)
 	_players.erase(parent)
 	_enemies.erase(parent)
 	parent.knock_off(knock_off_fade_time, true)
@@ -1216,10 +1367,19 @@ func _all_figures() -> Array[Figure]:
 func _knock_off_fallen_figures() -> void:
 	var table: Rect2 = board.get_table_rect()
 	var fallen_enemies: Array[Figure] = []
+	var fallen_players: Array[Figure] = []
 	for figure in _all_figures():
 		if not table.has_point(figure.global_position):
 			if figure.bubble_rounds > 0:
 				_stop_at_edge(figure, table)  # Bubble Shield
+				continue
+			if figure.has_meta("ghost_wrap"):  # an ally a Ghost passed through (Wrap Gift): one wrap
+				figure.remove_meta("ghost_wrap")
+				var wrapped := figure.global_position
+				wrapped.x = table.position.x + fposmod(wrapped.x - table.position.x, table.size.x)
+				wrapped.y = table.position.y + fposmod(wrapped.y - table.position.y, table.size.y)
+				figure.global_position = wrapped
+				figure.show_popup("Boo!", Color(0.85, 0.9, 1.0))
 				continue
 			if figure.ability.on_left_table(figure, table):
 				continue  # saved (e.g. Ghost wrapped around)
@@ -1233,6 +1393,12 @@ func _knock_off_fallen_figures() -> void:
 			figure.knock_off(knock_off_fade_time)
 			if figure.team == Figure.Team.ENEMY:
 				fallen_enemies.append(figure)
+			else:
+				fallen_players.append(figure)
+	for victim in fallen_players:  # (enemy figures react too, e.g. a Speedo's Kill Rush)
+		for enemy in _enemies:
+			if _is_alive(enemy):
+				enemy.ability.on_opponent_knocked_off(enemy, victim)
 	# Cha-ching and friends: your surviving figures react to each enemy that fell.
 	for victim in fallen_enemies:
 		for player in _players:
@@ -1280,6 +1446,21 @@ func refresh_equipment(slot: int) -> void:
 			figure.set_equipment(RunManager.deck_equipment[slot])
 
 
+## Firecracker's Safety Officer: its team keeps the explosion cover for `rounds` rounds after it is knocked off.
+func add_lingering_cover(team: int, reduction: float, rounds: int) -> void:
+	_lingering_cover[team] = {"reduction": reduction, "rounds": rounds}
+
+
+func lingering_cover_for(team: int) -> float:
+	return _lingering_cover[team].reduction if _lingering_cover.has(team) else 0.0
+
+
+## The player's figure gets a flick right after the current flick settles (like Speedo's second flick).
+func grant_bonus_flick(figure: Figure) -> void:
+	if figure.team == Figure.Team.PLAYER and not _bonus_queue.has(figure):
+		_bonus_queue.append(figure)
+
+
 ## A figure leaves play without counting as knocked off (a clustling rejoining its cluster).
 func retire_figure(figure: Figure) -> void:
 	if not _is_alive(figure):
@@ -1323,7 +1504,7 @@ func finish_absorbed(figure: Figure) -> void:
 
 
 ## The held figure escapes (or its Absorber fell): back in play at `at`, at its current (shrunk) size.
-func release_absorbed(figure: Figure, at: Vector2) -> void:
+func release_absorbed(figure: Figure, at: Vector2, velocity := Vector2.ZERO) -> void:
 	if not is_instance_valid(figure):
 		return
 	var table: Rect2 = board.get_table_rect()
@@ -1332,7 +1513,7 @@ func release_absorbed(figure: Figure, at: Vector2) -> void:
 	figure.freeze = false
 	figure.global_position = Vector2(clampf(at.x, table.position.x + 40.0, table.end.x - 40.0),
 			clampf(at.y, table.position.y + 40.0, table.end.y - 40.0))
-	figure.linear_velocity = Vector2.ZERO
+	figure.linear_velocity = velocity
 	figure._update_collision()
 	if figure.team == Figure.Team.PLAYER:
 		figure.on_deck = false
@@ -1412,7 +1593,7 @@ func _take_snapshot() -> void:
 			"on_deck": figure.on_deck, "flickable": figure.flickable, "turn_flicks": figure.turn_flicks,
 			"deck_position": figure.deck_position, "radius": figure.radius, "mass": figure.mass,
 			"shrunk": figure.shrunk, "frozen": figure.frozen_rounds, "bubble": figure.bubble_rounds,
-			"equipment": figure.equipment, "finish": figure.finish, "upgrade": figure.upgrade,
+			"equipment": figure.equipment, "finish": figure.finish, "upgrade": figure.upgrade_state,
 			"scale": figure.scale_factors, "elite": figure.elite,
 		})
 	_snapshot = {"player_flicks": player_flicks, "figures": list, "boost": flick_boost, "extra": extra_turns, "enemy_flicks": _enemy_flicks}

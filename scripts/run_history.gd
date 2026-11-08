@@ -49,7 +49,7 @@ static func record_run(run, won: bool) -> void:
 			"figure": run.deck[i].resource_path,
 			"name": run.deck[i].display_name,
 			"finish": run.deck_finish[i].display_name if run.deck_finish[i] != null else "",
-			"upgrade": run.deck_upgrade[i].display_name if run.deck_upgrade[i] != null else "",
+			"upgrade": run.upgrade_summary(i),
 			"equipment": run.deck_equipment[i].display_name if run.deck_equipment[i] != null else "",
 		})
 	var relics := []

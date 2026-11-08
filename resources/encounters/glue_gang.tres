@@ -4,14 +4,14 @@
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/glue_guy.tres" id="f_glue_guy"]
 [ext_resource type="Resource" path="res://resources/figures/splitter.tres" id="f_splitter"]
-[ext_resource type="Resource" path="res://resources/upgrades/glue_guy_upgrade.tres" id="upg"]
 
 [sub_resource type="Resource" id="enemy_0"]
 script = ExtResource("1")
 figure = ExtResource("f_glue_guy")
 count = 1
 positions = Array[Vector2]([Vector2(450, 200)])
-upgrade = ExtResource("upg")
+upgrade_path = 0
+upgrade_tier = 1
 
 [sub_resource type="Resource" id="enemy_1"]
 script = ExtResource("1")

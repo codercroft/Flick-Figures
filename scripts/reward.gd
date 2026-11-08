@@ -3,7 +3,7 @@ extends Control
 ## is on offer; each drop is shown ONE AT A TIME, and every step has a skip option. Chance drops get a
 ## little "Lucky!" flourish. Kinds: "figures" (pick 1 of N, then which figure it replaces), "relic"
 ## (a random relic), "relics" (pick 1 of N), "power", "equipment", "finish" (pick which figure gets
-## it), "upgrade_item" (a finish or figure-specific upgrade for a figure you choose) and "treasure" (the chest: always a relic).
+## it), "upgrade" (pick a figure, then the next tier on one of its two upgrade paths) and "treasure" (the chest: always a relic).
 ## All chances and amounts are in RewardConfig. The choices are in the middle of the screen; Take/Skip/Back are pinned at the bottom (see ScreenFrame).
 
 const MAP_SCENE := "res://scenes/map.tscn"
@@ -73,8 +73,9 @@ func _next_step() -> void:
 			_show_equipment("You found equipment!")
 		"finish":
 			_show_finish()
-		"upgrade_item":
-			_show_upgrade_item()
+		"upgrade":
+			_relic_step = step
+			_show_upgrade()
 		"treasure":
 			_show_treasure()
 		_:
@@ -223,40 +224,58 @@ func _show_finish() -> void:
 	_show_item("You found a finish!", "%s\n%s" % [finish.display_name, finish.description], _pick_figure_for.bind(finish))
 
 
-## Boss: a finish or a figure-specific upgrade; you choose the figure.
-func _show_upgrade_item() -> void:
-	var item := RunManager.random_upgrade_item()
-	if item == null:
-		_next_step()
+## An Upgrade: pick one of your figures (the step can name one: `slot`), then its next tier on an open path.
+func _show_upgrade() -> void:
+	_clear_cards()
+	var slot: int = _relic_step.get("slot", -1)
+	if slot >= 0 and slot < RunManager.deck.size() and RunManager.can_upgrade(slot):
+		_show_upgrade_tree(slot)
 		return
-	var heading := "Upgrade: %s" % ("a figure upgrade!" if item is UpgradeData else "a finish!")
-	_show_item(heading, "%s\n%s" % [item.display_name, item.description], _pick_figure_for.bind(item))
+	var slots := RunManager.upgradable_slots()
+	if slots.is_empty():
+		_show_message("None of your figures can take an upgrade.")
+		return
+	title.text = "Upgrade which figure?"
+	var card_height := minf(REPLACE_CARD_HEIGHT, 900.0 / maxi(slots.size(), 1))
+	for s in slots:
+		var summary := RunManager.upgrade_summary(s)
+		var card := _add_card(RunManager.deck[s], card_height, RunManager.deck[s].display_name + ("\n" + summary if summary != "" else ""))
+		card.pressed.connect(_show_upgrade_tree.bind(s))
+	_add_button("Skip", _next_step)
 
 
-## Pick which figure gets a finish or upgrade (an upgrade only fits its own figure).
+## Both paths as a tree: tap an available box, then Take it.
+func _show_upgrade_tree(slot: int) -> void:
+	_clear_cards()
+	title.text = "%s: choose an upgrade" % RunManager.deck[slot].display_name
+	var view := UpgradeTreeView.new()
+	column.add_child(view)
+	view.setup(RunManager.deck[slot], RunManager.deck_upgrade[slot])
+	var take := func() -> void:
+		if view.selected_state() != "available":
+			title.text = "Pick a gold (available) box first"
+			return
+		RunManager.take_upgrade(slot, view.selected.x)
+		_show_message("%s upgraded!" % RunManager.deck[slot].display_name)
+	_add_button("Take it", take)
+	_add_button("Skip", _next_step)
+
+
+## Pick which figure gets a finish.
 func _pick_figure_for(item: Resource) -> void:
 	_clear_cards()
 	title.text = "Give %s to which figure?" % item.display_name
-	var shown := 0
 	var card_height := minf(REPLACE_CARD_HEIGHT, 900.0 / maxi(RunManager.deck.size(), 1))
 	for slot in RunManager.deck.size():
-		if item is UpgradeData and RunManager.deck[slot] != item.figure:
-			continue
-		var held = RunManager.deck_upgrade[slot] if item is UpgradeData else RunManager.deck_finish[slot]
+		var held: FinishData = RunManager.deck_finish[slot]
 		var note := "\nreplaces %s" % held.display_name if held != null else ""
 		var card := _add_card(RunManager.deck[slot], card_height, RunManager.deck[slot].display_name + note)
 		card.pressed.connect(_apply_to_figure.bind(item, slot))
-		shown += 1
-	if shown == 0:
-		title.text = "None of your figures can take %s." % item.display_name
 	_add_button("Skip", _next_step)
 
 
 func _apply_to_figure(item: Resource, slot: int) -> void:
-	if item is UpgradeData:
-		RunManager.set_upgrade(slot, item)
-	else:
-		RunManager.set_finish(slot, item)
+	RunManager.set_finish(slot, item)
 	_show_message("%s got %s!" % [RunManager.deck[slot].display_name, item.display_name])
 
 

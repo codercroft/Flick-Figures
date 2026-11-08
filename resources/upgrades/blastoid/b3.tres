@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Quake Warheads"
+description = "Rocket power +50%, radius -20%; a rocket that hits an opponent gives every enemy the Earthquake shove."
+ability_overrides = {"earthquake_on_hit": true}
+ability_multipliers = {"blast_force": 1.5, "blast_radius": 0.8}

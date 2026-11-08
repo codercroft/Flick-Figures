@@ -43,6 +43,8 @@ func _on_body_entered(body: Node) -> void:
 	var other := body as Figure
 	if other != null and other.team == owner_figure.team and other.on_deck:
 		return  # passes through its own side's figures on the deck, like their flicks do
+	if other != null and is_instance_valid(owner_figure):
+		owner_figure.ability.on_projectile_hit(owner_figure, other)
 	_explode()
 
 

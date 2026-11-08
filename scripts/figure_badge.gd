@@ -8,7 +8,7 @@ var data: FigureData:
 		data = value
 		queue_redraw()
 ## Small extras like on the table: a gold pip for a figure-specific upgrade, the equipment's badge label.
-var upgraded := false:
+var upgraded := 0:  # the number of upgrade tiers owned (one gold pip each)
 	set(value):
 		upgraded = value
 		queue_redraw()
@@ -41,8 +41,8 @@ func _draw() -> void:
 		return
 	draw_circle(center, radius, data.color)
 	draw_arc(center, radius - 4.0, 0.0, TAU, 48, Figure.PLAYER_RING, 8.0, true)
-	if upgraded:
-		draw_circle(center + Vector2(radius, -radius) * 0.7, radius * 0.14, Color(1.0, 0.82, 0.25))
+	for i in upgraded:
+		draw_circle(center + Vector2(radius, -radius) * 0.7 + Vector2(-radius * 0.3 * i, radius * 0.08 * i), radius * 0.14, Color(1.0, 0.82, 0.25))
 	if item_label != "":
 		var badge_center := center + Vector2(radius, radius) * 0.7
 		draw_circle(badge_center, radius * 0.26, Color(0.1, 0.1, 0.14, 0.9))

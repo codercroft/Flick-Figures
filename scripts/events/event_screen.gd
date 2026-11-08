@@ -23,10 +23,18 @@ func start() -> void:
 
 
 ## Ends the event and goes back to the map.
+## Reward steps (e.g. an Upgrade) to show on the reward screen when the event ends; that screen finishes the node.
+var follow_up_steps: Array[Dictionary] = []
+
+
 func leave() -> void:
 	if _done:
 		return
 	_done = true
+	if not follow_up_steps.is_empty():
+		RunManager.reward_steps = follow_up_steps
+		get_tree().change_scene_to_file("res://scenes/reward.tscn")
+		return
 	RunManager.finish_node()
 	get_tree().change_scene_to_file(MAP_SCENE)
 

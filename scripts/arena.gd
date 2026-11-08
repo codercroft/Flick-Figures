@@ -97,7 +97,7 @@ func _add_pin_shapes(body: StaticBody2D, radius: float) -> void:
 	var ring_shape := CollisionShape2D.new()
 	ring_shape.shape = ring
 	sensor.add_child(ring_shape)
-	sensor.body_entered.connect(_on_pin_touched)
+	sensor.body_entered.connect(_on_pin_touched.bind(body))
 	body.add_child(sensor)
 
 
@@ -112,14 +112,27 @@ func _make_static_body(bounce: float) -> StaticBody2D:
 	return body
 
 
-func _on_pin_touched(body: Node) -> void:
+func _on_pin_touched(body: Node, pin: Node = null) -> void:
 	if body is Figure:
-		_kick.call_deferred(body)  # deferred: don't change bodies inside a physics callback
+		_kick.call_deferred(body, pin)  # deferred: don't change bodies inside a physics callback
 
 
-func _kick(figure: Figure) -> void:
-	if is_instance_valid(figure) and not figure.is_slow():
-		figure.linear_velocity = (figure.linear_velocity * pin_kick).limit_length(pin_max_speed)
+func _kick(figure: Figure, pin: Node = null) -> void:
+	if not is_instance_valid(figure):
+		return
+	var kick := pin_kick
+	if pin != null and is_instance_valid(pin):
+		kick = pin.get_meta("kick", pin_kick)
+		var pin_owner = pin.get("owner_figure")
+		if pin_owner != null and is_instance_valid(pin_owner) and pin_owner.team != figure.team:
+			if pin.has_meta("douse"):
+				figure.douse(2, 1.5)
+			if pin.has_meta("explode"):
+				var blast: Array = pin.get_meta("explode")
+				pin.remove_meta("explode")  # the first opponent hit only
+				Figure.blast(get_tree(), pin.global_position, blast[0], blast[1], pin_owner)
+	if not figure.is_slow():
+		figure.linear_velocity = (figure.linear_velocity * kick).limit_length(pin_max_speed)
 
 
 # --- Floor patches -----------------------------------------------------------
@@ -242,32 +255,39 @@ static func is_spot_free(space: PhysicsDirectSpaceState2D, board: Rect2, pos: Ve
 
 ## Tap with Pinhead selected: places its pin at `pos` (a second pin of the same Pinhead is moved),
 ## or takes the pin back if `pos` is on it. Returns "placed", "removed" or "blocked".
-func toggle_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2) -> String:
+func toggle_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2, options := {}) -> String:
 	for pin in _temp_pins:
 		if pin.owner_figure == owner_figure and pin.position.distance_to(pos) <= pin.radius + 10.0:
-			remove_temp_pins(owner_figure)
+			remove_temp_pin(pin)
 			return "removed"
-	var old_spot := Vector2.INF
-	for pin in _temp_pins:
-		if pin.owner_figure == owner_figure:
-			old_spot = pin.position
-	remove_temp_pins(owner_figure)
-	if not place_temp_pin(owner_figure, pos, radius, board):
-		if old_spot != Vector2.INF:  # blocked: the old pin stays where it was
-			place_temp_pin(owner_figure, old_spot, radius, board)
+	if not place_temp_pin(owner_figure, pos, radius, board, options):
 		return "blocked"
 	return "placed"
 
 
-## Places a temporary pin if the spot is free. Returns whether it was placed.
-func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2) -> bool:
-	remove_temp_pins(owner_figure)  # a new pin replaces the old one
+## Places a temporary pin if the spot is free. Returns whether it was placed. A Pinhead keeps `options.max` pins
+## (the oldest goes when it is full); Lasting Pins are kept through flick-cycle resets (`permanent`, at most `cap`).
+func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Rect2, options := {}) -> bool:
 	if not is_spot_free(get_world_2d().direct_space_state, board, pos, radius):
 		return false
+	var mine: Array[TempPin] = []
+	for existing in _temp_pins:
+		if existing.owner_figure == owner_figure:
+			mine.append(existing)
+	while mine.size() >= int(options.get("max", 1)) and not mine.is_empty():
+		remove_temp_pin(mine.pop_front())  # a new pin replaces the oldest
+	if options.get("permanent", false):  # at most `cap` lasting pins on the table
+		var lasting: Array[TempPin] = []
+		for existing in _temp_pins:
+			if existing.permanent and existing.owner_figure == owner_figure:
+				lasting.append(existing)
+		while lasting.size() >= int(options.get("cap", 4)) and not lasting.is_empty():
+			remove_temp_pin(lasting.pop_front())
 	var pin := TempPin.new()
 	pin.radius = radius
 	pin.color = temp_pin_color
 	pin.owner_figure = owner_figure
+	pin.permanent = options.get("permanent", false)
 	pin.collision_layer = Figure.LAYER_ARENA
 	pin.collision_mask = 0
 	var material := PhysicsMaterial.new()
@@ -276,10 +296,23 @@ func place_temp_pin(owner_figure: Figure, pos: Vector2, radius: float, board: Re
 	pin.physics_material_override = material
 	pin.position = pos
 	pin.add_to_group("pins")
+	if options.get("kick", 0.0) > 0.0:
+		pin.set_meta("kick", options.kick)
+	if options.get("douse", false):
+		pin.set_meta("douse", true)
+	if options.get("explode_force", 0.0) > 0.0:
+		pin.set_meta("explode", [options.explode_radius, options.explode_force])
 	_add_pin_shapes(pin, radius)
 	add_child(pin)
 	_temp_pins.append(pin)
 	return true
+
+
+func remove_temp_pin(pin: TempPin) -> void:
+	_temp_pins.erase(pin)
+	if is_instance_valid(pin):
+		remove_child(pin)
+		pin.queue_free()
 
 
 ## Removes the temporary pins of one Pinhead (or all of them if `owner_figure` is null).
@@ -303,7 +336,7 @@ func remove_team_pins(team: int) -> void:
 			_alchemy_zones.remove_at(i)
 	for i in range(_temp_pins.size() - 1, -1, -1):
 		var pin := _temp_pins[i]
-		if not is_instance_valid(pin.owner_figure) or pin.owner_figure.team == team:
+		if not is_instance_valid(pin.owner_figure) or (pin.owner_figure.team == team and not pin.permanent):
 			remove_child(pin)
 			pin.queue_free()
 			_temp_pins.remove_at(i)
@@ -351,9 +384,9 @@ func has_temp_pin(owner_figure: Figure) -> bool:
 # --- Shieldon Ooper's walls and the Alchemist's zones -----------------------------------
 
 ## Props up a wall for `owner_figure` (replacing its old one). Fails (false) if a figure is in the way.
-func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float) -> bool:
+func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float, props := {}) -> bool:
 	remove_shield_wall(owner_figure)
-	var wall := _make_shield_wall(owner_figure, center, size, wall_rotation)
+	var wall := _make_shield_wall(owner_figure, center, size, wall_rotation, props)
 	if wall == null:
 		return false
 	_shield_walls.append(wall)
@@ -380,7 +413,7 @@ func remove_starter_walls() -> void:
 
 
 ## Builds a ShieldWall and adds it to the arena, or returns null if a figure or wall is in the way.
-func _make_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float) -> ShieldWall:
+func _make_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float, props := {}) -> ShieldWall:
 	var rect := RectangleShape2D.new()
 	rect.size = size
 	var query := PhysicsShapeQueryParameters2D.new()
@@ -396,9 +429,11 @@ func _make_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wal
 	wall.collision_layer = Figure.LAYER_ARENA
 	wall.collision_mask = 0
 	var material := PhysicsMaterial.new()
-	material.bounce = wall_bounce
+	material.bounce = clampf(wall_bounce * props.get("bounce", 1.0), 0.0, 1.0)
 	material.friction = 0.0
 	wall.physics_material_override = material
+	wall.launch = props.get("launch", 1.0)
+	wall.douses = props.get("douses", false)
 	var shape := CollisionShape2D.new()
 	shape.shape = rect
 	wall.add_child(shape)
@@ -430,8 +465,18 @@ func remove_shield_wall(owner_figure: Figure) -> void:
 func place_zone(owner_figure: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> bool:
 	if not is_spot_free(get_world_2d().direct_space_state, board, pos, 30.0):
 		return false  # blocked: the old zone stays
-	remove_zone(owner_figure)  # one zone per Alchemist: the new one replaces the old
+	# One zone per Alchemist (Double Zones keeps more): when full, the oldest goes.
+	var mine: Array[AlchemyZone] = []
+	for existing in _alchemy_zones:
+		if is_instance_valid(existing) and existing.owner_figure == owner_figure:
+			mine.append(existing)
+	while mine.size() >= int(stats.get("max_zones", 1)) and not mine.is_empty():
+		var oldest: AlchemyZone = mine.pop_front()
+		_alchemy_zones.erase(oldest)
+		remove_child(oldest)
+		oldest.queue_free()
 	var zone := AlchemyZone.new()
+	zone.flick = stats.get("flick", 1.0)
 	zone.radius = stats.radius
 	zone.knockback = stats.knockback
 	zone.douse_rounds = stats.get("douse_rounds", 2)
@@ -463,7 +508,7 @@ func _douse_figures_in_zones(figures: Array) -> void:
 		for zone in _alchemy_zones:
 			if is_instance_valid(zone) and is_instance_valid(zone.owner_figure) and zone.owner_figure.team != figure.team \
 					and figure.global_position.distance_to(zone.position) <= zone.radius + figure.radius:
-				figure.douse(zone.douse_rounds, zone.knockback)
+				figure.douse(zone.douse_rounds, zone.knockback, false, zone.flick)
 
 
 ## The strongest knockback multiplier of an Alchemist zone of the OTHER team at `pos` (1 = none).
@@ -490,29 +535,44 @@ func zones_of(team: int) -> Array[Dictionary]:
 ## Tap with an Engineer selected: places its turret at `pos` (a second turret of the same Engineer is
 ## replaced), or takes the turret back if `pos` is on it. Returns "placed", "removed" or "blocked".
 func toggle_turret(engineer: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> String:
-	var mine := turret_of(engineer)
-	if mine != null and mine.position.distance_to(pos) <= mine.radius + 10.0:
-		remove_turret(engineer)
-		return "removed"
-	var old_spot := mine.position if mine != null else Vector2.INF
+	for mine in turrets_of_engineer(engineer):
+		if mine.position.distance_to(pos) <= mine.radius + 10.0:
+			_remove_turret_node(mine)
+			return "removed"
 	if not place_turret(engineer, pos, stats, board):
-		if old_spot != Vector2.INF:  # blocked: the old turret stays where it was
-			place_turret(engineer, old_spot, stats, board)
 		return "blocked"
 	return "placed"
 
 
-## Places the Engineer's turret if the spot is free (the old one goes). Returns whether it was placed.
+## Places an Engineer's turret if the spot is free; with `stats.max_turrets` already out the oldest goes. Returns
+## whether it was placed.
 func place_turret(engineer: Figure, pos: Vector2, stats: Dictionary, board: Rect2) -> bool:
-	remove_turret(engineer)
 	if not is_spot_free(get_world_2d().direct_space_state, board, pos, stats.radius):
 		return false
+	var mine := turrets_of_engineer(engineer)
+	while mine.size() >= int(stats.get("max_turrets", 1)) and not mine.is_empty():
+		_remove_turret_node(mine.pop_front())
 	var turret := Turret.new()
 	turret.setup(engineer, stats)
 	turret.position = pos
 	add_child(turret)
 	_turrets.append(turret)
 	return true
+
+
+func turrets_of_engineer(engineer: Figure) -> Array[Turret]:
+	var list: Array[Turret] = []
+	for turret in _turrets:
+		if is_instance_valid(turret) and not turret.is_queued_for_deletion() and turret.owner_figure == engineer:
+			list.append(turret)
+	return list
+
+
+func _remove_turret_node(turret: Turret) -> void:
+	_turrets.erase(turret)
+	if is_instance_valid(turret):
+		remove_child(turret)
+		turret.queue_free()
 
 
 ## The turrets of `team`: [{position, range}] (the enemy AI weighs shots by which turrets can nudge them).

@@ -7,6 +7,8 @@ var radius := 150.0
 var knockback := 1.5
 ## Opposing figures that touch it stay Doused (extra knockback) for this many rounds.
 var douse_rounds := 2
+## Doused figures flick with this share of power.
+var flick := 1.0
 var owner_figure: Figure
 var _age := 0.0
 

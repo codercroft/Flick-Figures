@@ -10,9 +10,11 @@ extends Resource
 @export var positions: Array[Vector2] = []
 ## Equipment every copy of this enemy always carries (on top of nothing else: it replaces the random roll).
 @export var equipment: EquipmentData
-## A finish and a figure-specific upgrade every copy always carries (Glue Gang's Goo Chain).
+## A finish and an upgrade every copy always carries: `upgrade_path` (0 = A, 1 = B, -1 none) up to `upgrade_tier`
+## (Glue Gang's Sticky tier 1).
 @export var finish: FinishData
-@export var upgrade: UpgradeData
+@export var upgrade_path := -1
+@export var upgrade_tier := 0
 @export_group("Boosts")
 @export var mass_multiplier := 1.0
 @export var flick_power_multiplier := 1.0

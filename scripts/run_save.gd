@@ -34,6 +34,7 @@ static func save(run, pending_node := -1) -> void:
 		"current_node": run.current_node,
 		"pending_node": pending_node,
 		"money": run.money,
+		"money_spent": run.money_spent,
 		"first_combat_played": run.first_combat_played,
 		"minigame_penalty": run.minigame_penalty,
 		"harder_fight": run.harder_fight,
@@ -42,7 +43,7 @@ static func save(run, pending_node := -1) -> void:
 		"picked": _paths(run.picked_figures),
 		"deck_equipment": _paths(run.deck_equipment),
 		"deck_finish": _paths(run.deck_finish),
-		"deck_upgrade": _paths(run.deck_upgrade),
+		"deck_upgrade_state": _states(run.deck_upgrade),
 		"equipment_inventory": _paths(run.equipment_inventory),
 		"relics": _paths(run.relics),
 		"powers": _paths(run.powers),
@@ -81,6 +82,7 @@ static func load_into(run) -> int:
 	run.act = int(data.get("act", 0))
 	run.current_node = int(data.get("current_node", -1))
 	run.money = int(data.get("money", 0))
+	run.money_spent = int(data.get("money_spent", 0))
 	run.first_combat_played = bool(data.get("first_combat_played", true))
 	run.minigame_penalty = bool(data.get("minigame_penalty", false))
 	run.harder_fight = bool(data.get("harder_fight", false))
@@ -96,7 +98,7 @@ static func load_into(run) -> int:
 		run.deck.append(figure if figure is FigureData else run.config.starting_figure)
 		run.deck_equipment.append(_item(data, "deck_equipment", i, EquipmentData))
 		run.deck_finish.append(_item(data, "deck_finish", i, FinishData))
-		run.deck_upgrade.append(_item(data, "deck_upgrade", i, UpgradeData))
+		run.deck_upgrade.append(_upgrade_state(data, i, run.deck[i]))
 	run.picked_figures.clear()
 	for path in data.get("picked", []):
 		var picked = _load(path)
@@ -175,6 +177,37 @@ static func _path(resource: Resource) -> String:
 	if resource.resource_path == "":
 		push_warning("[save] a resource without a file path was not saved: %s" % resource)
 	return resource.resource_path
+
+
+## Upgrades are saved as [path, tier] per deck slot.
+static func _states(list: Array) -> Array:
+	var out: Array = []
+	for state in list:
+		out.append([state.x, state.y])
+	return out
+
+
+## The old single figure-specific upgrades became tiers of the new trees (the file name says which): an owned old
+## upgrade becomes that tier and the lower tiers of its path are filled in (a tier is its position in the path).
+const OLD_UPGRADES := {
+	"aggro_bom_upgrade": [0, 1], "big_belly_upgrade": [0, 1], "big_bunch_upgrade": [0, 1], "big_gulp_upgrade": [0, 1],
+	"bombo_upgrade": [0, 2], "cha_ching_upgrade": [0, 1], "duwall_upgrade": [0, 2], "ghost_upgrade": [0, 3],
+	"glue_guy_upgrade": [0, 1], "magnet_upgrade": [0, 1], "powerhouse_upgrade": [0, 1], "pusher_upgrade": [0, 1],
+	"rallying_cry_upgrade": [0, 3], "sneaky_bomber_upgrade": [0, 2], "speedo_upgrade": [0, 1],
+	"splitter_upgrade": [0, 1], "twin_rockets_upgrade": [0, 2],
+}
+
+
+static func _upgrade_state(data: Dictionary, index: int, figure: FigureData) -> Vector2i:
+	var states: Array = data.get("deck_upgrade_state", [])
+	if index < states.size():
+		return Vector2i(int(states[index][0]), int(states[index][1]))
+	var old: Array = data.get("deck_upgrade", [])  # a save from before the upgrade trees
+	if index < old.size() and old[index] is String and old[index] != "":
+		var key: String = String(old[index]).get_file().get_basename()
+		if OLD_UPGRADES.has(key) and RunManager.tree_for(figure) != null:
+			return Vector2i(OLD_UPGRADES[key][0], OLD_UPGRADES[key][1])
+	return Vector2i(-1, 0)
 
 
 static func _paths(list: Array) -> Array:

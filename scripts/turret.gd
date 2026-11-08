@@ -12,6 +12,7 @@ var stats := {}
 var radius := 30.0
 
 var _cooldown := 0.0
+var _rocket_cooldown := 0.0
 var _aim := Vector2.UP
 var _flash := 0.0
 
@@ -24,6 +25,7 @@ func setup(engineer: Figure, turret_stats: Dictionary) -> void:
 	mass = turret_stats.mass
 	linear_damp = turret_stats.damping
 	_cooldown = turret_stats.interval
+	_rocket_cooldown = turret_stats.get("rocket_interval", 0.0)
 	_aim = Vector2.UP if team == Figure.Team.PLAYER else Vector2.DOWN
 
 
@@ -64,6 +66,11 @@ func _physics_process(delta: float) -> void:
 	var target := _nearest_target()
 	if target == null:
 		return
+	if stats.get("rocket_interval", 0.0) > 0.0:  # Rocket Turret: a small rocket now and then
+		_rocket_cooldown -= delta
+		if _rocket_cooldown <= 0.0:
+			_rocket_cooldown = stats.rocket_interval
+			_fire_rocket(target)
 	_cooldown -= delta
 	if _cooldown > 0.0:
 		return
@@ -107,8 +114,24 @@ func _fire(direction: Vector2) -> void:
 	pellet.range_left = stats.range
 	pellet.impulse = stats.impulse
 	pellet.radius = stats.pellet_radius
+	pellet.douse = stats.get("douse", 1.0)
+	pellet.slow = stats.get("slow", 1.0)
 	pellet.position = position + direction * (radius + stats.pellet_radius + 2.0)
 	get_parent().add_child(pellet)
+
+
+func _fire_rocket(target: Figure) -> void:
+	var offset := target.global_position - global_position
+	var rocket := Projectile.new()
+	rocket.owner_figure = owner_figure
+	rocket.direction = offset.normalized()
+	rocket.speed = 900.0
+	rocket.range_left = maxf(offset.length() - radius - 20.0, 0.0)
+	rocket.radius = 11.0
+	rocket.blast_radius = 120.0
+	rocket.blast_force = 450.0
+	rocket.position = position + rocket.direction * (radius + 16.0)
+	get_parent().add_child(rocket)
 
 
 func _remove() -> void:

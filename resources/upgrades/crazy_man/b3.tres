@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Thick Skin"
+description = "Teammates in the aura gain +30% knockback resistance."
+ability_multipliers = {"aura_knockback_resistance": 1.3}

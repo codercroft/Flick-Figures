@@ -304,3 +304,54 @@ func get_escape_speed(figure: Figure) -> float:
 func get_held_figure(figure: Figure) -> Figure:
 	var held := first.get_held_figure(figure)
 	return held if held != null else second.get_held_figure(figure)
+
+
+func get_dealt_knockback_bonus(figure: Figure, other: Figure) -> float:
+	return first.get_dealt_knockback_bonus(figure, other) + second.get_dealt_knockback_bonus(figure, other)
+
+
+func get_enemy_aura(figure: Figure) -> Dictionary:
+	var aura := first.get_enemy_aura(figure)
+	return aura if not aura.is_empty() else second.get_enemy_aura(figure)
+
+
+func get_tap_ability(figure: Figure) -> Dictionary:
+	var tap := first.get_tap_ability(figure)
+	return tap if not tap.is_empty() else second.get_tap_ability(figure)
+
+
+func use_tap_ability(figure: Figure, point: Vector2) -> bool:
+	if not first.get_tap_ability(figure).is_empty():
+		return first.use_tap_ability(figure, point)
+	return second.use_tap_ability(figure, point)
+
+
+func get_reward_choice_bonus(figure: Figure) -> int:
+	return first.get_reward_choice_bonus(figure) + second.get_reward_choice_bonus(figure)
+
+
+func on_projectile_hit(figure: Figure, target: Figure) -> void:
+	first.on_projectile_hit(figure, target)
+	second.on_projectile_hit(figure, target)
+
+
+func get_stuck_enemy_flick_multiplier(figure: Figure) -> float:
+	return first.get_stuck_enemy_flick_multiplier(figure) * second.get_stuck_enemy_flick_multiplier(figure)
+
+
+func get_team_explosion_reduction(figure: Figure) -> float:
+	return maxf(first.get_team_explosion_reduction(figure), second.get_team_explosion_reduction(figure))
+
+
+func get_pin_options(figure: Figure) -> Dictionary:
+	var options := first.get_pin_options(figure)
+	return options if not options.is_empty() else second.get_pin_options(figure)
+
+
+func ai_wants_tap(figure: Figure, opponents: Array) -> bool:
+	return first.ai_wants_tap(figure, opponents) or second.ai_wants_tap(figure, opponents)
+
+
+func ai_tap_point(figure: Figure, opponents: Array) -> Vector2:
+	var point := first.ai_tap_point(figure, opponents)
+	return point if point != Vector2.INF else second.ai_tap_point(figure, opponents)

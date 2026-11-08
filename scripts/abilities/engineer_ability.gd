@@ -25,11 +25,19 @@ extends FigureAbility
 @export var pellet_radius := 9.0
 ## Aim ahead of a moving target.
 @export var lead_target := true
+@export_group("Upgrades")
+## Turret path: how many turrets it keeps (the oldest goes), and a small rocket every `rocket_interval` seconds (0 = none).
+@export var max_turrets := 1
+@export var rocket_interval := 0.0
+## Tech path: pellets Douse (1.0 = no; 1.2 = light Douse), and slow a moving figure they hit (0.6 = to 60% speed; 1 = no).
+@export var pellet_douse := 1.0
+@export var pellet_slow := 1.0
 
 
 func get_turret_stats(_figure: Figure) -> Dictionary:
 	return {
 		"radius": turret_radius, "mass": turret_mass, "damping": turret_damping, "interval": fire_interval,
 		"speed": pellet_speed, "range": pellet_range, "impulse": pellet_impulse,
-		"pellet_radius": pellet_radius, "lead": lead_target,
+		"pellet_radius": pellet_radius, "lead": lead_target, "max_turrets": max_turrets,
+		"rocket_interval": rocket_interval, "douse": pellet_douse, "slow": pellet_slow,
 	}

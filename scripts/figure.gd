@@ -40,7 +40,8 @@ var blast_shield := false:  # set by main while the team has a Firecracker (draw
 			queue_redraw()
 ## The toy finish (one general upgrade) and the figure-specific upgrade on this figure, or null.
 var finish: FinishData
-var upgrade: UpgradeData
+var upgrades: Array[UpgradeData] = []  # the tiers this figure owns (RunManager.owned_upgrades), in order
+var upgrade_state := Vector2i(-1, 0)  # (path, tier), kept for Rewind
 ## Enemies: the act's stat multipliers it was built with ({accuracy, power, mass}) and whether it
 ## is an elite (drawn with a gold ring). Kept so Slime pieces and Rewind can rebuild it.
 var scale_factors := {}
@@ -51,7 +52,7 @@ var equipment: EquipmentData
 var deck_slot := -1  # the index in RunManager.deck for the player's starting figures (-1 for anything else)
 var _core_ability: FigureAbility  # the figure's own ability, without equipment / upgrade / finish effects
 var _equipment_effect: FigureAbility
-var _upgrade_effect: FigureAbility
+var _upgrade_effects: Array[FigureAbility] = []
 var _finish_effect: FigureAbility
 var radius := 60.0
 var stop_speed := 15.0  # below this speed (px/s) the figure counts as slow
@@ -104,6 +105,16 @@ var placed_this_turn := false
 var doused_rounds := 0
 var doused_full := 1
 var doused_multiplier := 1.0
+var placed_count := 0  # placements made this turn (Pinhead and Engineer can place more than one)
+var temp_dealt := 0.0  # extra knockback dealt until the end of the next turn (Rally's Hard Hitters)
+var temp_taken := 1.0  # knockback taken multiplier until the end of the next turn (Rally's Padded Ranks)
+var temp_taken_team := -1  # whose turn start clears the two above (-1 = none)
+var charge_power := 1.0  # x flick power on the next flick (Energizer's Overcharge)
+var shock_flick := 1.0  # x flick power until this figure's next flick (Energizer's Shock)
+var doused_flick := 1.0  # x flick power while Doused by a weakening zone (Alchemist's Weakening Brew)
+var stunned_rounds := 0  # can't flick for this many rounds (Energizer's Stun)
+var bummed_stats := {}
+var bummed_extra := 0  # takeovers left after leaving a Bummer's aura (Gloom tier 3)
 var doused_juice := false  # the weaker Juicer version (lighter tint); an Alchemist zone replaces it
 var _circle: CircleShape2D
 
@@ -132,22 +143,29 @@ var _blast_progress := 1.0:  # 0 = blast just went off, 1 = ring finished
 ## Call before adding the figure to the scene.
 func setup(figure_data: FigureData, figure_team: Team, base_damping: float, speed_to_stop: float,
 		frames_to_settle := 5, item: EquipmentData = null, toy_finish: FinishData = null,
-		figure_upgrade: UpgradeData = null, stat_scale := {}, is_elite := false) -> void:
+		figure_upgrades: Array = [], stat_scale := {}, is_elite := false) -> void:
 	base_data = figure_data
 	data = figure_data
 	team = figure_team
 	equipment = item
 	finish = toy_finish
-	upgrade = figure_upgrade
+	upgrades.clear()
+	for u in figure_upgrades:
+		upgrades.append(u)
 	elite = is_elite
 	scale_factors = stat_scale
 	# Stat changes go on a private copy so the shared FigureData resource is never touched.
-	if upgrade != null and not upgrade.data_overrides.is_empty() \
-			or finish != null and finish.knockback_taken_multiplier != 1.0 or not stat_scale.is_empty():
+	var changes_data := false
+	for u in upgrades:
+		if not u.data_overrides.is_empty() or not u.data_multipliers.is_empty():
+			changes_data = true
+	if changes_data or finish != null and finish.knockback_taken_multiplier != 1.0 or not stat_scale.is_empty():
 		data = figure_data.duplicate() as FigureData
-		if upgrade != null:
-			for key in upgrade.data_overrides:
-				data.set(key, upgrade.data_overrides[key])
+		for u in upgrades:  # tier 1 first: overrides, then multipliers
+			for key in u.data_overrides:
+				data.set(key, u.data_overrides[key])
+			for key in u.data_multipliers:
+				data.set(key, data.get(key) * u.data_multipliers[key])
 		if finish != null:
 			data.knockback_taken_multiplier *= finish.knockback_taken_multiplier
 		# Act difficulty (and elite strength) for enemies: accuracy, flick power and mass.
@@ -171,10 +189,13 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 	settle_frames = frames_to_settle
 	# Each figure gets its own copy so abilities can keep per-figure state.
 	ability = data.ability.duplicate() as FigureAbility if data.ability else FigureAbility.new()
-	if upgrade != null:
-		for key in upgrade.ability_overrides:
+	for u in upgrades:
+		for key in u.ability_overrides:
 			if key in ability:
-				ability.set(key, upgrade.ability_overrides[key])
+				ability.set(key, u.ability_overrides[key])
+		for key in u.ability_multipliers:
+			if key in ability:
+				ability.set(key, ability.get(key) * u.ability_multipliers[key])
 	for key in stat_scale.get("ability_values", {}):  # exact values from an encounter (Big Brother's double shell)
 		if key in ability:
 			ability.set(key, stat_scale.ability_values[key])
@@ -186,7 +207,10 @@ func setup(figure_data: FigureData, figure_team: Team, base_damping: float, spee
 	# Equipment, upgrades and finishes with an effect run next to the figure's own ability.
 	_core_ability = ability
 	_equipment_effect = _copy_effect(equipment.effect if equipment != null else null)
-	_upgrade_effect = _copy_effect(upgrade.extra_effect if upgrade != null else null)
+	_upgrade_effects.clear()
+	for u in upgrades:
+		if u.extra_effect != null:
+			_upgrade_effects.append(_copy_effect(u.extra_effect))
 	_finish_effect = _copy_effect(finish.effect if finish != null else null)
 	_rebuild_ability()
 
@@ -198,7 +222,10 @@ func _copy_effect(effect: FigureAbility) -> FigureAbility:
 ## The figure's own ability plus the equipment / upgrade / finish effects (events go to all of them).
 func _rebuild_ability() -> void:
 	ability = _core_ability
-	for extra in [_equipment_effect, _upgrade_effect, _finish_effect]:
+	var extras: Array = [_equipment_effect]
+	extras.append_array(_upgrade_effects)
+	extras.append(_finish_effect)
+	for extra in extras:
 		if extra != null:
 			ability = CombinedAbility.new(ability, extra)
 
@@ -369,11 +396,11 @@ func _draw() -> void:
 					HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, ink)
 			FigureIcons.draw(self, data.icon, Vector2(0.0, radius * 0.46), radius * 0.3, ink)
 	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
-	if upgrade != null:
-		# A little gold pip in the upper right marks a figure-specific upgrade.
-		var pip := Vector2(radius, -radius) * 0.66
-		draw_circle(pip, radius * 0.17, Color(1.0, 0.85, 0.2))
-		draw_arc(pip, radius * 0.17, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
+	for i in upgrades.size():
+		# Little gold pips in the upper right: one per upgrade tier owned.
+		var pip := Vector2(radius, -radius) * 0.66 + Vector2(-radius * 0.3 * i, radius * 0.1 * i)
+		draw_circle(pip, radius * 0.14, Color(1.0, 0.85, 0.2))
+		draw_arc(pip, radius * 0.14, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
 	if elite:
 		draw_arc(Vector2.ZERO, radius + 9.0, 0.0, TAU, 48, Color(1.0, 0.8, 0.2), 7.0, true)
 	if equipment != null:
@@ -461,6 +488,15 @@ func _physics_process(delta: float) -> void:
 		ability.on_physics_process(self, delta)
 
 
+## Upgrades and temporary buffs that make this figure's hits push harder.
+func _apply_dealt_bonus(other: Figure) -> void:
+	if knocked_off or other.knocked_off or other.team == team:
+		return
+	var bonus := ability.get_dealt_knockback_bonus(self, other) + temp_dealt
+	if bonus > 0.0:
+		ability.extra_hit_knockback(self, other, bonus)
+
+
 func _on_body_entered(body: Node) -> void:
 	touched_since_flick = true
 	if body is Figure:
@@ -473,12 +509,19 @@ func _on_body_entered(body: Node) -> void:
 				(_prev_velocity - other._prev_velocity).length())
 		var point := global_position + (other.global_position - global_position).normalized() * radius
 		ability.on_impact.call_deferred(self, other, speed, point)
+		_apply_dealt_bonus.call_deferred(other)
+		if has_meta("spat_explode"):  # a figure an Absorber spat out explodes on its first impact
+			var blast: Array = get_meta("spat_explode")
+			remove_meta("spat_explode")
+			explode.call_deferred(blast[0], blast[1])
 		# Both figures get this signal; only the one with the lower id reports the impact.
 		if get_instance_id() < other.get_instance_id():
 			emit_signal.call_deferred(&"impacted", self, other, speed, point)
 			AudioManager.play_clack(speed)
 	else:
 		ability.on_hit_wall.call_deferred(self, body)
+		if body is ShieldWall:
+			(body as ShieldWall).on_figure_hit.call_deferred(self)
 		AudioManager.play_wall(_last_velocity.length())
 		if body is BreakableWall and team == Team.PLAYER:  # the Mad Creator's box: only the player's hits damage it
 			body.hit_by(self, _last_velocity if _last_velocity.length() >= _prev_velocity.length() else _prev_velocity)
@@ -491,7 +534,28 @@ func aura_flick_multiplier() -> float:
 		multiplier *= RunManager.enemy_relic_power(RunManager.combat, self)  # enemy relics (act 3 elites)
 	for source in _aura_sources():
 		multiplier *= source.ability.get_aura_flick_multiplier(source)
+	multiplier *= charge_power * shock_flick * (doused_flick if doused_rounds > 0 else 1.0)
+	multiplier *= enemy_aura_factor().y
+	for other in glue_partners():  # glued to an opposing figure: Glue Guy's Tar
+		if other.team != team and not other.knocked_off:
+			multiplier *= other.ability.get_stuck_enemy_flick_multiplier(other)
 	return multiplier
+
+
+## (knockback taken, flick power) factors from the auras of OPPOSING figures this figure stands in (Crazy Man's
+## Frenzy, Bummer's Downer), x each.
+func enemy_aura_factor() -> Vector2:
+	var factor := Vector2.ONE
+	if not is_inside_tree():
+		return factor
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == self or other.knocked_off or other.team == team or other.ability == null:
+			continue
+		var aura := other.ability.get_enemy_aura(other)
+		if not aura.is_empty() and other.global_position.distance_to(global_position) <= aura.radius + radius:
+			factor *= Vector2(aura.get("knockback", 1.0), aura.get("flick", 1.0))
+	return factor
 
 
 ## Knockback-taken multiplier from teammates' auras (below 1 = tougher).
@@ -534,7 +598,10 @@ func bummer_effect_at(point: Vector2) -> Dictionary:
 
 ## The Bummer effect on this figure where it stands now ({} = not in an opposing Bummer's aura).
 func bummer_effect() -> Dictionary:
-	return bummer_effect_at(global_position)
+	var effect := bummer_effect_at(global_position)
+	if effect.is_empty() and bummed_extra > 0:
+		return bummed_stats  # Lingering Gloom: still bummed for one more flick
+	return effect
 
 
 ## Alchemist: the knockback multiplier from an enemy debuff zone this figure stands in, or from being Doused by
@@ -543,12 +610,12 @@ func zone_knockback_multiplier() -> float:
 	var best := doused_multiplier if doused_rounds > 0 else 1.0
 	var combat = RunManager.combat  # the Main node (untyped: Main is not a named class)
 	if combat == null or not is_inside_tree():
-		return best
-	return maxf(best, combat.arena.zone_multiplier_at(global_position, team))
+		return best * temp_taken
+	return maxf(best, combat.arena.zone_multiplier_at(global_position, team)) * enemy_aura_factor().x * temp_taken
 
 
 ## Touched an Alchemist's zone: Doused for `rounds` rounds (touching again refreshes it back to the full amount).
-func douse(rounds: int, knockback: float, juice := false) -> void:
+func douse(rounds: int, knockback: float, juice := false, flick := 1.0) -> void:
 	if doused_rounds > 0 and knockback < doused_multiplier:
 		return  # a stronger Douse is active: only the stronger effect applies
 	if doused_rounds < rounds or doused_full != rounds or doused_juice != juice:
@@ -556,6 +623,7 @@ func douse(rounds: int, knockback: float, juice := false) -> void:
 	doused_rounds = rounds
 	doused_full = rounds
 	doused_multiplier = knockback
+	doused_flick = flick if not juice else 1.0
 	doused_juice = juice
 
 
@@ -621,6 +689,8 @@ func launch(impulse: Vector2) -> void:
 	flickable = false
 	turn_flicks += 1
 	touched_since_flick = false
+	charge_power = 1.0  # (a recharge's bonus and a shock last until this flick)
+	shock_flick = 1.0
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(impulse)
@@ -649,10 +719,26 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 			* RunManager.relic_knockback_taken(self, source) * aura_knockback_multiplier() * zone_knockback_multiplier())
 
 
+## Share of an ENEMY explosion's push this figure ignores because of a teammate Firecracker's Safety Officer cover.
+func _explosion_cover(source: Figure) -> float:
+	if source == null or source.team == team or not is_inside_tree():
+		return 0.0
+	var best := 0.0
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other.team == team and not other.knocked_off and other.ability != null:
+			best = maxf(best, other.ability.get_team_explosion_reduction(other))
+	var combat = RunManager.combat
+	if combat != null and combat.has_method("lingering_cover_for"):
+		best = maxf(best, combat.lingering_cover_for(team))
+	return clampf(best, 0.0, 1.0)
+
+
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
 ## get_explosion_multiplier (0 = immune).
 func take_explosion(impulse: Vector2, source: Figure) -> void:
 	unglue()
+	impulse *= 1.0 - _explosion_cover(source)
 	var multiplier := ability.get_explosion_multiplier(self, source)
 	if multiplier > 0.0:
 		ability.on_took_explosion(self, impulse * multiplier)  # (Duwall's shell)
@@ -776,10 +862,19 @@ func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
 ## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
 ## `force` at the center and fades to zero at the edge.
 func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
+	force *= take_detonate_multiplier()
 	blast_radius *= RunManager.relic_explosion_multiplier(team)  # Blast Cap
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
 	Figure.blast(get_tree(), global_position, blast_radius, force, self, spared)
+
+
+## Firecracker's Heavy Charges marks the explosives it sets off; their next blast is stronger (used once).
+func take_detonate_multiplier() -> float:
+	var mult: float = get_meta("detonate_force_mult", 1.0)
+	if has_meta("detonate_force_mult"):
+		remove_meta("detonate_force_mult")
+	return mult
 
 
 ## An explosion at `center` (set off by `source`, which may be null for a power) that pushes every
@@ -895,7 +990,8 @@ func transform_into(new_data: FigureData) -> void:
 	set_size(data.radius, new_mass)
 	if physics_material_override != null:
 		physics_material_override.bounce = clampf(data.bounce + (equipment.bounce_bonus if equipment != null else 0.0), 0.0, 1.0)
-	upgrade = null
+	upgrades.clear()
+	upgrade_state = Vector2i(-1, 0)
 	queue_redraw()
 
 
@@ -906,6 +1002,15 @@ func set_size(new_radius: float, new_mass: float) -> void:
 	if _circle != null:
 		_circle.radius = new_radius
 	queue_redraw()
+
+
+## Can this figure act in the current flick cycle? (A player figure that has not flicked yet / an enemy that has not
+## acted yet.) Used by tap abilities (Magnet's Collapse, Ghost's Teleport, Absorber's Spit).
+func can_act_now() -> bool:
+	if team == Team.PLAYER:
+		return flickable
+	var combat = RunManager.combat
+	return combat == null or not combat._enemy_cycle.has(get_instance_id())
 
 
 ## A body made of its own collision shapes (Cluster): the usual circle goes, set_size no longer resizes it.
@@ -920,6 +1025,10 @@ func use_custom_shapes() -> void:
 ## Called by main.gd at the start of each round: powers that last "a round" count down here.
 func tick_round() -> void:
 	ability.on_round_ticked(self)
+	if stunned_rounds > 0:
+		stunned_rounds -= 1
+		if stunned_rounds == 0 and team == Team.PLAYER:
+			flickable = true
 	if doused_rounds > 0:
 		doused_rounds -= 1
 		queue_redraw()
