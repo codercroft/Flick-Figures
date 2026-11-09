@@ -606,3 +606,8 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 
 ### Not implemented (asked for earlier, not present)
 - Nothing outstanding that a prompt asked for is known to be missing. Open design questions: whether Open Corners should be the Pinball Wizard arena; whether Ascension 5 act 1 elites should get gear; whether trimmed 5-figure encounters should be redesigned for 4.
+
+
+## Sandbox mode
+
+Main menu > Sandbox: the real combat scene for fun and playtesting; never touches run saves, unlocks, run history or the Compendium and never ends (no rewards). Strip at the bottom: Setup/Hide, Edit/Play, AI on/off, Free on/off, Menu, Reset, Clear, Pause/Resume, Step. Setup sheet tabs: Arena (all layouts, Boss field, Auto), Figures (side + every figure; tap the board or deck to place; selected figure: Delete, Upgrade path/tier, Finish, Equipment), Boss (any boss, Act 1-3, Ascension 0-10), Fights (any regular or elite encounter), Items (player/enemy relics, player powers; Apply). Edit mode: tap select, drag move. AI off: you flick one enemy figure after each of your flicks. Free flick: any figure any time, no turns. Pause/Step freeze and advance 0.1 s. Lineup figures (boss/encounter) can be moved or deleted live but not gear-edited and return on Reset; powers are player-only. Tested by `tools/sandbox_test.gd`.

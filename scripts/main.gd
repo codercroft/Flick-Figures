@@ -99,6 +99,8 @@ var turret_may_fire := false
 var _settling := false
 
 var _top_bar := TopBar.new()
+var sandbox: SandboxPanel  # Sandbox mode only (SandboxSetup.active)
+var _manual_enemy := false  # Sandbox "AI off": the user is flicking the enemy side this turn
 
 # Relics read these.
 ## Flicks the player has taken this combat (Opening Act: the first one is boosted).
@@ -161,9 +163,11 @@ func _ready() -> void:
 		ui.show_enemy_relics("Enemy relic: " + ", ".join(RunManager.enemy_relics.map(func(r): return r.display_name)), TopBar.height() + 8.0)
 	if not banner.is_empty():
 		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
-	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom)
+	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom + (SandboxPanel.STRIP_RESERVE if SandboxSetup.active else 0.0))
 	_spawn_players()
 	_spawn_enemies()
+	if SandboxSetup.active:
+		_sandbox_spawn_entries()
 	if RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS and RunManager.boss != null \
 			and RunManager.boss.creator_box and not _enemies.is_empty():
 		_creator_box = CreatorBox.new()
@@ -173,6 +177,10 @@ func _ready() -> void:
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
 	_place_opening_turrets()
+	if SandboxSetup.active:
+		sandbox = SandboxPanel.new()
+		add_child(sandbox)
+		sandbox.setup(self)
 
 
 ## Enemy Engineers (Siege) have their turret up from the very start of the combat, before the player's first flick.
@@ -191,9 +199,15 @@ func _exit_tree() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if SandboxSetup.active and SandboxSetup.free_flick:
+		for figure in _all_figures():
+			if _is_alive(figure) and not figure.flickable:
+				figure.flickable = true
+		turret_may_fire = _real_motion()
 	_knock_off_fallen_figures()
 	_update_blast_shields()
-	turret_may_fire = _settling and _state != State.GAME_OVER and _real_motion()
+	if not (SandboxSetup.active and SandboxSetup.free_flick):
+		turret_may_fire = _settling and _state != State.GAME_OVER and _real_motion()
 
 
 ## Figures of a team with a Firecracker on the table get the faint "explosion shield" ring.
@@ -233,6 +247,9 @@ func _input(event: InputEvent) -> void:
 	# The run info overlay is open: the game behind it ignores touches.
 	if RunInfo.is_open:
 		return
+	if SandboxSetup.active and (SandboxSetup.mode != SandboxSetup.Mode.PLAY or (sandbox != null and sandbox.is_over_ui(event.position) \
+			and event is InputEventScreenTouch and event.pressed)):
+		return  # (the sandbox's edit mode and its own controls take the touches)
 	# Taps on the power buttons and the status bar are for them, not for aiming.
 	if event is InputEventScreenTouch and event.pressed and (ui.is_over_power_bar(event.position) or ui.is_over_skip(event.position) or _top_bar.is_over(event.position)):
 		return
@@ -453,6 +470,10 @@ func _release_aim(pos: Vector2) -> void:
 	_last_player_flicker = flicked_figure
 	_deselect()
 	_touch_index = -1
+	if SandboxSetup.active and SandboxSetup.free_flick:
+		flicked_figure.flickable = true  # Free flick: no turn order, no flick cycle; flick again at once
+		_state = State.PLAYER_TURN
+		return
 	_state = State.SETTLING
 	_finish_player_turn()
 
@@ -572,7 +593,7 @@ func _fire_shot(figure: Figure, pos: Vector2) -> void:
 func _any_player_figure_at(pos: Vector2) -> Figure:
 	var best: Figure = null
 	var best_distance := INF
-	for figure in _players:
+	for figure in _flick_pool():
 		var distance := figure.global_position.distance_to(pos)
 		if _is_alive(figure) and distance <= figure.radius + grab_padding and distance < best_distance:
 			best = figure
@@ -749,10 +770,20 @@ func _flick_impulse(pos: Vector2) -> Vector2:
 	return -drag.normalized() * (pull / max_pull) * full_force
 
 
+## The figures the user may flick right now: the player's, the enemy's in a Sandbox "AI off" enemy turn, or both
+## in Sandbox "Free flick".
+func _flick_pool() -> Array[Figure]:
+	if SandboxSetup.active and SandboxSetup.free_flick:
+		return _all_figures()
+	if _manual_enemy:
+		return _enemies
+	return _players
+
+
 func _player_figure_at(pos: Vector2, flickable: bool) -> Figure:
 	var best: Figure = null
 	var best_distance := INF
-	for figure in _players:
+	for figure in _flick_pool():
 		var distance := figure.global_position.distance_to(pos)
 		if figure.flickable == flickable and distance <= figure.radius + grab_padding and distance < best_distance:
 			best = figure
@@ -761,7 +792,7 @@ func _player_figure_at(pos: Vector2, flickable: bool) -> Figure:
 
 
 func _has_flickable_figure() -> bool:
-	for figure in _players:
+	for figure in _flick_pool():
 		if figure.flickable:
 			return true
 	return false
@@ -786,12 +817,37 @@ func _finish_player_turn() -> void:
 			queued.flickable = true
 			_offer_bonus_flick(queued)
 			return
+	if _manual_enemy:  # Sandbox AI off: the user's enemy flick is done, back to the player
+		_manual_enemy = false
+		_start_player_turn()
+		return
 	if extra_turns > 0:
 		extra_turns -= 1
 		_update_status()
 		_start_player_turn(false)
 		return
+	if SandboxSetup.active and SandboxSetup.ai_off:
+		_begin_manual_enemy_turn()
+		return
 	await _run_enemy_turn()
+
+
+## Sandbox "AI off": the enemy side's turn is the user's: flick ONE enemy figure, then it is the player's turn.
+func _begin_manual_enemy_turn() -> void:
+	_end_turn_for_all()
+	_clear_temp_buffs(Figure.Team.ENEMY)
+	_manual_enemy = true
+	turret_side = Figure.Team.ENEMY
+	for enemy in _enemies:
+		if _is_alive(enemy):
+			enemy.turn_flicks = 0
+			enemy.flickable = true
+	_state = State.PLAYER_TURN
+	_busy_time = 0.0
+	_touch_index = -1
+	_aim_figure = null
+	_deselect()
+	ui.show_enemy_turn("AI off: flick an enemy figure")
 
 
 ## A figure can be knocked off and freed while we wait, so always check before using one.
@@ -1219,6 +1275,8 @@ func _all_figures_resting() -> bool:
 
 
 func _check_game_over() -> bool:
+	if SandboxSetup.active:
+		return false  # the sandbox never ends: no rewards, no run end
 	if _creator_box != null and not _is_alive(_creator_box.creator):
 		# The Mad Creator is off the table: everything it summoned vanishes.
 		for enemy in _enemies:
@@ -1276,6 +1334,8 @@ func _end_game(won: bool) -> void:
 # --- Figures -----------------------------------------------------------------
 
 func _spawn_players() -> void:
+	if SandboxSetup.active:
+		return  # (the sandbox spawns its own figures)
 	var deck: Rect2 = board.deck_rect
 	var slot_width := deck.size.x / RunManager.deck.size()
 	for i in RunManager.deck.size():
@@ -1285,6 +1345,65 @@ func _spawn_players() -> void:
 		figure.deck_position = pos
 		figure.deck_slot = i
 		_players.append(figure)
+
+
+## Sandbox: spawns the hand-placed figures (and records the live Figure in each entry).
+func _sandbox_spawn_entries() -> void:
+	for entry in SandboxSetup.entries:
+		entry.erase("slot")
+		sandbox_spawn(entry)
+
+
+## Sandbox: one placed figure. Player figures inside the deck strip start on deck; everything else on the board.
+func sandbox_spawn(entry: Dictionary) -> Figure:
+	var team: int = entry.team
+	var figure := _spawn_figure(team, entry.data, entry.pos, entry.equipment, entry.finish, entry.upgrade)
+	entry.node = figure
+	if team == Figure.Team.PLAYER:
+		figure.on_deck = board.deck_rect.has_point(entry.pos)
+		figure.deck_position = entry.pos
+		var slot: int = entry.get("slot", -1)
+		if slot >= 0 and slot < RunManager.deck.size():  # (a rebuilt figure keeps its deck slot)
+			RunManager.deck[slot] = entry.data
+			RunManager.deck_equipment[slot] = entry.equipment
+			RunManager.deck_finish[slot] = entry.finish
+			RunManager.deck_upgrade[slot] = entry.upgrade
+		else:
+			slot = RunManager.deck.size()
+			RunManager.deck.append(entry.data)
+			RunManager.deck_equipment.append(entry.equipment)
+			RunManager.deck_finish.append(entry.finish)
+			RunManager.deck_upgrade.append(entry.upgrade)
+		figure.deck_slot = slot
+		_players.append(figure)
+	else:
+		_enemies.append(figure)
+	return figure
+
+
+## Sandbox: "AI off" was switched back on: if it was the user's enemy turn, the AI takes it now.
+func sandbox_resume_ai() -> void:
+	if _manual_enemy and _state == State.PLAYER_TURN:
+		_manual_enemy = false
+		await _run_enemy_turn()
+
+
+## Sandbox: "Free flick" was switched off: back to the normal turn flow.
+func sandbox_end_free_flick() -> void:
+	if _state == State.PLAYER_TURN or _state == State.AIMING:
+		_cancel_aim()
+		_start_player_turn(false)
+
+
+## Sandbox: removes a figure from play without any knock-off bookkeeping.
+func sandbox_remove(figure: Figure) -> void:
+	if not is_instance_valid(figure):
+		return
+	_players.erase(figure)
+	_enemies.erase(figure)
+	if _selected == figure:
+		_selected = null
+	figure.queue_free()
 
 
 func _spawn_enemies() -> void:

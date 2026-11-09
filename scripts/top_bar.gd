@@ -33,19 +33,20 @@ func _ready() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_panel.add_child(row)
 
-	var map_button := Button.new()
-	map_button.text = "Map"
-	map_button.custom_minimum_size = Vector2(130.0, 72.0)
-	map_button.add_theme_font_size_override("font_size", 32)
-	map_button.pressed.connect(RunInfo.open_map)
-	row.add_child(map_button)
+	if not SandboxSetup.active:  # (the sandbox has no run: no map, no inventory)
+		var map_button := Button.new()
+		map_button.text = "Map"
+		map_button.custom_minimum_size = Vector2(130.0, 72.0)
+		map_button.add_theme_font_size_override("font_size", 32)
+		map_button.pressed.connect(RunInfo.open_map)
+		row.add_child(map_button)
 
-	var inventory := Button.new()
-	inventory.text = "Inventory"
-	inventory.custom_minimum_size = Vector2(190.0, 72.0)
-	inventory.add_theme_font_size_override("font_size", 32)
-	inventory.pressed.connect(RunInfo.open_inventory)
-	row.add_child(inventory)
+		var inventory := Button.new()
+		inventory.text = "Inventory"
+		inventory.custom_minimum_size = Vector2(190.0, 72.0)
+		inventory.add_theme_font_size_override("font_size", 32)
+		inventory.pressed.connect(RunInfo.open_inventory)
+		row.add_child(inventory)
 
 	_sound_button.custom_minimum_size = Vector2(72.0, 72.0)
 	_sound_button.add_theme_font_size_override("font_size", 22)
@@ -74,7 +75,7 @@ func _process(_delta: float) -> void:
 ## Updates the texts (cheap: called every frame).
 func refresh() -> void:
 	_act_label.text = _where_text()
-	_money_label.text = "$%d" % RunManager.money
+	_money_label.text = "" if SandboxSetup.active else "$%d" % RunManager.money
 	_sound_button.text = "OFF" if AudioManager.muted else "SND"
 	_sound_button.modulate = Color(1.0, 0.55, 0.55) if AudioManager.muted else Color.WHITE
 
@@ -82,6 +83,8 @@ func refresh() -> void:
 ## "Act 2/3  Row 4  A5": the act, the map row you are on (the node being played, else the last one you finished)
 ## and the Ascension level.
 func _where_text() -> String:
+	if SandboxSetup.active:
+		return "SANDBOX  Act %d  A%d" % [SandboxSetup.act + 1, SandboxSetup.ascension]
 	var text := "Act %d/%d" % [RunManager.act + 1, RunManager.config.acts]
 	var shown: MapNode = RunManager.node
 	if shown == null and RunManager.current_node >= 0 and RunManager.map != null:

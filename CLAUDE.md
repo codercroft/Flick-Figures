@@ -262,3 +262,7 @@ Mobile game built in Godot 4 with GDScript.
 ## Bonus flicks
 
 - ALL extra flicks go through `Main._offer_bonus_flick(figure)` (Speedo, Bloodluster, Jet Pack, `grant_bonus_flick` queue, Rewind re-offer). It must set `figure.flickable = true` because `launch()` clears it and the aim guards reject non-flickable figures. The UI shows "Bonus flick! ..." and `ui.skip_button` (signal `bonus_skipped` -> `_skip_bonus_flick`). After changing the turn state machine or any flick hook, run `godot --headless -s tools/bonus_flick_test.gd` (scripted real combats; exit 1 on failure).
+
+## Sandbox
+
+- Main menu > Sandbox (`SandboxSetup.begin()`): the real combat scene with `SandboxSetup.active`. Setup data lives in `SandboxSetup` (static); `prepare()` fills RunManager before every (re)load; `SandboxPanel` (`scripts/sandbox_panel.gd`) is the strip + collapsible sheet + edit-mode touches. The sandbox must never call `autosave`, `RunHistory.*`, `end_run` or unlock anything. Main hooks: `_sandbox_spawn_entries`/`sandbox_spawn`/`sandbox_remove`, `_flick_pool` (AI off / free flick), `_manual_enemy`, `_check_game_over` returns false. To add a sandbox option, add it to `SandboxSetup`, apply it in `prepare()` or Main, then a button in the matching tab. Run `godot --headless -s tools/sandbox_test.gd` after changing combat setup code.

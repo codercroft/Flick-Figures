@@ -70,6 +70,8 @@ var elite_encounter := false
 var enemy_relics: Array[RelicData] = []
 ## The Ascension level of this run (0 = the flat base game; see AscensionConfig). Each level includes the lower ones.
 var ascension := 0
+## Sandbox mode only (SandboxSetup): force this encounter instead of picking one.
+var sandbox_encounter: EncounterData
 ## Ascension 10: the second act 3 boss fight is on (after the first boss was beaten).
 var in_second_boss := false
 ## Set by end_run when winning unlocked a new Ascension level (-1 = none).
@@ -896,10 +898,12 @@ func _build_lineup() -> void:
 	var difficulty := config.difficulty
 	var encounter: EncounterData = null
 	if node.type == MapNode.Type.ELITE:
-		encounter = _pick_encounter()
+		encounter = sandbox_encounter if sandbox_encounter != null else _pick_encounter()
 		elite_encounter = encounter != null
 	elif node.type == MapNode.Type.COMBAT:
-		if first_combat_played:
+		if sandbox_encounter != null:
+			encounter = sandbox_encounter
+		elif first_combat_played:
 			encounter = _pick_regular_encounter()  # (the very first combat is plain Grunts: no encounter)
 		first_combat_played = true
 	if encounter != null:
@@ -1347,3 +1351,23 @@ func _pick_arena() -> void:
 	if candidates.is_empty():
 		candidates = config.arenas
 	arena = candidates.pick_random() if not candidates.is_empty() else null
+
+
+## Sandbox mode: an empty enemy side (the sandbox then adds figures itself).
+func clear_lineup() -> void:
+	enemies.clear()
+	enemy_elite.clear()
+	enemy_boosts.clear()
+	enemy_positions.clear()
+	enemy_gear.clear()
+	enemy_forced_equipment.clear()
+	enemy_forced_finish.clear()
+	enemy_forced_upgrade.clear()
+	enemy_relics.clear()
+	elite_encounter = false
+	encounter_name = ""
+	encounter_arena = null
+	enemy_flick_per_unit = false
+	enemies_in_row = false
+	enemy_flicks_per_turn = 1
+	boss_summons.clear()

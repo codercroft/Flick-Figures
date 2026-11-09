@@ -58,7 +58,15 @@ func _show_main() -> void:
 	_button("New Run", Color(0.25, 0.5, 0.85), _on_new_run)
 	_button("Compendium", Color(0.55, 0.4, 0.8), _open_scene.bind("res://scenes/compendium.tscn"))
 	_button("Run History", Color(0.8, 0.5, 0.25), _open_scene.bind("res://scenes/run_history.tscn"))
+	_button("Sandbox", Color(0.3, 0.6, 0.6), _open_sandbox)
 	_button("Settings", Color(0.45, 0.48, 0.58), _show_settings)
+
+
+## Sandbox: free play with any setup. It never touches saves, unlocks, run history or the Compendium.
+func _open_sandbox() -> void:
+	SandboxSetup.begin()
+	SandboxSetup.prepare()
+	get_tree().change_scene_to_file(NodeScenes.COMBAT_SCENE)
 
 
 func _show_confirm_new_run() -> void:
