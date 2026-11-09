@@ -22,7 +22,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 ### Cycle rules
 - A flicked figure is greyed out and cannot be flicked again until every other figure has been flicked ("cycle"); then ALL remaining figures become flickable again where they stand. There is no reload step (`Main.reload_enabled`, off, would bring back tap-to-reload).
 - Placements (Pinhead pin, Alchemist zone, Engineer turret): at most one per figure per turn. Pinhead and Engineer can place AND flick; Alchemist placing uses up its action (place OR flick). Blastoid: a drag (flick) OR a tap (shot), not both.
-- Extra flicks: Speedo 2/turn (3 with Triple Dash), Jet Pack one half-power flick per combat, Bloodluster a bonus flick after a flick that knocked something off (unlimited chain, each with +35% damping stack), Extra Turn power.
+- Extra flicks (one shared system: `Main._offer_bonus_flick`, which re-enables `flickable`; label "Bonus flick! <Figure> can flick again (drag, or Skip to end turn)" plus a Skip button; tested by `tools/bonus_flick_test.gd`): Speedo 2/turn (3 with Triple Dash), Jet Pack one half-power flick per combat, Bloodluster a bonus flick after a flick that knocked something off (unlimited chain, each with +35% damping stack), Extra Turn power.
 
 ### Turn structure
 1. Player flicks ONE figure (powers can be used any time on the player's turn without ending it).

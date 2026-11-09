@@ -6,6 +6,10 @@ extends CanvasLayer
 
 ## A power slot button was pressed (slot index).
 signal power_pressed(slot: int)
+## The Skip button of a bonus flick was pressed.
+signal bonus_skipped
+
+var skip_button: Button
 
 @onready var power_bar: HBoxContainer = $PowerBar
 @onready var turn_label: Label = $TurnLabel
@@ -14,6 +18,29 @@ signal power_pressed(slot: int)
 @onready var arena_label: Label = $ArenaLabel
 @onready var result_panel: Control = $ResultPanel
 @onready var result_label: Label = $ResultPanel/ResultLabel
+
+
+func _ready() -> void:
+	skip_button = Button.new()
+	skip_button.text = "Skip bonus flick"
+	skip_button.add_theme_font_size_override("font_size", 30)
+	skip_button.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	skip_button.offset_left = 200.0
+	skip_button.offset_right = -200.0
+	skip_button.offset_top = -300.0
+	skip_button.offset_bottom = -230.0
+	skip_button.hide()
+	skip_button.pressed.connect(bonus_skipped.emit)
+	add_child(skip_button)
+
+
+## Shows or hides the Skip button (visible while a bonus flick is on offer).
+func set_bonus_visible(visible_now: bool) -> void:
+	skip_button.visible = visible_now
+
+
+func is_over_skip(screen_pos: Vector2) -> bool:
+	return skip_button.visible and skip_button.get_global_rect().has_point(screen_pos)
 
 
 func show_your_turn(text := "Your turn") -> void:

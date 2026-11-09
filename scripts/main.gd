@@ -139,6 +139,7 @@ func _ready() -> void:
 	var insets := SafeArea.insets()
 	ui.apply_bottom_inset(insets.bottom)
 	ui.power_pressed.connect(_on_power_slot_pressed)
+	ui.bonus_skipped.connect(func(): if _bonus_figure != null and _state == State.PLAYER_TURN: _skip_bonus_flick())
 	ui.set_powers(RunManager.powers)
 	RunInfo.powers_changed.connect(_on_powers_discarded)
 	_update_status()
@@ -207,6 +208,7 @@ func _update_blast_shields() -> void:
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
 func _process(delta: float) -> void:
 	ui.set_powers_enabled(_state == State.PLAYER_TURN)
+	ui.set_bonus_visible(_bonus_figure != null and (_state == State.PLAYER_TURN or _state == State.AIMING))
 	if _hold_pending and _state == State.AIMING:
 		_hold_time += delta
 		if _hold_time >= spray_hold_seconds:
@@ -232,7 +234,7 @@ func _input(event: InputEvent) -> void:
 	if RunInfo.is_open:
 		return
 	# Taps on the power buttons and the status bar are for them, not for aiming.
-	if event is InputEventScreenTouch and event.pressed and (ui.is_over_power_bar(event.position) or _top_bar.is_over(event.position)):
+	if event is InputEventScreenTouch and event.pressed and (ui.is_over_power_bar(event.position) or ui.is_over_skip(event.position) or _top_bar.is_over(event.position)):
 		return
 	if event is InputEventScreenTouch:
 		var pos := _to_world(event.position)
@@ -505,13 +507,18 @@ func _offer_bonus_flick(figure: Figure) -> void:
 		figure.bonus_flicks_used += 1
 		figure.ability.on_bloodlust_bonus(figure)  # its damping stacks up
 		figure.show_popup("Bloodlust!", Color(1.0, 0.25, 0.3))
+	figure.flickable = true  # (launch() cleared it; the bonus flick needs it, or aiming is rejected)
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
 	_aim_figure = null
 	aim_line.clear()
 	_select(figure)
-	ui.show_your_turn(("Bloodlust! " if bloodlust else "") + "%s: flick again, or tap to skip" % figure.data.display_name)
+	ui.show_your_turn(_bonus_text(figure, bloodlust))
+
+
+func _bonus_text(figure: Figure, bloodlust := false) -> String:
+	return "%sBonus flick! %s can flick again (drag, or Skip to end turn)" % ["Bloodlust! " if bloodlust else "", figure.data.display_name]
 
 
 func _skip_bonus_flick() -> void:
@@ -1644,6 +1651,7 @@ func rewind() -> bool:
 	for figure in _players:
 		if figure.turn_flicks > 0 and _has_flick_left(figure):
 			_bonus_figure = figure  # it was Speedo's extra flick: offer it again
+			figure.flickable = true
 	_snapshot = {}
 	_update_status()
 	return true
@@ -1758,7 +1766,7 @@ func _resume_player_turn() -> void:
 		_selected = null
 	if _bonus_figure != null and _is_alive(_bonus_figure):
 		_select(_bonus_figure)
-		ui.show_your_turn("%s: flick again, or tap to skip" % _bonus_figure.data.display_name)
+		ui.show_your_turn(_bonus_text(_bonus_figure))
 	elif _needs_reload:
 		ui.show_your_turn("Your turn: tap a figure to reload")
 	else:

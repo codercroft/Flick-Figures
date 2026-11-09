@@ -258,3 +258,7 @@ Mobile game built in Godot 4 with GDScript.
 - Prefer simple, readable code over clever or abstract code.
 - Expose every tunable value (flick strength, friction, mass, bounce, turn timings, etc.) as an `@export` variable, with a sensible default and a short comment, so it can be adjusted in the Inspector.
 - Use static typing where it helps readability, and keep scripts small and focused.
+
+## Bonus flicks
+
+- ALL extra flicks go through `Main._offer_bonus_flick(figure)` (Speedo, Bloodluster, Jet Pack, `grant_bonus_flick` queue, Rewind re-offer). It must set `figure.flickable = true` because `launch()` clears it and the aim guards reject non-flickable figures. The UI shows "Bonus flick! ..." and `ui.skip_button` (signal `bonus_skipped` -> `_skip_bonus_flick`). After changing the turn state machine or any flick hook, run `godot --headless -s tools/bonus_flick_test.gd` (scripted real combats; exit 1 on failure).
