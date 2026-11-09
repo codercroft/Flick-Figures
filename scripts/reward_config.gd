@@ -12,15 +12,15 @@ extends Resource
 ## Extra random rewards after a regular combat's or elite's figure draft, one entry per act. Each is
 ## one of `bonus_item_kinds`.
 @export var bonus_items_by_act: Array[int] = [0, 1, 2]
-## What a bonus item can be: "power", "equipment" or "upgrade" (an Upgrade step: pick a figure, then its next tier).
-@export var bonus_item_kinds: Array[String] = ["power", "equipment", "upgrade"]
+## What a bonus item can be: "power" or "equipment" (Upgrades come only from bosses, the shop and duplicate figures).
+@export var bonus_item_kinds: Array[String] = ["power", "equipment"]
 ## Upgrade steps after an ELITE fight (after the figure draft).
-@export var elite_upgrades := 1
+@export var elite_upgrades := 0
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
 ## Figure choices after an ELITE fight roll each slot's rarity with these weights (common, uncommon, rare) in every act.
 @export var elite_rarity_weights := Vector3(0.6, 0.35, 0.05)
-@export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.75, 0.22, 0.03), Vector3(0.6, 0.32, 0.08), Vector3(0.5, 0.38, 0.12)]
+@export var rarity_weights_by_act: Array[Vector3] = [Vector3(0.75, 0.24, 0.01), Vector3(0.6, 0.32, 0.08), Vector3(0.5, 0.38, 0.12)]
 
 @export_group("Relics")
 ## Weights (common, uncommon, rare) for relics from chests, elites and the shop. Boss relics never
@@ -54,7 +54,7 @@ extends Resource
 @export var boss_relic_choices := 3
 ## A boss gives this many finishes and this many Upgrade steps.
 @export var boss_finishes := 1
-@export var boss_upgrades := 2
+@export var boss_upgrades := 1
 ## The guaranteed extra item is a power or an equipment item: this is the power chance.
 @export_range(0.0, 1.0) var boss_power_chance := 0.5
 

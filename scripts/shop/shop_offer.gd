@@ -11,6 +11,8 @@ var figure: FigureData
 ## True if the player must pick one of their figures for this offer to act on.
 ## A figure on sale (not an upgrade card that merely shows one): owning it already offers Recruit or Upgrade.
 var is_figure := false
+## The shop's one Upgrade: pick any figure that can take one, then choose from its tree (pays on Take).
+var is_upgrade := false
 var needs_slot := false
 ## Shown above the figure list when the player has to pick (if needs_slot).
 var slot_prompt := "Which figure?"

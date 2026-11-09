@@ -47,7 +47,13 @@ func _show_offers(message := "") -> void:
 
 
 func _on_offer_pressed(offer: ShopOffer) -> void:
-	if offer.is_figure and RunManager.owns(offer.figure):
+	if offer.is_upgrade:
+		var slots := RunManager.upgradable_slots()
+		if slots.size() == 1:
+			_show_upgrade_tree(offer, slots[0])
+		else:
+			_show_copy_picker(offer, slots)
+	elif offer.is_figure and RunManager.owns(offer.figure):
 		_show_duplicate_choice(offer)  # Recruit another copy, or Upgrade the one you have (the same price)
 	elif offer.needs_slot:
 		_pending = offer
@@ -83,14 +89,15 @@ func _show_duplicate_choice(offer: ShopOffer) -> void:
 ## Several copies: pick which one gets the upgrade.
 func _show_copy_picker(offer: ShopOffer, copies: Array[int]) -> void:
 	frame.clear()
-	title.text = "Upgrade which %s?" % offer.figure.display_name
+	title.text = "Upgrade which figure ($%d)?" % offer.price if offer.is_upgrade else "Upgrade which %s?" % offer.figure.display_name
 	for slot in copies:
 		var summary := RunManager.upgrade_summary(slot)
+		var data: FigureData = RunManager.deck[slot]
 		var card := FigureCard.new()
-		card.setup(offer.figure, 150.0, "%s\n%s" % [offer.figure.display_name, summary if summary != "" else "no upgrades yet"], 32)
+		card.setup(data, 150.0, "%s\n%s" % [data.display_name, summary if summary != "" else "no upgrades yet"], 32)
 		card.pressed.connect(_show_upgrade_tree.bind(offer, slot))
 		column.add_child(card)
-	frame.add_action("Back", _show_duplicate_choice.bind(offer))
+	frame.add_action("Back", _show_offers if offer.is_upgrade else _show_duplicate_choice.bind(offer))
 
 
 ## Both upgrade paths: tap an available box, then Take it (this is where the price is paid).
@@ -111,7 +118,7 @@ func _show_upgrade_tree(offer: ShopOffer, slot: int) -> void:
 		RunManager.take_upgrade(slot, view.selected.x)
 		offer.sold = true
 		_show_offers("%s upgraded!" % RunManager.deck[slot].display_name))
-	frame.add_action("Back", _show_duplicate_choice.bind(offer))
+	frame.add_action("Back", _show_offers if offer.is_upgrade else _show_duplicate_choice.bind(offer))
 
 
 ## Pick which of your figures the offer applies to (grunts first, the usual sacrifice).
