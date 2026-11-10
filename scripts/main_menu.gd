@@ -95,7 +95,12 @@ func _show_ascension_select(selected := -1) -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_root.add_child(grid)
+	var grid_scroll := ScrollContainer.new()  # (any number of levels: the grid scrolls if it gets tall)
+	grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	grid_scroll.custom_minimum_size = Vector2(0.0, minf(ceilf((config.max_level + 1) / 6.0), 3.0) * 120.0)
+	grid_scroll.add_child(grid)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_root.add_child(grid_scroll)
 	for level in config.max_level + 1:
 		var button := Button.new()
 		button.text = str(level) if level <= unlocked else "x"

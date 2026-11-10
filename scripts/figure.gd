@@ -398,9 +398,11 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
 	for i in upgrades.size():
 		# Little gold pips in the upper right: one per upgrade tier owned.
-		var pip := Vector2(radius, -radius) * 0.66 + Vector2(-radius * 0.3 * i, radius * 0.1 * i)
-		draw_circle(pip, radius * 0.14, Color(1.0, 0.85, 0.2))
-		draw_arc(pip, radius * 0.14, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
+		# (a little bigger with a dark backing so upgraded ENEMIES read at a glance too)
+		var pip := Vector2(radius, -radius) * 0.66 + Vector2(-radius * 0.34 * i, radius * 0.1 * i)
+		draw_circle(pip, radius * 0.22, Color(0.12, 0.09, 0.03, 0.85))
+		draw_circle(pip, radius * 0.16, Color(1.0, 0.85, 0.2))
+		draw_arc(pip, radius * 0.16, 0.0, TAU, 14, Color(0.2, 0.15, 0.05), 3.0, true)
 	if elite:
 		draw_arc(Vector2.ZERO, radius + 9.0, 0.0, TAU, 48, Color(1.0, 0.8, 0.2), 7.0, true)
 	if equipment != null:

@@ -48,22 +48,22 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 - Column 2 (the 3rd row) is the **chest row**: every node there is a Treasure node, so every path passes exactly one chest (3-4 chests exist per map).
 - Shops: 1-3 per act (weights 1:2:1, avg 2.0), at most one per row, never in the chest row. Events: 1-3 per act (avg 2.0), same rules, placed on plain combat nodes. NOTE: the config says "from column 2", but column 2 is the chest row, so in practice the first shop/event can appear in column 3 (the 4th row).
 - Elites: at least one per act (avg 1.55, max seen 5), only from column 3, chosen at 25% per eligible node, always avoidable.
-- The first combat of a run is always plain Grunts (4, or 5 at Ascension 9) on a random arena. Later combats use hand-made encounters (never repeating until all are used).
-- Node flow: Combat/Elite/Boss -> combat scene -> reward screens -> map. Shop -> shop scene. Treasure -> reward scene. Event -> event scene. Run ends on loss or after the last boss (Ascension 10: after the second act 3 boss).
+- The first combat of a run is always plain Grunts (4, or 5 at Ascension 10) on a random arena. Later combats use hand-made encounters (never repeating until all are used).
+- Node flow: Combat/Elite/Boss -> combat scene -> reward screens -> map. Shop -> shop scene. Treasure -> reward scene. Event -> event scene. Run ends on loss or after the last boss (Ascension 11: after the second act 3 boss).
 
 ### Combat lineups
-- Regular combat: hand-made encounter (section 6) topped up with Grunts or trimmed to the combat's enemy count: **4 at Ascension 0-2** (every act), 4/5/6 by act from Ascension 3, +1 at Ascension 9. Trimming removes entries from the END of the lineup (Fireworks, Fortress and Demolition Crew have 5 figures, so they lose their last entry below Ascension 3).
+- Regular combat: hand-made encounter (section 6) topped up with Grunts or trimmed to the combat's enemy count: **4 at Ascension 0-2** (every act), 4/5/6 by act from Ascension 3, +1 at Ascension 10. Trimming removes entries from the END of the lineup (Fireworks, Fortress and Demolition Crew have 5 figures, so they lose their last entry below Ascension 3).
 - Elite: random named elite available in the act (section 6). Boss: that act's boss (section 7). Boss fights always use Open Field.
 
 ### Rewards per node (all chances in `reward_config.tres`)
 | Node | Rewards |
 |---|---|
 | Regular combat | Money (above). Figure draft: pick 1 of 3 figures in every act, rarity rolled per slot by act: act 1 75/24/1, act 2 60/32/8, act 3 50/38/12 (Common/Uncommon/Rare %; the shop's figure rolls use the same weights). If you pick a figure you already own you choose Recruit (add it as usual, pick which figure it replaces) or Upgrade (an Upgrade step on your existing copy instead; disabled if that copy has no tiers left; with several copies you pick which). Offered figures you own show an "Owned" badge. Bonus items after the draft: 0 / 1 / 2 by act, each a random power or equipment item (never an Upgrade). Chance drops: 15% power, 10% equipment. Every step has a skip. |
-| Elite | Money +$2. 1 guaranteed random relic (act 3: pick 1 of 3 relics). Figure draft as above (3 choices) but rarity 60/35/5 in every act. Bonus items as above. No Upgrade step. Chance drops: 40% power, 30% equipment, 20% finish. |
+| Elite | Money +$2. 1 guaranteed random relic (act 3: pick 1 of 3 relics). Figure draft as above (3 choices) but rarity 60/35/5 in every act. Bonus items as above. 1 Upgrade step (pick a figure, then the next tier of one of its paths). Chance drops: 40% power, 30% equipment, 20% finish. |
 | Boss | Money +$5. Pick 1 of 3 relics (Boss and Rare relics first, then others). One finish (for a figure you choose) AND 1 Upgrade step. Pick 1 of 3 figures (Rare only, ones you do not own; falls back down in rarity). One guaranteed power (50%) or equipment (50%). |
 | Treasure chest | A relic (rarity weights 65/30/5 Common/Uncommon/Rare; never Boss). The act 1 chest always gives a Rare relic. Equipment only if every relic is held. |
 | Fight made harder by a lost minigame | +$5 and one extra item step (power/equipment/finish) before the normal rewards. |
-- Trophy Case relic: +1 figure choice. Ascension 6: figure choices capped at 2 (also the boss pick) and all chance drops x0.5.
+- Trophy Case relic: +1 figure choice. Ascension 7: figure choices capped at 2 (also the boss pick) and all chance drops x0.5.
 - Power slots: 3. A power drop with full slots lets you replace a held power or discard the new one.
 
 ### Shop (fresh stock each visit, from `shop_config.tres`)
@@ -173,7 +173,7 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Wall Piece | 6 | 88 | 1 | 1.5 | 0.6 | 1 | 0.8 | uneatable, boss body |
 
 ### Upgrade trees
-Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades/<figure>/tree.tres`, listed in `RunConfig.upgrade_trees`): two paths of three tiers (`a1`..`a3`, `b1`..`b3`; each tier is an `UpgradeData` with a name, a description, stat overrides / multipliers and an optional effect script). Rules: tiers are taken in order; the figure's FIRST upgrade picks its path and locks the other (at most 3 upgrades per figure); upgrades belong to the figure and are lost if it is replaced; finishes are a separate slot. Tier effects are cumulative (tier 2 on top of tier 1...; multipliers compound). The Upgrade reward step shows both paths until the first pick, then only the chosen path (owned / available / locked boxes, tap for the description). Sources: bosses 1 Upgrade step (plus 1 finish), the shop's one Upgrade ($20), duplicate figures (Recruit / Upgrade); regular combats and elites never give one, the Trader's high trade grants one for the new figure. Enemies: the Ascension 1 enemy upgrade chance rolls tier 1 on a random path; from Ascension 5 elite and boss enemies can roll up to tier 2 on it; Mirror Match copies your tiers exactly. Upgrade pips (one per tier owned) show on figures and on the deck strip; the Inventory figure details and the Compendium figure page show the tree. Saved runs migrate the old single upgrades to tiers (Hair Trigger = Fuse 1, Twin Rockets = Artillery 2, Boom Boom = Boom 2, Bomb Shelter = Shell 2, Full Haunt = Haunt 3, Rallying Cry = Charge 3, Long Fuse = Fuse 2, ... lower tiers of the path are filled in).
+Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades/<figure>/tree.tres`, listed in `RunConfig.upgrade_trees`): two paths of three tiers (`a1`..`a3`, `b1`..`b3`; each tier is an `UpgradeData` with a name, a description, stat overrides / multipliers and an optional effect script). Rules: tiers are taken in order; the figure's FIRST upgrade picks its path and locks the other (at most 3 upgrades per figure); upgrades belong to the figure and are lost if it is replaced; finishes are a separate slot. Tier effects are cumulative (tier 2 on top of tier 1...; multipliers compound). The Upgrade reward step shows both paths until the first pick, then only the chosen path (owned / available / locked boxes, tap for the description). Sources: elites 1 Upgrade step, bosses 1 Upgrade step (plus 1 finish), the shop's one Upgrade ($20), duplicate figures (Recruit / Upgrade); regular combats never give one, the Trader's high trade grants one for the new figure. Enemies: from Ascension 5 (Upgraded Enemies) they roll tier 1 on one path, elites and bosses' figures up to tier 2; Mirror Match copies your tiers exactly. Upgrade pips (one per tier owned) show on figures and on the deck strip; the Inventory figure details and the Compendium figure page show the tree. Saved runs migrate the old single upgrades to tiers (Hair Trigger = Fuse 1, Twin Rockets = Artillery 2, Boom Boom = Boom 2, Bomb Shelter = Shell 2, Full Haunt = Haunt 3, Rallying Cry = Charge 3, Long Fuse = Fuse 2, ... lower tiers of the path are filled in).
 
 | Figure | Path | Tier | Name | Effect |
 |---|---|---|---|---|
@@ -384,7 +384,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Boss | Second Wind | The first of your figures knocked off each combat returns to the deck strip. (Only from boss rewards.) |
 
 Exact numbers: Blast Cap x1.5 radius; Bully x2 within 200 px of the edge; Grippy Table: damping x1/0.7; Home Field x0.5 in the bottom third; Last One Standing x2 power, x0.5 knockback; Opening Act first flick x2; Underdog x1.5 power; Gravity Well x2 pulls (Magnet, Magnet Charm, Magnet Throw); Trophy Case +1 figure choice; Extra Pocket +1 deck slot (Boss rarity, boss reward only); Starter Walls pops a 190 x 26 wall above every unflicked deck figure before the enemy's first turn (lasts that turn); Second Wind returns the first knocked-off figure each combat to its deck slot; Clean Sheet gives a random power if no figure was lost; Aim Assist shows the first bounce.
-The enemy-side versions (Ascension 7+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act (never economy relics).
+The enemy-side versions (Ascension 8+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act (never economy relics).
 
 ### Powers (12; 3 slots; used up when used; using one never ends the turn)
 | Power | Effect (numbers) |
@@ -502,7 +502,7 @@ Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a
 | 1 | Sniper Squad | 5 Snipers (mass 0.4, radius 40, flick x1.5, accuracy 0.98) | 2 | no | Fragile, accurate. |
 | 2 | Trangle | 1 body, mass 8, radius 120, flick x2.8, concave-triangle collision shape | 2 | yes | Gets 12 rad/s spin on every flick (decays 1.8/s) so its hollows sweep figures. |
 | 2 | Slime | Large (r100, m5, flick x2) | 1 per slime piece on the table (cap 4) | yes | Splits (impact >=350 px/s) into 2 medium (r70, m2.4; split >=300), each into 2 small (r45, m0.9, never split). New pieces ignore hits 0.5 s and take half knockback until the next round. |
-| 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 4) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s or an arm jammed on a pin breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
+| 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 4) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s, or ANY contact between an arm/ball and a pin (arena or Pinhead pin, no speed threshold, no waiting), breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
 | 3 | Mad Creator | Creator (r60, m3, bounce 0.9) in a 480 px box of 4 breakable walls (8000 health each) | 2 (first flick is always the Creator's) | no | While in the box it flicks itself 150-520 px; where it stops, the floor space under it (Grunt, Speedo, Bumper, Powerhouse) summons that figure in front of the box (max 5 summons). Player hits and explosions break walls. |
 Each act picks one of its two bosses at random at run start (no repeats). Boss accuracy is 0.7-0.98 (data), scaled by act only from Ascension 3. "Boss body" tag (Wall pieces, Trangle, Skull-o-tron core, Slime large, Mad Creator): when a Bummer takes one over, its shot must never go off the table.
 
@@ -520,8 +520,8 @@ Each act picks one of its two bosses at random at run start (no repeats). Boss a
 
 ---
 
-## 9. Ascension (0-10)
-Selector on New Run; highest unlocked level saved in `user://ascension.json`; winning at the highest unlocked level unlocks the next (to 10). Level shown in the top bar ("A3"), saved with the run, recorded in run history, per-level win stats in Run History. Every number is in `resources/ascension_config.tres`.
+## 9. Ascension (0-11, data-driven)
+The level list is `AscensionConfig.level_names` / `level_descriptions` (`max_level` = list size - 1, no cap in code; each system reads its level number from the "Level numbers" exports, e.g. `level_upgraded`). Selector on New Run (a scrolling grid); highest unlocked level saved in `user://ascension.json` (version 2: an older file's level 5+ is shifted up by one on load); winning at the highest unlocked level unlocks the next. Level shown in the top bar ("A3"), saved with the run, recorded in run history, per-level win stats in Run History. Every number is in `resources/ascension_config.tres`.
 
 ### Ascension 0 baseline (flat)
 4 enemies per regular combat in every act; no act stat multiplier (bosses too); no random enemy finishes/equipment/upgrades; elites: no stat boost, no guaranteed gear, no enemy relic. Still present at level 0: encounter and elite pools, AI depth by tier, boss rules and back walls, the player reward curve (3/2/1 choices, bonus items), event penalties, encounter-FORCED gear (The Setup's Skull, Mirror Match copies of your gear), the act 3 elite "pick 1 of 3 relics" reward.
@@ -529,16 +529,19 @@ Selector on New Run; highest unlocked level saved in `user://ascension.json`; wi
 ### Levels (each includes all lower ones)
 | Lvl | Name | Effect |
 |---|---|---|
-| 1 | Geared Enemies | Regular enemies roll gear (act 2: 25% finish, 15% equipment; act 3: 50% / 35% / 10% a tier 1 upgrade on a random path); elites and bosses roll at the next act's rates, and from Ascension 5 they can roll tier 2 upgrades. Always compatible. |
+| 1 | Geared Enemies | Regular enemies roll gear: finishes and equipment only (act 2: 25% finish, 15% equipment; act 3: 50% / 35%); elites and bosses roll at the next act's rates. No upgrade tiers. |
 | 2 | Harsher Events | A lost minigame gives BOTH penalties: extra Grunt AND gear on an enemy. |
 | 3 | Rising Threat | Act multipliers return: accuracy x1.05/1.1, flick power x1.1/1.2, mass x1.1/1.25 (acts 2/3); bosses accuracy x1.05/1.1, power x1.1/1.2, mass x1.15/1.3; regular combats 4/5/6 enemies. |
 | 4 | Leaner Economy | Shop prices x1.5 (rounded up). |
-| 5 | Hardened Elites | Elite enemies get the EliteConfig stat boost (x1.05 mass/power/accuracy in act 1, 1.0 later) and, in acts 2-3, one guaranteed role-fitting item each (50% equipment / 50% finish). Act 1 elites get no gear. |
-| 6 | Fewer Offers | Figure choices capped at 2 (including the boss pick); chance drops halved. |
-| 7 | Elite Relics | Elites carry one enemy relic in every act (random from the 7-relic enemy pool); shown in the banner and a red line under the top bar. |
-| 8 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo. |
-| 9 | Bigger Squads | +1 enemy in every regular combat (on top of Level 3's 4/5/6). |
-| 10 | Double Boss | After the act 3 boss you fight the other act 3 boss immediately (no rewards between). Winning both wins the run. |
+| 5 | Upgraded Enemies | Enemies with an upgrade tree roll tier 1 on one path (random among combat paths): regular enemies 15% / 30% / 45% by act (`enemy_tier1_chance`). Elites' and bosses' figures use the next act's rates and can reach tier 2 (`elite_tier2_chance` 0 / 25% / 50% of those that rolled, by the shifted act). Figures without a tree (most bosses, summons) get none; no tier 3. Upgrade pips on enemies are bigger with a dark backing. |
+| 6 | Hardened Elites | Elite enemies get the EliteConfig stat boost (x1.05 mass/power/accuracy in act 1, 1.0 later) and, in acts 2-3, one guaranteed role-fitting item each (50% equipment / 50% finish). Act 1 elites get no gear. |
+| 7 | Fewer Offers | Figure choices capped at 2 (including the boss pick); chance drops halved. |
+| 8 | Elite Relics | Elites carry one enemy relic in every act (random from the 7-relic enemy pool); shown in the banner and a red line under the top bar. |
+| 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo. |
+| 10 | Bigger Squads | +1 enemy in every regular combat (on top of Level 3's 4/5/6). |
+| 11 | Double Boss | After the act 3 boss you fight the other act 3 boss immediately (no rewards between). Winning both wins the run. |
+
+Migration: saved unlock progress and in-progress runs from before the insertion (no version stored) shift a level of 5+ up by one (`AscensionProgress.migrate_level`). Run history entries keep their stored number; older entries (no `asc_version`) at level 5+ display the old name ("Ascension 6 (old: Fewer Offers)") and are counted apart in the per-level stats.
 
 ---
 

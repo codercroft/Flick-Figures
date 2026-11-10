@@ -69,6 +69,7 @@ static func record_run(run, won: bool) -> void:
 		"date": Time.get_datetime_string_from_system(false, true).left(16),
 		"won": won,
 		"ascension": run.ascension,
+		"asc_version": AscensionProgress.VERSION,
 		"act": run.act + 1,
 		"acts": run.config.acts,
 		"node": node_text,
@@ -103,18 +104,45 @@ static func overall_stats() -> Dictionary:
 	return {"runs": count, "wins": wins, "win_rate": float(wins) / count if count > 0 else 0.0, "furthest_act": furthest}
 
 
-## Per Ascension level: {level: {runs, wins}} for every level that has finished runs (old runs count as level 0).
-static func ascension_stats() -> Dictionary:
+## Level names from before "Upgraded Enemies" was inserted as level 5 (history entries with no `asc_version` and a level
+## of 5 or more keep their stored number and show these names; they are counted apart from today's levels).
+const LEGACY_NAMES := ["Base game", "Geared Enemies", "Harsher Events", "Rising Threat", "Leaner Economy", "Hardened Elites",
+		"Fewer Offers", "Elite Relics", "Boss Upgrades", "Bigger Squads", "Double Boss"]
+
+
+static func is_legacy_level(entry: Dictionary) -> bool:
+	return int(entry.get("asc_version", 1)) < AscensionProgress.VERSION and int(entry.get("ascension", 0)) >= AscensionProgress.FIRST_SHIFTED_LEVEL
+
+
+## "Ascension 6: Fewer Offers" for an entry (the name as it was at the time for older entries, marked "old").
+static func ascension_label(entry: Dictionary, config: AscensionConfig) -> String:
+	var level := int(entry.get("ascension", 0))
+	if level <= 0:
+		return ""
+	if is_legacy_level(entry):
+		var old_name: String = LEGACY_NAMES[level] if level < LEGACY_NAMES.size() else "?"
+		return "Ascension %d (old: %s)" % [level, old_name]
+	return "Ascension %d" % level
+
+
+## Per Ascension level: an array of {label, level, legacy, runs, wins}, sorted, for every level that has finished runs
+## (old runs count as level 0). Works for any number of levels.
+static func ascension_stats() -> Array:
 	_load()
-	var stats := {}
+	var groups := {}
 	for entry in _data.runs:
 		var level := int(entry.get("ascension", 0))
-		if not stats.has(level):
-			stats[level] = {"runs": 0, "wins": 0}
-		stats[level].runs += 1
+		var legacy := is_legacy_level(entry)
+		var key := "%s%d" % ["old " if legacy else "", level]
+		if not groups.has(key):
+			groups[key] = {"level": level, "legacy": legacy, "runs": 0, "wins": 0,
+					"label": "Ascension %d%s" % [level, " (old level)" if legacy else ""]}
+		groups[key].runs += 1
 		if entry.won:
-			stats[level].wins += 1
-	return stats
+			groups[key].wins += 1
+	var list: Array = groups.values()
+	list.sort_custom(func(a, b): return a.level < b.level or (a.level == b.level and a.legacy and not b.legacy))
+	return list
 
 
 ## Per figure, keyed by resource path: {name, picked, in_deck, wins, win_rate (-1 if never in a final deck)}.

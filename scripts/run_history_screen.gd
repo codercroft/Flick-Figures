@@ -36,13 +36,10 @@ func _build_stats() -> void:
 	add_text("Runs played: %d     Wins: %d     Win rate: %d%%\nFurthest act reached: %d of %d" % [
 			overall.runs, overall.wins, roundi(overall.win_rate * 100.0), overall.furthest_act, RunManager.config.acts], 32)
 	var by_level := RunHistory.ascension_stats()
-	if by_level.size() > 1 or not by_level.has(0):
+	if by_level.size() > 1 or (by_level.size() == 1 and by_level[0].level > 0):
 		add_heading("Ascension", 36)
-		var levels := by_level.keys()
-		levels.sort()
-		for level in levels:
-			var record: Dictionary = by_level[level]
-			add_text("Ascension %d: %d won of %d (%d%%)" % [level, record.wins, record.runs, roundi(100.0 * record.wins / record.runs)], 30)
+		for record in by_level:
+			add_text("%s: %d won of %d (%d%%)" % [record.label, record.wins, record.runs, roundi(100.0 * record.wins / record.runs)], 30)
 	add_heading("Figures", 36)
 	var sort_row := HBoxContainer.new()
 	sort_row.add_theme_constant_override("separation", 12)
@@ -90,8 +87,8 @@ func _build_runs() -> void:
 		var result := "WON" if entry.won else "LOST"
 		var where := "all %d acts" % entry.acts if entry.won else "Act %d, %s" % [entry.act, entry.node]
 		var header := Button.new()
-		var level := int(entry.get("ascension", 0))
-		header.text = "%s   %s%s\n%s" % [result, entry.date, "   Ascension %d" % level if level > 0 else "", where]
+		var level_text := RunHistory.ascension_label(entry, RunManager.config.ascension)
+		header.text = "%s   %s%s\n%s" % [result, entry.date, "   " + level_text if level_text != "" else "", where]
 		header.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		header.custom_minimum_size = Vector2(0.0, 110.0)
 		header.add_theme_font_size_override("font_size", 32)

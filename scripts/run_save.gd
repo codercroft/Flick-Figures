@@ -30,6 +30,7 @@ static func save(run, pending_node := -1) -> void:
 		"version": VERSION,
 		"seed": run.run_seed,
 		"ascension": run.ascension,
+		"ascension_version": AscensionProgress.VERSION,
 		"act": run.act,
 		"current_node": run.current_node,
 		"pending_node": pending_node,
@@ -78,6 +79,8 @@ static func load_into(run) -> int:
 		return -2
 	run.run_seed = int(data.get("seed", 0))
 	run.ascension = int(data.get("ascension", 0))
+	if int(data.get("ascension_version", 1)) < AscensionProgress.VERSION:  # (saved before the new level 5 was inserted)
+		run.ascension = AscensionProgress.migrate_level(run.ascension)
 	run.in_second_boss = false
 	run.act = int(data.get("act", 0))
 	run.current_node = int(data.get("current_node", -1))

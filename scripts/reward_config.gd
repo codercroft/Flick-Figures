@@ -15,7 +15,7 @@ extends Resource
 ## What a bonus item can be: "power" or "equipment" (Upgrades come only from bosses, the shop and duplicate figures).
 @export var bonus_item_kinds: Array[String] = ["power", "equipment"]
 ## Upgrade steps after an ELITE fight (after the figure draft).
-@export var elite_upgrades := 0
+@export var elite_upgrades := 1
 ## Rarity weights for drafted figures, one entry per act: (common, uncommon, rare). Act 1 is mostly
 ## common; later acts lean toward rarer figures. The shop's figures use the same weights.
 ## Figure choices after an ELITE fight roll each slot's rarity with these weights (common, uncommon, rare) in every act.
