@@ -33,11 +33,6 @@ var team := Team.PLAYER
 var data: FigureData  # may be a modified copy of base_data (upgrades and finishes change stats)
 var base_data: FigureData  # the original, untouched figure data (what to respawn from)
 var ability: FigureAbility
-var blast_shield := false:  # set by main while the team has a Firecracker (draws the faint ring)
-	set(value):
-		if value != blast_shield:
-			blast_shield = value
-			queue_redraw()
 ## The toy finish (one general upgrade) and the figure-specific upgrade on this figure, or null.
 var finish: FinishData
 var upgrades: Array[UpgradeData] = []  # the tiers this figure owns (RunManager.owned_upgrades), in order
@@ -415,9 +410,6 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-badge_radius, badge_size * 0.33), equipment.label,
 				HORIZONTAL_ALIGNMENT_CENTER, badge_radius * 2.0, badge_size, Color(0.1, 0.1, 0.12))
 	ability.draw_overlay(self)
-	if blast_shield:  # a Firecracker on the team protects it from the team's own explosions
-		draw_arc(Vector2.ZERO, radius + 7.0, 0.0, TAU, 40, Color(1.0, 0.65, 0.2, 0.45), 3.0, true)
-		draw_arc(Vector2.ZERO, radius + 12.0, 0.0, TAU, 40, Color(1.0, 0.65, 0.2, 0.15), 2.0, true)
 	if frozen_rounds > 0:
 		draw_circle(Vector2.ZERO, radius, Color(0.6, 0.9, 1.0, 0.55))
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(0.85, 1.0, 1.0), 6.0, true)
@@ -721,26 +713,10 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 			* RunManager.relic_knockback_taken(self, source) * aura_knockback_multiplier() * zone_knockback_multiplier())
 
 
-## Share of an ENEMY explosion's push this figure ignores because of a teammate Firecracker's Safety Officer cover.
-func _explosion_cover(source: Figure) -> float:
-	if source == null or source.team == team or not is_inside_tree():
-		return 0.0
-	var best := 0.0
-	for node in get_tree().get_nodes_in_group("figures"):
-		var other := node as Figure
-		if other.team == team and not other.knocked_off and other.ability != null:
-			best = maxf(best, other.ability.get_team_explosion_reduction(other))
-	var combat = RunManager.combat
-	if combat != null and combat.has_method("lingering_cover_for"):
-		best = maxf(best, combat.lingering_cover_for(team))
-	return clampf(best, 0.0, 1.0)
-
-
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
 ## get_explosion_multiplier (0 = immune).
 func take_explosion(impulse: Vector2, source: Figure) -> void:
 	unglue()
-	impulse *= 1.0 - _explosion_cover(source)
 	var multiplier := ability.get_explosion_multiplier(self, source)
 	if multiplier > 0.0:
 		ability.on_took_explosion(self, impulse * multiplier)  # (Duwall's shell)
@@ -864,19 +840,10 @@ func show_popup(text: String, color := Color(1.0, 0.85, 0.2)) -> void:
 ## Pushes every other figure within blast_radius away (except `spared`, if given). The push is
 ## `force` at the center and fades to zero at the edge.
 func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
-	force *= take_detonate_multiplier()
 	blast_radius *= RunManager.relic_explosion_multiplier(team)  # Blast Cap
 	_blast_radius = blast_radius
 	create_tween().tween_property(self, "_blast_progress", 1.0, BLAST_RING_TIME).from(0.0)
 	Figure.blast(get_tree(), global_position, blast_radius, force, self, spared)
-
-
-## Firecracker's Heavy Charges marks the explosives it sets off; their next blast is stronger (used once).
-func take_detonate_multiplier() -> float:
-	var mult: float = get_meta("detonate_force_mult", 1.0)
-	if has_meta("detonate_force_mult"):
-		remove_meta("detonate_force_mult")
-	return mult
 
 
 ## An explosion at `center` (set off by `source`, which may be null for a power) that pushes every
@@ -885,7 +852,6 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 		source: Figure = null, spared: Figure = null, source_team := -1) -> void:
 	if source != null:
 		source_team = source.team
-	var protected := team_has_firecracker(tree, source_team)
 	force *= RunManager.explosion_force_multiplier()
 	AudioManager.play_boom(blast_radius)
 	for wall in tree.get_nodes_in_group("breakable_walls"):
@@ -899,33 +865,17 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 		if distance >= blast_radius:
 			continue
 		var direction := offset.normalized() if distance > 0.01 else Vector2.UP
-		if blast_immune(other, source_team, protected):
-			other.ability.on_exploded.call_deferred(other, source)  # (it still reacts, e.g. a Firecracker, but is not pushed)
+		if blast_immune(other, source_team):
+			other.ability.on_exploded.call_deferred(other, source)  # (it still reacts, e.g. a Bombo chain, but is not pushed)
 			continue
 		other.take_explosion(direction * force * (1.0 - distance / blast_radius), source)
 		other.ability.on_exploded.call_deferred(other, source)
 
 
-## True if any figure of `team` on the table has a Firecracker's explosion immunity.
-static func team_has_firecracker(tree: SceneTree, team: int) -> bool:
-	if team < 0:
-		return false
-	for node in tree.get_nodes_in_group("figures"):
-		var other := node as Figure
-		if other.team == team and not other.knocked_off and other.ability.grants_explosion_immunity(other):
-			return true
-	return false
-
-
 ## True if an explosion (or implosion) set off by `source_team` does not push `victim`: the player's own blasts never
-## push any player figure (the base rule), and an ENEMY Firecracker (`team_protected`) shields the enemy team from its
-## own team's blasts. Blasts from the other side always push.
-static func blast_immune(victim: Figure, source_team: int, team_protected: bool) -> bool:
-	if source_team < 0:
-		return false
-	if source_team == Team.PLAYER and victim.team == Team.PLAYER:
-		return true  # the player's own explosions never push any player figure
-	return team_protected and victim.team == source_team
+## push any player figure. Enemy explosions push everyone, their own side included.
+static func blast_immune(victim: Figure, source_team: int) -> bool:
+	return source_team == Team.PLAYER and victim.team == Team.PLAYER
 
 
 ## Asks main.gd to replace this figure with `pieces` ({data, position, velocity} dictionaries).

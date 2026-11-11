@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Heavy Charges"
-description = "Explosives it sets off get +30% force."
-ability_overrides = {"detonation_force": 1.3}
+display_name = "Homing Mines"
+description = "Mines drift toward moving opponents within about 250 px."
+ability_overrides = {"homing_range": 250.0}

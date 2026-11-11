@@ -75,7 +75,6 @@ var _aim_figure: Figure
 var _selected: Figure  # the figure chosen for aiming (highlighted)
 var _turn_serial := 0  # bumped by the watchdog so a stuck turn's coroutines stop
 var _busy_time := 0.0  # seconds spent settling or in the enemy turn
-var _lingering_cover := {}  # team -> {reduction, rounds}
 var _bonus_queue: Array = []  # player figures that get a flick right after the current one settles
 var _press_on_selected := false  # the current press landed on the figure that was already selected
 var _hold_pending := false  # Spitter: this touch may turn into a spray if it is held still
@@ -205,18 +204,8 @@ func _physics_process(_delta: float) -> void:
 				figure.flickable = true
 		turret_may_fire = _real_motion()
 	_knock_off_fallen_figures()
-	_update_blast_shields()
 	if not (SandboxSetup.active and SandboxSetup.free_flick):
 		turret_may_fire = _settling and _state != State.GAME_OVER and _real_motion()
-
-
-## Figures of a team with a Firecracker on the table get the faint "explosion shield" ring.
-func _update_blast_shields() -> void:
-	var player_shield := Figure.team_has_firecracker(get_tree(), Figure.Team.PLAYER)
-	var enemy_shield := Figure.team_has_firecracker(get_tree(), Figure.Team.ENEMY)
-	for figure in _all_figures():
-		if _is_alive(figure):
-			figure.blast_shield = player_shield if figure.team == Figure.Team.PLAYER else enemy_shield
 
 
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
@@ -313,10 +302,6 @@ func _start_player_turn(new_round := true) -> void:
 			if _is_alive(figure):
 				figure.tick_round()
 		arena.tick_round()
-		for team in _lingering_cover.keys():
-			_lingering_cover[team].rounds -= 1
-			if _lingering_cover[team].rounds <= 0:
-				_lingering_cover.erase(team)
 	for figure in _players:
 		if _is_alive(figure):
 			figure.turn_flicks = 0
@@ -1572,13 +1557,6 @@ func refresh_equipment(slot: int) -> void:
 			figure.set_equipment(RunManager.deck_equipment[slot])
 
 
-## Firecracker's Safety Officer: its team keeps the explosion cover for `rounds` rounds after it is knocked off.
-func add_lingering_cover(team: int, reduction: float, rounds: int) -> void:
-	_lingering_cover[team] = {"reduction": reduction, "rounds": rounds}
-
-
-func lingering_cover_for(team: int) -> float:
-	return _lingering_cover[team].reduction if _lingering_cover.has(team) else 0.0
 
 
 ## The player's figure gets a flick right after the current flick settles (like Speedo's second flick).

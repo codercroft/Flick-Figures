@@ -85,7 +85,7 @@ const TOUCH_MARGIN := 4.0
 @export var blast_hit_bonus := 50.0
 ## An explosion that pushes allies counts against it by this fraction of what it would score on them.
 @export var blast_ally_factor := 1.0
-## How sure the AI is that a shot through an ally (a bonk into a Skull wearer, Firecracker) lands as predicted.
+## How sure the AI is that a shot through an ally (a bonk into a Skull wearer) lands as predicted.
 @export var chain_confidence := 0.8
 ## Pusher pushes without rebounding, so edge pushes with it are worth this much more.
 @export var shove_edge_multiplier := 1.6
@@ -118,8 +118,14 @@ const TOUCH_MARGIN := 4.0
 ## Eater: hitting a smaller figure eats it (worth about a knock-off); the same figure on our own side is a loss.
 @export var eater_eat_bonus := 150.0
 @export var eater_ally_penalty := 180.0
-## Hitting a player Firecracker (its team is immune to its own explosions): bonus, mostly if it is knocked off.
-@export var firecracker_target_bonus := 80.0
+## Land Miner: a shot path through a PLAYER mine's trigger radius sets it off under our shooter (cost per mine, at most
+## `mine_count_cap`); shoving a player figure across one of OUR mines earns `mine_push_bonus` per mine; a Land Miner's flick
+## earns `mine_lane_bonus` per player flick lane (player figure -> enemy figure) each mine it would drop lies near (at most 2 per mine).
+@export var mine_path_penalty := 60.0
+@export var mine_push_bonus := 70.0
+@export var mine_lane_bonus := 45.0
+@export var mine_lane_reach := 45.0
+@export var mine_count_cap := 3
 ## Goo Chain Glue Guy: bonus per extra player figure close to the target that the chain could pick up, and how close.
 @export var glue_chain_bonus := 60.0
 @export var glue_chain_reach := 150.0
@@ -492,8 +498,6 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		score = hit_player_bonus + kill_bonus * knocked_off * kill_weight + edge_bonus * edge_weight * pushed_toward_edge
 		if kill_weight > 1.0:
 			score += bloodluster_kill_bonus * knocked_off  # a kill earns a bonus flick
-		if other.ability.grants_explosion_immunity(other):
-			score += firecracker_target_bonus * (0.4 + knocked_off)  # removing it makes the player's own blasts hurt them
 		if other.ability.has_active_wall(other):
 			score += shield_break_bonus  # moving a Shieldon drops its wall
 		if other.is_doused():
@@ -507,8 +511,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 				score += shell_break_bonus
 			score -= shell_toughness_penalty * shell.remaining / shell.max
 	else:
-		# Hitting an ally can still pay: it may be shoved into a player figure (a bonk into a Mr Potential's Skull wearer), or it
-		# may be a Firecracker that goes off next to player figures.
+		# Hitting an ally can still pay: it may be shoved into a player figure (a bonk into a Mr Potential's Skull wearer),.
 		var ally_value := 0.0
 		var behind := _player_behind_ally(enemy, other, contact - enemy.global_position, players)
 		if behind:
@@ -522,13 +525,10 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 			var ally_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
 			if other.bummer_effect_at(ally_end).is_empty():
 				ally_value += bummer_exit_bonus
-		var ally_blast := other.ability.get_ai_blast(other)
-		if not ally_blast.is_empty() and ally_blast.when == "ally_hit":
-			combo += _blast_value(other.global_position, ally_blast, other, enemy, players, table)
 		if ally_value > 0.0 or combo > 0.0:
 			kind = "ally"
 		score = ally_value if ally_value > 0.0 else -ally_hit_penalty
-	# A Firecracker that hits anything sets off the team's other explosive figures: count their blasts.
+	# A figure that sets off its team's explosives when it hits (Bombo's Shrapnel): count their blasts.
 	if enemy.ability.sets_off_team_explosives(enemy):
 		combo += _team_detonation_value(enemy, players, table)
 	score += combo * weight
@@ -573,6 +573,13 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		if other.team != enemy.team and target_velocity.length() > other.stop_speed:  # pushing the target through our own juice
 			var slide_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
 			score += juice_push_bonus * mini(_arena.juice_pieces_on_path(other.global_position, slide_end, other.radius, enemy.team), 3)
+	# Landmines: a path through a player mine sets it off under us; a player figure shoved across our mines is worth it;
+	# a Land Miner's flick drops mines along the way (worth more across the player's flick lanes).
+	score -= mine_path_penalty * mini(_mines_near_path(_other_team(enemy.team), enemy.global_position, contact), mine_count_cap)
+	if other.team != enemy.team and target_velocity.length() > other.stop_speed:
+		var mine_slide_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
+		score += mine_push_bonus * mini(_mines_near_path(enemy.team, other.global_position, mine_slide_end), mine_count_cap)
+	score += _mine_lane_value(enemy, enemy.global_position, direction, minf(hit_distance, _travel_distance(enemy, speed))) * weight
 	# Would the shooter itself slide off after the hit? (Light shooters bounce back off heavy targets.)
 	score -= _self_penalty * _leave_chance(enemy, contact, shooter_velocity, table)
 	# Aim error can make the shot miss, and a shooter that misses just keeps sliding. Count that risk.
@@ -605,6 +612,82 @@ func _turrets_covering(team: int, opposing: bool, from: Vector2, to: Vector2) ->
 		if Geometry2D.get_closest_point_to_segment(turret.position, from, to).distance_to(turret.position) <= turret.range:
 			count += 1
 	return count
+
+
+func _other_team(team: int) -> int:
+	return Figure.Team.PLAYER if team == Figure.Team.ENEMY else Figure.Team.ENEMY
+
+
+## How many of `owner_team`'s landmines have their trigger radius touched by the path from `from` to `to`.
+func _mines_near_path(owner_team: int, from: Vector2, to: Vector2) -> int:
+	var count := 0
+	for node in get_tree().get_nodes_in_group("mines"):
+		var mine := node as LandMine
+		if mine != null and mine.team == owner_team \
+				and Geometry2D.get_closest_point_to_segment(mine.global_position, from, to).distance_to(mine.global_position) <= mine.trigger_radius:
+			count += 1
+	return count
+
+
+## Land Miner: the value of the mines a flick from `from` along `direction` would drop (one every `spacing` px, the first
+## after `spacing`, up to `length` px): each is worth more the more player flick lanes pass near it, and a spot near a
+## player figure counts as a lane.
+func _mine_lane_value(enemy: Figure, from: Vector2, direction: Vector2, length: float) -> float:
+	var stats := enemy.ability.get_mine_stats(enemy)
+	if stats.is_empty():
+		return 0.0
+	var spacing: float = stats.spacing
+	var reach: float = stats.trigger_radius + mine_lane_reach
+	var players: Array[Figure] = []
+	var allies: Array[Figure] = []
+	for node in get_tree().get_nodes_in_group("figures"):
+		var figure := node as Figure
+		if figure.knocked_off:
+			continue
+		if figure.team == enemy.team:
+			if figure != enemy:
+				allies.append(figure)
+		else:
+			players.append(figure)
+	var total := 0.0
+	var k := 1
+	while spacing * k <= length:
+		var point := from + direction * spacing * k
+		var lanes := 0
+		for player in players:
+			if player.global_position.distance_to(point) <= reach + 140.0:
+				lanes += 1
+			for ally in allies:
+				if Geometry2D.get_closest_point_to_segment(point, player.global_position, ally.global_position).distance_to(point) <= reach:
+					lanes += 1
+		total += mine_lane_bonus * mini(lanes, 2)
+		k += 1
+	return total
+
+
+## Land Miner: a longer flick that lays mines across the player's lanes (a candidate in the reposition choice). Free
+## flights only; the path must be clear and the end safely on the table.
+func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2, stats: Dictionary) -> Dictionary:
+	var best := {}
+	var best_score := -INF
+	var safe_area := table.grow(-reposition_edge_margin)
+	for i in 16:
+		var direction := Vector2.from_angle(TAU * i / 16.0)
+		for factor in [1.1, 2.1]:
+			var distance: float = stats.spacing * factor
+			var speed := distance * enemy.linear_damp + enemy.stop_speed
+			var end := _flight_end(enemy, enemy.global_position, direction * speed, table)
+			if not safe_area.has_point(end):
+				continue
+			if not _first_hit(enemy, shape, direction, distance + 30.0).is_empty():
+				continue
+			var score := -_nearest_distance(end, players) + _mine_lane_value(enemy, enemy.global_position, direction, distance) \
+					- mine_path_penalty * mini(_mines_near_path(_other_team(enemy.team), enemy.global_position, end), mine_count_cap) \
+					- zone_path_penalty * _zone_crossings(enemy, enemy.global_position, end)
+			if score > best_score:
+				best_score = score
+				best = {"kind": "reposition", "score": score, "direction": direction, "speed": speed, "distance": distance}
+	return best
 
 
 ## How many player Alchemist zones the straight path from `from` to `to` touches (our figure would be Doused).
@@ -891,13 +974,12 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 	var force: float = blast.force * RunManager.explosion_force_multiplier()
 	var total := 0.0
 	_fast_slides = true
-	var protected := Figure.team_has_firecracker(get_tree(), Figure.Team.ENEMY)  # our Firecracker shields our own figures
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
 		if figure == source or figure == spared or figure.knocked_off:
 			continue
-		if Figure.blast_immune(figure, Figure.Team.ENEMY, protected):
-			continue  # a friendly figure with a Firecracker around costs nothing, so blasts near our own figures are free
+		if Figure.blast_immune(figure, Figure.Team.ENEMY):
+			continue
 		var offset := figure.global_position - center
 		var distance := offset.length()
 		if distance >= radius:
@@ -1136,6 +1218,12 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 			best_score = score
 			best = {"kind": "reposition", "score": score, "direction": direction,
 					"speed": speed, "distance": reposition_distance}
+	var mine_stats := enemy.ability.get_mine_stats(enemy)
+	if not mine_stats.is_empty():  # Land Miner: a mine-laying flick across the player's lanes may beat a plain reposition
+		var lay := _best_mine_lay(enemy, shape, players, table, mine_stats)
+		if not lay.is_empty() and (best.is_empty() or lay.score > best_score):
+			best = lay
+			best_score = lay.score
 	if best.is_empty() and near_edge:
 		# Boxed in: a gentle flick straight toward the middle of the table is better than passing.
 		var inward := (table.get_center() - enemy.global_position).normalized()
@@ -1515,7 +1603,7 @@ func _rejoin_move(enemy: Figure) -> Dictionary:
 	return {"kind": "reposition", "score": 1.0, "direction": to_home.normalized(), "speed": speed, "distance": distance + 20.0}
 
 
-## The blasts of the other explosive figures on `enemy`'s team (set off by a Firecracker's hit), scored as usual.
+## The blasts of the other explosive figures on `enemy`'s team (set off by a hit, Bombo's Shrapnel), scored as usual.
 func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2) -> float:
 	var registry := RunManager.config.registry if RunManager.config != null else null
 	if registry == null:
@@ -1547,7 +1635,7 @@ func _team_detonation_value(enemy: Figure, players: Array[Figure], table: Rect2)
 ## Blastoid: the best spot to tap. Aim points are every player figure plus the middle of each close pair (a blast
 ## there catches both). The projectile is cast to see what it hits first (it bursts there) or, if nothing is in the
 ## way, at the aim point (capped at its range). Scored by the blast (pushes, knock-offs, our own figures hurt), a
-## bonus for a direct hit and the blasts of allied Firecrackers the explosion would set off.
+## bonus for a direct hit 
 func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2) -> Dictionary:
 	var proj := enemy.ability.get_shot_stats(enemy)
 	var shape := CircleShape2D.new()
@@ -1574,27 +1662,12 @@ func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2) 
 			reach = clampf(hit.distance, start_gap, wanted)
 			direct = hit.collider != null and hit.collider.team == Figure.Team.PLAYER
 		var center: Vector2 = enemy.global_position + direction * reach
-		var score := _blast_value(center, blast, enemy, null, players, table) + _chain_blast_value(enemy, center, blast.radius, players, table)
+		var score := _blast_value(center, blast, enemy, null, players, table)
 		if direct:
 			score += blastoid_hit_bonus
 		if best.is_empty() or score > best.score:
 			best = {"kind": "shot", "score": score, "point": enemy.global_position + direction * reach}
 	return best
-
-
-## Allied Firecrackers caught in a blast go off too: their own blasts count.
-func _chain_blast_value(source: Figure, center: Vector2, radius: float, players: Array[Figure], table: Rect2) -> float:
-	var total := 0.0
-	for node in get_tree().get_nodes_in_group("figures"):
-		var ally := node as Figure
-		if ally == source or ally.knocked_off or ally.team != source.team:
-			continue
-		if ally.global_position.distance_to(center) > radius + ally.radius:
-			continue
-		var chain := ally.ability.get_ai_blast(ally)
-		if not chain.is_empty() and chain.get("when", "") == "ally_hit":
-			total += _blast_value(ally.global_position, chain, ally, null, players, table)
-	return total
 
 
 ## Alchemist: the empty spot where a debuff zone would catch the most player figures (nearer its middle counts

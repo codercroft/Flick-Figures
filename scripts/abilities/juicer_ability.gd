@@ -1,7 +1,7 @@
 class_name JuicerAbility
 extends FigureAbility
 ## While it moves, Juicer leaves a trail of sticky floor material. Each piece pushes any OPPOSING
-## figure that rolls over it (moving ones only) BACK the way Juicer came from, and lightly Douses any that touch it. Its own team is not
+## figure that rolls over it (moving ones only) the way Juicer was MOVING when it laid the piece, and lightly Douses any that touch it. Its own team is not
 ## affected. Pieces fade after a few rounds. The push is much weaker than an arena boost patch (470).
 
 ## Rounds a trail piece lasts (a round = until the player's next turn).
@@ -28,7 +28,7 @@ extends FigureAbility
 ## contact, not stacking; an Alchemist's stronger Douse wins if a figure has both).
 @export var douse_rounds := 2
 @export var douse_knockback := 1.2
-## Slick path (Edge Steering): trail pieces push toward the nearest table edge instead of back the way Juicer came.
+## Slick path (Edge Steering): trail pieces push toward the nearest table edge instead of along Juicer's travel.
 @export var steer_to_edge := false
 
 var _last_drop := Vector2.INF
@@ -47,7 +47,7 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 	if figure.global_position.distance_to(_last_drop) < segment_spacing:
 		return
 	_last_drop = figure.global_position
-	var push := -figure.linear_velocity.normalized()
+	var push := figure.linear_velocity.normalized()  # the way Juicer was moving when it laid this piece
 	if steer_to_edge:
 		push = _toward_nearest_edge(figure.global_position, combat.board.get_table_rect())
 	combat.arena.add_trail_segment(figure, figure.global_position, push, self)

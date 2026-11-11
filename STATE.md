@@ -84,7 +84,7 @@ Ascension 4: every price x1.5, rounded up.
 ---
 
 ## 3. Figures
-Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2400), damping multiplier, bounce, knockback-taken multiplier (data value; abilities add more, listed below). Every figure works on either side (white ring = player, red = enemy). "Explosive" = registry tag: a Firecracker's hit sets it off. "Economy" = enemies never get it.
+Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2400), damping multiplier, bounce, knockback-taken multiplier (data value; abilities add more, listed below). Every figure works on either side (white ring = player, red = enemy). "Explosive" = registry tag: Bombo's Shrapnel sets it off. "Economy" = enemies never get it.
 
 ### Draftable figures
 | Rarity | Figure | Mass | Radius | Flick power | Damping x | Bounce | KB taken x | Upgrade paths | Tags |
@@ -93,7 +93,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Blastoid | 1 | 56 | 1 | 1 | 0.7 | 1 | Artillery / Nuke | explosive |
 | Common | Cha-ching | 1 | 55 | 1 | 1 | 0.7 | 1 | Savings / Bounty | economy |
 | Common | Crazy Man | 1 | 55 | 1 | 1 | 1 | 1 | Frenzy / Hype | - |
-| Common | Firecracker | 0.8 | 50 | 1 | 1 | 0.7 | 1 | Blast Master / Safety Officer | explosive |
+| Uncommon | Land Miner | 1 | 55 | 1 | 1 | 0.7 | 1 | Multi-Mine / Smart Bombs | - |
 | Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Sticky / Tar | - |
 | Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Firehose / Sprinkler | - |
 | Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
@@ -120,7 +120,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Rare | Eater | 0.9 | 54 | 1 | 1 | 0.6 | 1 | Appetite / Digest | - |
 | Rare | Engineer | 1 | 60 | 1 | 1 | 0.7 | 1 | Turret / Tech | - |
 
-Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Economy": Cha-ching, Piggy Bank. Grunt is the starter-only figure (4 in the starting deck).
+Explosion rule: explosions set off by the player's side never push player figures; enemy explosions push everyone (their own side too; there is no team immunity any more). Notes: "Explosive": Bombo, Sneaky Bomber, Blastoid, Aggro-bom (Bombo's Shrapnel sets them off). "Economy": Cha-ching, Piggy Bank. Grunt is the starter-only figure (4 in the starting deck).
 
 ### Abilities as implemented
 | Figure | Ability |
@@ -129,11 +129,11 @@ Notes: "Explosive": Bombo, Sneaky Bomber, Firecracker, Blastoid, Aggro-bom. "Eco
 | Splitter | First impact (>=150 px/s) after a flick splits it into 2 Minis (radius 45, mass 0.78, flick power x0.7, 25% less knockback dealt, no income) that burst out at 260 px/s, +-55 deg, keeping 20% of its speed. Minis are fresh unflicked figures. Triple Split: 3 minis. |
 | Cha-ching | Economy only (see Win rules); +$1 per enemy knocked off while it is on the table. |
 | Aggro-bom | Counts collisions (pair cooldown 0.2 s); on the 4th it explodes (radius 320, force 1500) and survives; count persists across turns. Hair Trigger: 3. Pips drawn above it. |
-| Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 1200) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. When a Firecracker's hit (or anything else that sets off explosives) detonates it, it fires a rocket at the nearest opposing figure on the table instead of exploding where it stands (it stays put and keeps its action). Twin Rockets: 2 rockets per shot (a tap fans them +-6 degrees around the tapped point; a detonation sends one at each of the 2 nearest opposing figures, both at the same one if only one is left). |
+| Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 1200) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. When a set-off (Bombo's Shrapnel upgrade) detonates it, it fires a rocket at the nearest opposing figure on the table instead of exploding where it stands (it stays put and keeps its action). Twin Rockets: 2 rockets per shot (a tap fans them +-6 degrees around the tapped point; a detonation sends one at each of the 2 nearest opposing figures, both at the same one if only one is left). |
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
-| Firecracker | Explodes (radius 260, force 1500) when a teammate hits it (sparing that teammate) or when caught in an explosion (1.5 s re-arm). Its own flick hit detonates every other explosive teammate on the table once per flick. Enemy Firecrackers only: while one is on the table the enemy team ignores its own team's explosions (orange ring). The player's side needs none (see Win rules / explosions). |
+| Land Miner | Average stats. While moving from its OWN flick it drops a landmine every 700 px traveled (the first after 700 px, not at the start; a full-power flick travels about 1590 px, so 2 mines; at most 8 live mines per Land Miner, oldest removed first). A mine is a small team-colored marker (ring = player white / enemy red, faint trigger circle) that blocks and collides with nothing and stays for the combat. An OPPOSING figure whose center comes within 70 px sets it off: blast radius 140, force 600 (x1.3 explosion multiplier), then it is gone. Mine blasts follow the friendly-explosion rule (player mines never push player figures; enemy mines push everyone, their own side included), count for Blast Cap and Glow-in-the-dark, and explosions never set mines off. AI: paths through player mines cost 60 per mine, shoving a player figure across its own mines earns 70, a Land Miner's flicks (also a dedicated mine-laying candidate when it has nothing better) earn 45 per player flick lane near each mine they would drop. |
 | Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Goo Chain: several figures, stuck figures turn sticky, chain cap 5. |
-| Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures back the way it came (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
+| Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures the way Juicer was moving when it laid each piece (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
 | Magnet | While on the board bends the path of moving OPPOSING figures within 500 px (none inside 150 px; up to 1600 px/s^2 at the edge). Implodes when knocked off (radius 300, strength 1800, 0.4 s; 440 / 2700 if wearing Short Fuse). Big Magnet: radius 700, 2300. |
 | Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. |
 | Alchemist | Tap empty board: debuff zone radius 150 (placing uses its action). Opposing figures inside take x1.5 knockback. Touching/passing through Douses an opposing figure for 2 rounds (keeps the x1.5). One zone per Alchemist. |
@@ -188,7 +188,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Blastoid | Artillery | 3 | Rocket Ring | Firing a rocket fires rockets all around him. |
 | Blastoid | Nuke | 1 | Hot Warheads | Rocket power +25%. |
 | Blastoid | Nuke | 2 | Dense Warheads | Rocket radius -50%, rocket power +50%. |
-| Blastoid | Nuke | 3 | Quake Warheads | Rocket power +50%, radius -20%; a rocket that hits an opponent gives every enemy the Earthquake shove. |
+| Blastoid | Nuke | 3 | Quake Warheads | Rocket power +50%, radius -20%. A rocket that hits an opponent slams it along the rocket's direction (2.5x the rocket's normal knockback on a touching figure, `direct_hit_multiplier`) on top of the normal small blast, then every OTHER enemy gets the Earthquake shove. |
 | Cha-ching | Savings | 1 | Big Spender | +$5 survival bonus. |
 | Cha-ching | Savings | 2 | Extra Option | After surviving a combat, gain an extra option when choosing a figure. |
 | Cha-ching | Savings | 3 | Discount Card | Shop prices -15% while it is in your deck. |
@@ -201,12 +201,6 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Crazy Man | Hype | 1 | Wider Aura | Aura radius +30%. |
 | Crazy Man | Hype | 2 | Pep Talk | Teammates in the aura gain +25% flick power. |
 | Crazy Man | Hype | 3 | Thick Skin | Teammates in the aura gain +30% knockback resistance. |
-| Firecracker | Blast Master | 1 | Big Boom | Explosion radius +25%. |
-| Firecracker | Blast Master | 2 | Full Chains | Its explosion also sets off the team's explosives (full chains). |
-| Firecracker | Blast Master | 3 | Heavy Charges | Explosives it sets off get +30% force. |
-| Firecracker | Safety Officer | 1 | Padded Team | Team takes 25% less knockback from enemy explosions. |
-| Firecracker | Safety Officer | 2 | Lingering Cover | The cover lasts 1 round after it is knocked off. |
-| Firecracker | Safety Officer | 3 | Full Immunity | Team is fully immune to enemy explosions too. |
 | Glue Guy | Sticky | 1 | Goo Chain | Chains of up to 5. |
 | Glue Guy | Sticky | 2 | Sticky Flicks | +1 flick for every figure he is stuck to. |
 | Glue Guy | Sticky | 3 | Thin Prey | Opponents stuck to him lose 50% mass while stuck. |
@@ -219,6 +213,12 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Juicer | Squeeze | 1 | Stickier Juice | Juice Douse +30% (from +20%). |
 | Juicer | Squeeze | 2 | Big Splash | The splash radius is 50% bigger. |
 | Juicer | Squeeze | 3 | Sticky Max | Juice Douse +50% (from +30%). |
+| Land Miner | Multi-Mine | 1 | More Mines | Drops mines more often: about 3 per full flick (spacing x0.67). |
+| Land Miner | Multi-Mine | 2 | Bigger Bangs | Mine blast force +40%. |
+| Land Miner | Multi-Mine | 3 | Minefield | Drops mines even more often: about 4 per full flick (spacing x0.5 overall). |
+| Land Miner | Smart Bombs | 1 | Bigger Mines | Mine radius and force +30%. |
+| Land Miner | Smart Bombs | 2 | Tighter Pattern | Mines drop a bit more often (x0.8); radius and force +15% more. |
+| Land Miner | Smart Bombs | 3 | Homing Mines | Mines drift toward moving opponents within about 250 px (a gentle pull); they stay put otherwise. |
 | Magnet | Field | 1 | Big Magnet | Bigger, stronger pull. |
 | Magnet | Field | 2 | Repel Pulse | Once per combat, after flicking, tap it to briefly reverse the pull and push opponents away. |
 | Magnet | Field | 3 | Repel Pulses | The push can be used once per turn. |
@@ -465,11 +465,11 @@ Regular combats pick an unplayed encounter available in the act (all used = rese
 | 1 | Glass Cannons | 2 Powerhouse, 2 Grunt | Pinball |
 | 1 | Pushover | 2 Pusher, 2 Grunt | Corner Posts |
 | 1 | Well-Rounded Squad | Powerhouse, Duwall, Magnet (each mass x1.25, power x1.15, accuracy x1.1) + Grunts | random |
-| 2 | Tinderbox | Bombo, 2 Firecracker | The Funnel |
+| 2 | Tinderbox | Bombo, 2 Land Miner | The Funnel |
 | 2 | Ghost Patrol | 3 Ghost, Duwall | Open Field |
 | 2 | The Setup | Grunt wearing Mr Potential's Skull, 2 Grunt, Rally | Divider |
 | 2 | Sticky Situation | Glue Guy, 2 Splitter | Mud Flats |
-| 2 | Fireworks | 2 Firecracker, 2 Speedo, Magnet (5, trimmed to 4 below Ascension 3) | random |
+| 2 | Fireworks | 2 Land Miner, 2 Speedo, Magnet (5, trimmed to 4 below Ascension 3) | random |
 | 3 | Fortress | 2 Duwall, Magnet, 2 Powerhouse (5, trimmed to 4 below Ascension 3) | Fortress Walls |
 | 3 | Speed Trap | Juicer, 2 Speedo, Pinhead | Speedway |
 | 3 | Demolition Crew | Crazy Man, 2 Pusher, Bombo, Sneaky Bomber (5, trimmed to 4 below Ascension 3) | Pinball |
@@ -484,7 +484,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | 1 | Pinball Wizard | Crazy Man + 2 Speedo inside his aura | Corner Posts | 1 |
 | 2 | Swarm | 8 Swarmling | random | 3 |
 | 2 | Banshee | 5 Ghost | Open Field | 1 |
-| 2 | Powder Keg | Firecracker, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
+| 2 | Powder Keg | Land Miner, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
 | 2 | Glue Gang | Glue Guy with Goo Chain + 2 Splitter | random | 1 |
 | 2 | Juice Bar | Juicer, 2 Speedo, Bummer | random | 1 |
 | 3 | Mirror Match | one enemy per combat slot cycling through YOUR deck's figure types (economy ones become Grunts), each with copies of your equipment/finish/upgrade for that slot; mass/power/accuracy x1.1 | random | 1 |
@@ -512,7 +512,7 @@ Each act picks one of its two bosses at random at run start (no repeats). Boss a
 - **Candidate shots**: for every enemy x every player figure: angle offsets (-10, -5, 0, 5, 10 degrees) x power levels (0.2-0.6 of reference speed 2400 x the figure's power). Shots are shape-cast against figures and arena bodies; walls and pins block; floor patches, Juicer trails, magnet zones and Magnets bend the path (simulated in 0.08 s steps).
 - **Prediction**: elastic collision along the line of centres (masses, bounce, knockback multipliers, auras, zones, shell damage), then the slide (damping) vs the distance to the table edge gives a knock-off chance (ramps 70-120% of the way).
 - **Score of an attack on a player figure** = 100 (hit) + 100 x knock-off chance + 60 x push toward the edge, minus 300 x chance the shooter itself leaves the table (also x miss chance), minus 20 x power (lowest power that still works wins). Hitting an ally first is -150 unless it is lined up with a player figure behind it (then a chain value). Must beat 40 to count; otherwise a 180 px repositioning flick (away from edges, into auras) or a pass.
-- **Ability awareness**: explosions (Bombo/Aggro-bom/Firecracker/Sneaky Bomber/Blastoid: pushed player figures score like hits, pushed allies cost; allies are free while its side has a Firecracker), Firecracker detonation chains, Aggro-bom line-ups, Magnet curves, Pusher pushes, Duwall shell cracking (80 + 60 break, minus toughness), Shieldon wall breaking (+40), Alchemist zones (places its zone at turn start; avoids crossing player zones) and Doused targets, Engineer turrets (placed at combat start and every enemy turn on the best lane-covering spot; penalty for paths through player turret range), Pinhead pin bank shots, Eater (+150 for eating a smaller player figure, -180 for a friend unless it is The Collector's feeder), Energizer (+70 for hitting an ally), Bloodluster kill value x1.6 and bonus flicks, Speedo second shots (only if >=120), Bummer auras (avoid ending in one, -150 for flicking a figure inside one, +100 for shoving an ally out), Glue chains (+60 per extra player figure within 150 px), Blastoid shots (taken when better than its best flick), Crazy Man aura (stays inside), Ghost/Wings wrapping.
+- **Ability awareness**: explosions (Bombo/Aggro-bom/Sneaky Bomber/Blastoid: pushed player figures score like hits, pushed allies cost), set-off chains, landmines (see Land Miner), Aggro-bom line-ups, Magnet curves, Pusher pushes, Duwall shell cracking (80 + 60 break, minus toughness), Shieldon wall breaking (+40), Alchemist zones (places its zone at turn start; avoids crossing player zones) and Doused targets, Engineer turrets (placed at combat start and every enemy turn on the best lane-covering spot; penalty for paths through player turret range), Pinhead pin bank shots, Eater (+150 for eating a smaller player figure, -180 for a friend unless it is The Collector's feeder), Energizer (+70 for hitting an ally), Bloodluster kill value x1.6 and bonus flicks, Speedo second shots (only if >=120), Bummer auras (avoid ending in one, -150 for flicking a figure inside one, +100 for shoving an ally out), Glue chains (+60 per extra player figure within 150 px), Blastoid shots (taken when better than its best flick), Crazy Man aura (stays inside), Ghost/Wings wrapping.
 - **Bummer takeover**: the same search with inverted goals (+300 for its own figure leaving the table; hits on allies +120, kills +200); boss bodies instead get -2500 x leave chance and rewards for moving away from the Bummer.
 - **Tiers**: regular fights (and regular enemies) depth 1; elite fights depth 2 (adds fine angles -7.5..7.5 and powers .25-.55); boss fights depth 3 (adds wide angles +-20/30/45 and powers 0.7/0.8). Combo bonuses (blasts, chains, bank shots) x1 / x1.5 / x2. Thinking budget 700 ms per decision.
 - **Aim error**: random within `accuracy`-scaled max 20 degrees (accuracy 1 = perfect).
@@ -588,7 +588,7 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 
 ### Upgrade trees: interpretations and gaps (2026-11-08)
 - Tier effects are cumulative; "x%" changes compound (Blastoid Nuke: power x1.25 then x1.5 then x1.5, radius x0.5 then x0.8). Absolute values ("from +20%") are set, not added.
-- Firecracker: the team immunity is now the player's base rule, so Safety Officer reduces ENEMY explosion knockback (25%, 100%), keeps that cover 1 round after it is knocked off, and Full Chains means a teammate-triggered explosion also sets off the team's explosives. Blast Master tier 3 marks explosives it sets off (+30% force once).
+- Firecracker was removed (Land Miner took its place; saved runs convert it, dropping its upgrades). Enemy explosions push every figure, their own side included.
 - Cha-ching: Extra Option = +1 figure choice on the next regular reward screen if it survived; Big Bounty / Bounty Hunter set the knock-off bonus to $4 / $3 (base $1 plus the listed amount); Discount Card is a run modifier while it is in the deck.
 - Magnet: Repel Pulse is an instant outward shove (650 px/s at the magnet, fading to half at the edge of its pull range), used by tapping the greyed Magnet after it flicked (once per combat, once per turn with tier 3); Collapse Now is a tap on a flickable Magnet; Black Hole lasts 6 s.
 - Piggy Bank: flick power scales by half of the scale gained; Receipts / Big Spender count the share of the money spent this run (`RunManager.money_spent`, saved).

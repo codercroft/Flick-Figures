@@ -190,6 +190,11 @@ func get_turret_stats(figure: Figure) -> Dictionary:
 	return stats if not stats.is_empty() else second.get_turret_stats(figure)
 
 
+func get_mine_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_mine_stats(figure)
+	return stats if not stats.is_empty() else second.get_mine_stats(figure)
+
+
 func get_ai_blast(figure: Figure) -> Dictionary:
 	var blast := first.get_ai_blast(figure)
 	return blast if not blast.is_empty() else second.get_ai_blast(figure)
@@ -250,8 +255,7 @@ func get_ai_aggro(figure: Figure) -> Dictionary:
 	return info if not info.is_empty() else second.get_ai_aggro(figure)
 
 
-func grants_explosion_immunity(figure: Figure) -> bool:
-	return first.grants_explosion_immunity(figure) or second.grants_explosion_immunity(figure)
+
 
 
 func on_bloodlust_bonus(figure: Figure) -> void:
@@ -330,17 +334,16 @@ func get_reward_choice_bonus(figure: Figure) -> int:
 	return first.get_reward_choice_bonus(figure) + second.get_reward_choice_bonus(figure)
 
 
-func on_projectile_hit(figure: Figure, target: Figure) -> void:
-	first.on_projectile_hit(figure, target)
-	second.on_projectile_hit(figure, target)
+func on_projectile_hit(figure: Figure, target: Figure, direction := Vector2.ZERO) -> void:
+	first.on_projectile_hit(figure, target, direction)
+	second.on_projectile_hit(figure, target, direction)
 
 
 func get_stuck_enemy_flick_multiplier(figure: Figure) -> float:
 	return first.get_stuck_enemy_flick_multiplier(figure) * second.get_stuck_enemy_flick_multiplier(figure)
 
 
-func get_team_explosion_reduction(figure: Figure) -> float:
-	return maxf(first.get_team_explosion_reduction(figure), second.get_team_explosion_reduction(figure))
+
 
 
 func get_pin_options(figure: Figure) -> Dictionary:

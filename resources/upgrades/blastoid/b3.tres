@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1")
 display_name = "Quake Warheads"
-description = "Rocket power +50%, radius -20%; a rocket that hits an opponent gives every enemy the Earthquake shove."
-ability_overrides = {"earthquake_on_hit": true}
+description = "Rocket power +50%, radius -20%. A rocket that hits an opponent slams it 2.5x harder, then shakes every other enemy."
+ability_overrides = {"earthquake_on_hit": true, "direct_hit_multiplier": 2.5}
 ability_multipliers = {"blast_force": 1.5, "blast_radius": 0.8}

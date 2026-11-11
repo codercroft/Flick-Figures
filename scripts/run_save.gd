@@ -97,14 +97,16 @@ static func load_into(run) -> int:
 	run.deck_upgrade.clear()
 	var deck_paths: Array = data.get("deck", [])
 	for i in deck_paths.size():
-		var figure = _load(deck_paths[i])
+		var removed: bool = REMOVED_FIGURES.has(str(deck_paths[i]))
+		var figure = _load(REMOVED_FIGURES[deck_paths[i]] if removed else deck_paths[i])
 		run.deck.append(figure if figure is FigureData else run.config.starting_figure)
 		run.deck_equipment.append(_item(data, "deck_equipment", i, EquipmentData))
 		run.deck_finish.append(_item(data, "deck_finish", i, FinishData))
-		run.deck_upgrade.append(_upgrade_state(data, i, run.deck[i]))
+		# (a removed figure's replacement starts with no upgrades: the old tiers belonged to its old tree)
+		run.deck_upgrade.append(RunManager.NO_UPGRADE if removed else _upgrade_state(data, i, run.deck[i]))
 	run.picked_figures.clear()
 	for path in data.get("picked", []):
-		var picked = _load(path)
+		var picked = _load(REMOVED_FIGURES.get(path, path))
 		if picked is FigureData:
 			run.picked_figures.append(picked)
 	run.equipment_inventory.clear()
@@ -218,6 +220,10 @@ static func _paths(list: Array) -> Array:
 	for resource in list:
 		paths.append(_path(resource))
 	return paths
+
+
+## Figures taken out of the game -> what a saved run gets instead (Firecracker became a Land Miner).
+const REMOVED_FIGURES := {"res://resources/figures/firecracker.tres": "res://resources/figures/land_miner.tres"}
 
 
 static func _load(path) -> Resource:

@@ -117,18 +117,13 @@ func get_reward_choice_bonus(_figure: Figure) -> int:
 
 
 ## A projectile this figure fired hit `target` (a figure).
-func on_projectile_hit(_figure: Figure, _target: Figure) -> void:
+func on_projectile_hit(_figure: Figure, _target: Figure, _direction := Vector2.ZERO) -> void:
 	pass
 
 
 ## Flick-power factor on an OPPOSING figure that is glued to this one (Glue Guy's Tar).
 func get_stuck_enemy_flick_multiplier(_figure: Figure) -> float:
 	return 1.0
-
-
-## Share (0-1) of enemy explosion knockback this figure's whole team ignores while it is on the table.
-func get_team_explosion_reduction(_figure: Figure) -> float:
-	return 0.0
 
 
 ## Helper: sets off every other explosive teammate on the table (the registry's "explosive" tag).
@@ -213,6 +208,11 @@ func on_opponent_knocked_off(_figure: Figure, _victim: Figure) -> void:
 ## Pinhead: the radius of the temporary pin this figure may place before it is flicked (0 = none).
 func get_pin_radius(_figure: Figure) -> float:
 	return 0.0
+
+
+## Land Miner: the mines it lays while moving ({spacing, trigger_radius, radius, force}, {} = none). The enemy AI reads it.
+func get_mine_stats(_figure: Figure) -> Dictionary:
+	return {}
 
 
 ## Engineer: the turret this figure may place before it is flicked ({} = none). See EngineerAbility.
@@ -304,13 +304,13 @@ func predict_shell_damage(_figure: Figure, _shooter: Figure, _closing_speed: flo
 ## ENEMY AI HINTS (the AI reads these to plan shots that use abilities; they change nothing in play).
 
 ## The explosion this figure is expected to set off, or {}: {"radius", "force", "when"} where when is
-## "hit" (on its first hit), "stop" (where it stops, if it touched nothing) or "ally_hit" (when a teammate hits it).
+## "hit" (on its first hit), "stop" (where it stops, if it touched nothing) .
 func get_ai_blast(_figure: Figure) -> Dictionary:
 	return {}
 
 
-## "Explosive" figures (Bombo, Sneaky Bomber, Firecracker) blow up on command when a teammate Firecracker
-## sets them off: explode now, using the normal blast numbers.
+## "Explosive" figures (Bombo, Sneaky Bomber, Blastoid, Aggro-bom) blow up on command when a teammate that
+## "sets off explosives" (Bombo's Shrapnel upgrade) triggers them: explode now, using the normal blast numbers.
 func detonate(_figure: Figure) -> void:
 	pass
 
@@ -360,7 +360,7 @@ func get_rally_speed(_figure: Figure) -> float:
 	return 0.0
 
 
-## AI hint: hitting anything with this figure also sets off the team's other explosive figures (Firecracker).
+## AI hint: hitting anything with this figure also sets off the team's other explosive figures (Bombo's Shrapnel).
 func sets_off_team_explosives(_figure: Figure) -> bool:
 	return false
 
@@ -406,11 +406,6 @@ func on_shape_hit(_figure: Figure, _other: Figure, _shape_node: Node, _speed: fl
 ## ENEMY AI HINT: multiplier on this figure's mass when it hits something during its own flick (Pusher).
 func get_hit_mass_multiplier(_figure: Figure) -> float:
 	return 1.0
-
-
-## Firecracker: while this figure is on the table, its whole team takes no knockback from explosions its own team causes.
-func grants_explosion_immunity(_figure: Figure) -> bool:
-	return false
 
 
 ## Bloodluster: it was just granted a bonus flick (a kill earned it).

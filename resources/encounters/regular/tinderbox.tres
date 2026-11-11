@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
 [ext_resource type="Resource" path="res://resources/figures/bombo.tres" id="f0"]
-[ext_resource type="Resource" path="res://resources/figures/firecracker.tres" id="f1"]
+[ext_resource type="Resource" path="res://resources/figures/land_miner.tres" id="f1"]
 [ext_resource type="Resource" path="res://resources/arenas/funnel.tres" id="arena"]
 
 [sub_resource type="Resource" id="enemy_0"]

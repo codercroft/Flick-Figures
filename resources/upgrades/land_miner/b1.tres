@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Padded Team"
-description = "Team takes 25% less knockback from enemy explosions."
-ability_overrides = {"team_explosion_reduction": 0.25}
+display_name = "Bigger Mines"
+description = "Mine radius and force +30%."
+ability_multipliers = {"explosion_radius": 1.3, "explosion_force": 1.3}

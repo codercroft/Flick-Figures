@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Big Boom"
-description = "Explosion radius +25%."
-ability_multipliers = {"explosion_radius": 1.25}
+display_name = "More Mines"
+description = "Drops mines more often: about 3 per full flick."
+ability_multipliers = {"mine_spacing": 0.67}

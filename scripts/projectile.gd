@@ -1,6 +1,6 @@
 class_name Projectile
 extends Area2D
-## Blastoid's shot: flies straight, and explodes (a minor blast through Figure.blast, so Firecracker, Duwall's shell,
+## Blastoid's shot: flies straight, and explodes (a minor blast through Figure.blast, so Duwall's shell,
 ## Blast Cap and the other explosion effects all react) when it touches a figure, wall or pin, or at its max range.
 ## The firing Blastoid is never pushed by it.
 
@@ -44,7 +44,7 @@ func _on_body_entered(body: Node) -> void:
 	if other != null and other.team == owner_figure.team and other.on_deck:
 		return  # passes through its own side's figures on the deck, like their flicks do
 	if other != null and is_instance_valid(owner_figure):
-		owner_figure.ability.on_projectile_hit(owner_figure, other)
+		owner_figure.ability.on_projectile_hit(owner_figure, other, direction)
 	_explode()
 
 

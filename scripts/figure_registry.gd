@@ -11,8 +11,8 @@ extends Resource
 @export var economy: Array[FigureData] = []
 
 
-## The "explosive" tag: figures that blow up (Bombo, Sneaky Bomber, Firecracker). A Firecracker that hits
-## something sets off every other explosive figure of its team (FirecrackerAbility).
+## The "explosive" tag: figures that blow up (Bombo, Sneaky Bomber, Blastoid, Aggro-bom). Bombo's Shrapnel upgrade
+## sets off every other explosive figure of its team.
 @export var explosive: Array[FigureData] = []
 
 ## Boss figures, one of which a run picks to end on.

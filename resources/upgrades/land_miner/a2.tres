@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Full Immunity"
-description = "Team is fully immune to enemy explosions too."
-ability_overrides = {"team_explosion_reduction": 1.0}
+display_name = "Bigger Bangs"
+description = "Mine blast force +40%."
+ability_multipliers = {"explosion_force": 1.4}

@@ -3,9 +3,9 @@ extends FigureAbility
 ## Blastoid has two actions and each turn it takes ONE of them: flick it (drag, it moves like an average figure
 ## and does not fire) or TAP a spot on the board (a quick tap with no drag): it stays where it is and fires a
 ## small projectile at that spot. The projectile makes a minor explosion on contact with a figure, wall or pin,
-## or when it reaches the tapped spot (through the shared Figure.blast, so Firecracker, Duwall's shell and other
-## explosion effects react). There is no range limit: tap anywhere on the board. Blastoid carries the registry's "explosive" tag: when a
-## Firecracker's hit (or anything else that "sets off" explosives) detonates it, it fires a rocket at the nearest opposing figure on the
+## or when it reaches the tapped spot (through the shared Figure.blast, so Duwall's shell, Blast Cap and other
+## explosion effects react). There is no range limit: tap anywhere on the board. Blastoid carries the registry's "explosive" tag: when a teammate's hit (Bombo's Shrapnel upgrade,
+## or anything else that "sets off" explosives) detonates it, it fires a rocket at the nearest opposing figure on the
 ## table and stays put. Upgrade Twin Rockets: every shot fires 2 rockets.
 
 ## How fast the projectile flies (px/s).
@@ -21,9 +21,14 @@ extends FigureAbility
 ## Rocket Ring: firing also sends this many rockets out all around Blastoid (0 = none).
 @export var ring_rockets := 0
 @export var ring_distance := 420.0
-## Quake Warheads: a rocket that hits an opponent gives every opposing figure the Earthquake shove.
+## Quake Warheads (Nuke path): a rocket that hits an opponent first slams THAT opponent along the rocket's direction with
+## `direct_hit_multiplier` x the rocket's normal knockback (0 = off; the normal, reduced-radius blast still goes off), then every OTHER
+## opposing figure gets the Earthquake shove (`earthquake_speed`).
 @export var earthquake_on_hit := false
 @export var earthquake_speed := 380.0
+@export var direct_hit_multiplier := 0.0
+## The share of a rocket's force a figure touching it normally feels (the blast falloff at contact).
+@export var direct_hit_falloff := 0.55
 
 
 ## Tap-to-fire stats ({} = none); the enemy AI reads the same dictionary.
@@ -53,13 +58,20 @@ func _fire_ring(figure: Figure) -> void:
 		_fire_rocket(figure, figure.global_position + Vector2.from_angle(TAU * i / ring_rockets) * ring_distance)
 
 
-## Quake Warheads: every opposing figure gets shoved in a random direction.
-func on_projectile_hit(figure: Figure, target: Figure) -> void:
-	if not earthquake_on_hit or target.team == figure.team:
+## Quake Warheads: the target takes a huge direct shove, every other opponent gets the Earthquake shove.
+func on_projectile_hit(figure: Figure, target: Figure, direction := Vector2.ZERO) -> void:
+	if target.team == figure.team:
+		return
+	if direct_hit_multiplier > 0.0 and direction != Vector2.ZERO:
+		# `direct_hit_multiplier` x the rocket's normal knockback on a figure it touches (`direct_hit_falloff` of its force; the Nuke
+		# path's small blast radius would otherwise leave the target out of its own blast). The blast itself still goes off.
+		var push := direction.normalized() * blast_force * RunManager.explosion_force_multiplier() * direct_hit_falloff * direct_hit_multiplier
+		target.take_explosion(push, figure)
+	if not earthquake_on_hit:
 		return
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other != null and not other.knocked_off and other.team != figure.team:
+		if other != null and not other.knocked_off and other.team != figure.team and other != target:
 			other.nudge(Vector2.from_angle(randf() * TAU) * earthquake_speed)
 
 
@@ -74,7 +86,7 @@ func _fire_rocket(figure: Figure, point: Vector2) -> void:
 	projectile.range_left = maxf(offset.length() - start_gap, 0.0)
 	projectile.radius = projectile_radius
 	projectile.blast_radius = blast_radius
-	projectile.blast_force = blast_force * figure.take_detonate_multiplier()
+	projectile.blast_force = blast_force
 	projectile.position = figure.position + projectile.direction * start_gap
 	figure.get_parent().add_child(projectile)
 
@@ -83,7 +95,7 @@ func get_ai_blast(_figure: Figure) -> Dictionary:
 	return {"radius": blast_radius, "force": blast_force, "when": "detonate"}
 
 
-## Set off by a teammate Firecracker: fires a rocket at the nearest opposing figure on the table (Twin Rockets: one at
+## Set off by a teammate (the explosive tag): fires a rocket at the nearest opposing figure on the table (Twin Rockets: one at
 ## each of the 2 nearest, both at the same one if only one is left). Blastoid stays put and keeps its action.
 func detonate(figure: Figure) -> void:
 	_fire_ring(figure)

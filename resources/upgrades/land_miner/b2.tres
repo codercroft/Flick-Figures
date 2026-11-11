@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Tighter Pattern"
+description = "Drops mines a bit more often; mine radius and force +15% more."
+ability_multipliers = {"mine_spacing": 0.8, "explosion_radius": 1.15, "explosion_force": 1.15}

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/encounter_enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/figure_data.gd" id="3"]
-[ext_resource type="Resource" path="res://resources/figures/firecracker.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/figures/land_miner.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/figures/speedo.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/figures/magnet.tres" id="12"]
 

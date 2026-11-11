@@ -66,7 +66,7 @@ func get_ai_blast(_figure: Figure) -> Dictionary:
 	return {"radius": explosion_radius, "force": explosion_force, "when": "detonate"}
 
 
-## Set off by a teammate Firecracker: the big blast right now.
+## Set off by a teammate (the explosive tag): the big blast right now.
 func detonate(figure: Figure) -> void:
 	figure.explode(explosion_radius, explosion_force)
 
