@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Absorber"
-description = "Its hit absorbs a smaller figure, which shrinks inside for 3 rounds, then is knocked off. A teammate's hard hit frees it."
+description = "Its hit absorbs a smaller figure, which shrinks inside for 3 rounds, then is knocked off. A teammate's very hard hit frees it."
 rarity = 1
 label = "AB"
 icon = 35
@@ -18,6 +18,6 @@ radius = 66.0
 mass = 2.0
 bounce = 0.5
 damping_multiplier = 1.1
-flick_power_multiplier = 0.8
+flick_power_multiplier = 1.6
 accuracy = 0.8
 ability = SubResource("Resource_1")

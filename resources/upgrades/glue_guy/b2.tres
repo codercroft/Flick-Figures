@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Locked Down"
-description = "An enemy stuck to it can't flick."
-ability_overrides = {"stuck_enemy_flick": 0.0}
+description = "An enemy stuck to it flicks 50% weaker."
+ability_overrides = {"stuck_enemy_flick": 0.5}

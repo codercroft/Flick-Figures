@@ -8,9 +8,11 @@ extends FigureAbility
 ## figures pop out where it fell.
 
 ## Minimum impact speed (px/s) of the Absorber's own hit to absorb something.
-@export var absorb_speed := 300.0
+@export var absorb_speed := 150.0
 ## Minimum impact speed (px/s) of a teammate of a held figure to free it.
-@export var escape_speed := 500.0
+@export var escape_speed := 1100.0
+## Tight Grip (Spit tier 1): hits never free a held figure (it still pops out where it fell if the Absorber is knocked off).
+@export var escape_immune := false
 ## Rounds until a held figure is fully shrunk (and counts as knocked off).
 @export var shrink_rounds := 3
 ## Gut path: how many figures it can hold, and how much a figure shrinks at once when absorbed (0.5 = half size).
@@ -45,7 +47,7 @@ func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> 
 		return
 	_prune()
 	# A teammate of a held figure hits hard: the most recently absorbed one escapes.
-	if other.team != figure.team and speed >= escape_speed:
+	if other.team != figure.team and speed >= escape_speed and not escape_immune:
 		for i in range(held.size() - 1, -1, -1):
 			if held[i].figure.team == other.team:
 				_release(figure, i, Vector2.ZERO)
@@ -143,7 +145,7 @@ func get_absorb_speed(_figure: Figure) -> float:
 
 func get_escape_speed(_figure: Figure) -> float:
 	_prune()
-	return escape_speed if not held.is_empty() else 0.0
+	return escape_speed if not held.is_empty() and not escape_immune else 0.0
 
 
 func get_held_figure(_figure: Figure) -> Figure:

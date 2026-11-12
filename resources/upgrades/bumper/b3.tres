@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Easy Rolling"
-description = "Normal flick power and damping."
-data_overrides = {"flick_power_multiplier": 1.0, "damping_multiplier": 1.0}
+description = "Flick power and damping move halfway back toward normal."
+data_overrides = {"flick_power_multiplier": 0.85, "damping_multiplier": 1.3}

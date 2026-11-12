@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Goo Chain"
-description = "Chains of up to 5."
-ability_overrides = {"chain_sticky": true}
+display_name = "Sticky Grip"
+description = "Can stick to up to 3 figures at once."
+ability_overrides = {"max_stuck": 3}

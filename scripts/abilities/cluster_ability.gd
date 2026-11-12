@@ -25,6 +25,8 @@ extends FigureAbility
 
 var count := 3
 var _mass_each := 0.0
+var _tossed_this_turn := false
+var _toss_offered := false  # the "toss again" offer for the last toss was made
 var _slots: Array[Vector2] = []     # where each clustling sits (layout space)
 var _taken: Array[bool] = []        # is the slot filled right now
 var _shapes: Array[CollisionShape2D] = []
@@ -121,6 +123,8 @@ func fire_shot_at(figure: Figure, point: Vector2) -> void:
 		if _taken[i] and (_slots[i] - _origin).dot(direction) > best_dot:
 			best_dot = (_slots[i] - _origin).dot(direction)
 			best = i
+	_tossed_this_turn = true
+	_toss_offered = false
 	var spawn_at := figure.global_position + (_slots[best] - _origin) + direction * 8.0
 	_taken[best] = false
 	count -= 1
@@ -177,3 +181,17 @@ func draw_body(figure: Figure) -> void:
 		figure.draw_circle(spot, clustling_radius, fill)
 		figure.draw_arc(spot, clustling_radius - 3.0, 0.0, TAU, 28, ring, 5.0, true)
 		figure.draw_circle(spot + Vector2(-1, -1) * clustling_radius * 0.3, clustling_radius * 0.2, fill.lightened(0.4))
+
+
+func on_turn_ended(_figure: Figure) -> void:
+	_tossed_this_turn = false
+	_toss_offered = false
+
+
+## After a toss settles the player may toss again, as many times as there are clustlings to spare (never the last one).
+## (With Toss and Flick tossing keeps the action, so no window is needed.)
+func wants_post_action(figure: Figure) -> String:
+	if _tossed_this_turn and not _toss_offered and not toss_keeps_action and count > 1 and piece != null and not figure.knocked_off:
+		_toss_offered = true
+		return "toss"
+	return ""

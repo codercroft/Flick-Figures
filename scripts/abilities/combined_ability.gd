@@ -190,6 +190,11 @@ func get_turret_stats(figure: Figure) -> Dictionary:
 	return stats if not stats.is_empty() else second.get_turret_stats(figure)
 
 
+func wants_post_action(figure: Figure) -> String:
+	var post := first.wants_post_action(figure)
+	return post if post != "" else second.wants_post_action(figure)
+
+
 func get_reverse_stats(figure: Figure) -> Dictionary:
 	var stats := first.get_reverse_stats(figure)
 	return stats if not stats.is_empty() else second.get_reverse_stats(figure)

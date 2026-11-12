@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Armored"
-description = "Takes half knockback."
-data_multipliers = {"knockback_taken_multiplier": 0.5}
+description = "Takes 25% less knockback."
+data_multipliers = {"knockback_taken_multiplier": 0.75}

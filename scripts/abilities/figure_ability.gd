@@ -210,6 +210,12 @@ func get_pin_radius(_figure: Figure) -> float:
 	return 0.0
 
 
+## After this figure's action settles on the player's turn: "spray" (a Spitter may still spray) or "toss" (a Cluster may toss
+## another clustling) to offer that, "" for nothing. Called once per offer (the ability remembers it made one).
+func wants_post_action(_figure: Figure) -> String:
+	return ""
+
+
 ## Wikka Wat: the reverse it may use while moving ({charges_left, per_turn, seek}, {} = none). `can_reverse` says whether it can
 ## be used right now; `use_reverse(figure, direction)` reverses (or redirects) its momentum. The enemy AI reads these.
 func get_reverse_stats(_figure: Figure) -> Dictionary:

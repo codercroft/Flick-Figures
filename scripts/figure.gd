@@ -496,7 +496,6 @@ func _on_body_entered(body: Node) -> void:
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
-		_chain_glue.call_deferred(body)
 		var other: Figure = body
 		# Velocities change in the same step as the collision, so look at the step before too.
 		var speed := maxf((_last_velocity - other._last_velocity).length(),
@@ -792,25 +791,6 @@ func glue_cluster() -> Array[Figure]:
 	return cluster
 
 
-## Glue Guy's upgrade: a figure in a glue cluster with a chain-sticky Glue Guy sticks to whatever it hits,
-## as long as the whole chain stays within the cap.
-func _chain_glue(other: Figure) -> void:
-	if knocked_off or other.knocked_off or not is_glued():
-		return
-	var cluster := glue_cluster()
-	if cluster.has(other):
-		return
-	var cap := 0
-	for member in cluster:
-		cap = maxi(cap, member.ability.get_glue_chain_cap(member))
-	if cap <= 0:
-		return
-	var merged := cluster.duplicate()
-	for member in other.glue_cluster():
-		if not merged.has(member):
-			merged.append(member)
-	if merged.size() <= cap:
-		glue_to(other)
 func unglue() -> void:
 	for joint in glue_joints:
 		if is_instance_valid(joint):

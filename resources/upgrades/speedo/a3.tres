@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Quad Dash"
-description = "4 flicks per turn."
-ability_overrides = {"flicks_per_turn": 4}
+display_name = "Triple Dash"
+description = "3 flicks per turn."
+ability_overrides = {"flicks_per_turn": 3}

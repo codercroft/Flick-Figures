@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Building Speed"
-description = "Each flick in a turn is 15% stronger than the last."
-ability_overrides = {"power_per_flick": 0.15}
+display_name = "Flick Fury"
+description = "+10% knockback dealt for each flick Speedo has taken this combat (up to 10 flicks)."
+ability_overrides = {"flick_knockback_per_flick": 0.1}

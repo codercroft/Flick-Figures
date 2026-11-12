@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Sticky Flicks"
-description = "+1 flick for every figure he is stuck to."
-ability_overrides = {"flick_per_stuck": true}
+display_name = "Sticky Mess"
+description = "Can stick to up to 5 figures at once."
+ability_overrides = {"max_stuck": 5}

@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Spitter"
-description = "Hold instead of flicking to spray water toward your finger. Shrinks as its water runs out."
+description = "Hold to spray water toward your finger, before and/or after its flick. Shrinks as its water runs out."
 rarity = 0
 label = "SP"
 icon = 34

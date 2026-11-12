@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Tight Grip"
-description = "Escape threshold +50%."
-ability_multipliers = {"escape_speed": 1.5}
+description = "Hits never free a held figure (it still pops out where it fell if the Absorber is knocked off)."
+ability_overrides = {"escape_immune": true}

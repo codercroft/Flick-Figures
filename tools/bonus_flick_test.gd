@@ -113,8 +113,11 @@ func _play_turn(first: Node, take: Callable, between := Callable()) -> Dictionar
 			return {"stuck": true, "flicks": _main.player_flicks - flicks_before, "offers": offers}
 		if s == "turn":
 			break
-		offers += 1
 		var fig: Node = _main._bonus_figure
+		if _main._bonus_mode != "flick":  # a spray / toss window (Spitter, Cluster): not a bonus flick, just end it
+			_main._skip_bonus_flick()
+			continue
+		offers += 1
 		if take.call(offers, fig):
 			_check(fig.flickable and _main.ui.skip_button != null, "bonus figure %s is flickable on offer" % fig.data.display_name)
 			_flick(fig)
@@ -168,16 +171,15 @@ func _all() -> void:
 	_check(sp.ability.get_flick_power_multiplier(sp) > base, "second flick is stronger")
 	sp.turn_flicks = 0
 
-	print("Speedo: Zip (a knock-off earns an extra flick)")
+	print("Speedo: Zip tier 3 (+25% knockback dealt) and Dash tier 2 (+10% per flick taken)")
 	await _start([S])
 	sp = _fig(0)
-	sp.ability.kill_extra_flick = true
-	_main._flicker = sp  # (as if its own flick were in progress)
-	var before: int = sp.ability.get_flicks_per_turn(sp)
-	sp.ability.on_opponent_knocked_off(sp, null)
-	_check(sp.ability.get_flicks_per_turn(sp) == before + 1, "knock-off adds a flick (%d -> %d)" % [before, sp.ability.get_flicks_per_turn(sp)])
-	r = await _play_turn(sp, func(_n, _f): return true)
-	_check(not r.stuck and r.flicks == before + 1, "turn plays %d flicks (got %s)" % [before + 1, r])
+	sp.ability.knockback_dealt_bonus = 0.25
+	_check(absf(sp.ability.get_dealt_knockback_bonus(sp, null) - 0.25) < 0.001, "Hard Hitter: +25% knockback dealt")
+	sp.ability.flick_knockback_per_flick = 0.1
+	for i in 12:
+		sp.ability.on_flicked(sp, Vector2.ZERO)
+	_check(absf(sp.ability.get_dealt_knockback_bonus(sp, null) - 1.25) < 0.001, "Flick Fury: +10%% per flick taken, capped at 10 flicks (%.2f)" % sp.ability.get_dealt_knockback_bonus(sp, null))
 
 	print("Bloodluster: chain of bonus flicks while each flick kills")
 	await _start(["res://resources/figures/bloodluster.tres"])

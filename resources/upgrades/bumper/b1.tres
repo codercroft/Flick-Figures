@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Heavy Frame"
-description = "+30% mass."
-data_multipliers = {"mass": 1.3}
+description = "+15% mass."
+data_multipliers = {"mass": 1.15}

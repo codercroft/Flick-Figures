@@ -23,6 +23,8 @@ extends FigureAbility
 @export var water_per_round := 0.0
 
 var water := 0.0
+var _flicked_this_turn := false
+var _post_offered := false  # the after-flick spray offer was made this turn
 var spraying := false
 var _point := Vector2.ZERO
 var _full_radius := 0.0
@@ -99,3 +101,20 @@ func on_round_ticked(figure: Figure) -> void:
 		water = minf(water + water_per_round, max_water)
 		_resize(figure)
 		figure.queue_redraw()
+
+
+func on_flicked(_figure: Figure, _impulse: Vector2) -> void:
+	_flicked_this_turn = true
+
+
+func on_turn_ended(_figure: Figure) -> void:
+	_flicked_this_turn = false
+	_post_offered = false
+
+
+## Once its flick has settled it may still spray that turn (the same water, so the total stays limited).
+func wants_post_action(figure: Figure) -> String:
+	if _flicked_this_turn and not _post_offered and water > 0.05 and not figure.knocked_off:
+		_post_offered = true
+		return "spray"
+	return ""

@@ -11,7 +11,7 @@ piece = ExtResource("3")
 [resource]
 script = ExtResource("1")
 display_name = "Cluster"
-description = "Three clustlings as one body. Tap the board to toss one out (instead of flicking). Loose ones rejoin."
+description = "Three clustlings as one body. Tap the board to toss clustlings out, as many as you like but never the last (instead of flicking). Loose ones rejoin."
 rarity = 1
 label = "CL"
 icon = 33

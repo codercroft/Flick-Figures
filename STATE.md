@@ -103,8 +103,8 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | Bulwark / Spikes | - |
 | Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Brood / Shrapnel | - |
 | Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | Potency / Brew | - |
-| Uncommon | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | Gloom / Downer | - |
-| Uncommon | Absorber | 2 | 66 | 0.8 | 1.1 | 0.5 | 1 | Gut / Spit | - |
+| Rare | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | Gloom / Downer | - |
+| Uncommon | Absorber | 2 | 66 | 1.6 | 1.1 | 0.5 | 1 | Gut / Spit | - |
 | Uncommon | Cluster | 2.2 (3 x 0.73) | ~97 round the three (circles of 45) | 1 | 1 | 0.7 | 1 | Swarm / Rebound | - |
 | Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Shell / Ram | - |
 | Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | Charge / Shock | - |
@@ -134,7 +134,7 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
 | Land Miner | Average stats. Whenever it MOVES faster than 60 px/s (its own flick, a hit, a shove, Rally's nudge, an explosion; either side's turn) it adds the distance to a counter and drops a landmine every 400 px of total travel (the first after 400 px; the counter keeps running between movements; a full-power flick travels about 1590 px = 4 mines). Max 12 live mines per Land Miner (oldest removed first); no mine outside the table or within 40 px of another mine. A mine is a small team-colored marker (ring = player white / enemy red, faint trigger circle) that blocks and collides with nothing and stays for the combat. An OPPOSING figure whose center comes within 70 px sets it off: blast radius 180, force 1800 (x1.3 explosion multiplier; between Bombo 200 / 900 and Sneaky Bomber), then it is gone. Mine blasts follow the friendly-explosion rule (player mines never push player figures; enemy mines push everyone, their own side included), count for Blast Cap and Glow-in-the-dark, and explosions never set mines off. AI: paths through player mines cost 120 per mine, shoving a player figure across its own mines earns 110, a Land Miner's moves earn 30 per player flick lane near each mine they would drop (and it considers 1-3 spacings long mine-laying flicks when it has nothing better). |
 | Wikka Wat | Radius 58, mass 1, flick power x1.1. While it is MOVING on its own side's turn (its own flick, or bumped by a teammate) and faster than 120 px/s, a TAP anywhere on the screen (during the settle after your flick) fully reverses its momentum: same speed, opposite direction, a "Wikka!" popup and a small pink double-arrow effect. It is not a flick. One charge per turn; charges refill at every turn change (unused ones do not carry over). A pip above it per charge shows what is left (filled = ready). The enemy AI reverses when the new path is worth 60+ more than the current one (after missing, or back into a cluster), and uses Seek's redirect toward any opponent in reach. |
-| Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Goo Chain: several figures, stuck figures turn sticky, chain cap 5. |
+| Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Sticky path: it can stick to up to 1 / 3 / 5 figures at once (Sticky Grip, Sticky Mess; every stuck figure is joined straight to Glue Guy, stuck figures never become sticky: no chains). |
 | Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures the way Juicer was moving when it laid each piece (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
 | Magnet | While on the board bends the path of moving OPPOSING figures within 500 px (none inside 150 px; up to 1600 px/s^2 at the edge). Implodes when knocked off (radius 300, strength 1800, 0.4 s; 440 / 2700 if wearing Short Fuse). Big Magnet: radius 700, 2300. |
 | Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. |
@@ -148,13 +148,13 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Powerhouse | Flick x2; takes x2 knockback from enemy figures. Mega Power: x2.5. |
 | Pusher | Flick x0.8, damping x1.3 (short range). During its own flick it hits as if 1.75x heavier, never rebounds, and keeps pushing (2600 px/s^2) for up to 1 s (2 s with Long Haul) while touching its target. |
 | Sneaky Bomber | If its flick touches no figure it explodes where it stops (radius 270, force 2200, pushes everyone). Long Fuse: radius grows with distance (45 per 100 px). |
-| Speedo | Mass 0.6, flick x0.525; two flicks per turn (offered after the first settles; tap to skip). Triple Dash: three. |
+| Speedo | Mass 0.6, flick x0.525; two flicks per turn (offered after the first settles; tap to skip). Dash path: Building Speed, Flick Fury (+10% knockback dealt per flick taken this combat, up to 10), Triple Dash (three flicks). Zip path ends in Hard Hitter (+25% knockback dealt). |
 | Bloodluster | Damping x1.667 (flicks about 60% as far). A flick that knocks an opposing figure off earns a bonus flick from where it stopped, chaining while each flick kills; each bonus adds +35% damping until the round ticks or it becomes flickable again (red pips + tint). |
 | Bombo | Explodes (radius 200, force 900) on its first hit after each flick and survives. Boom Boom: every hit. |
 | Bumper | Bounce 1, damping x1.6, flick x0.7, takes x0.75 knockback. Anything that bounces off it leaves 1.3x faster (not a pushing Pusher). |
-| Cluster | Starts as 3 clustlings in ONE rigid body: one circle collision shape of radius 45 per clustling (a tight triangle for 3, a diamond for 4), each drawn as its own small figure, mass 0.73 each (rotation locked). Tap the board instead of flicking: tosses the clustling nearest that direction at 950 px/s (its circle leaves the body, which re-centres); it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Toss OR flick per turn; cannot toss the last one. A loose clustling that touches its own cluster (after 0.4 s) rejoins it in the nearest free spot (the cluster grows back; a full cluster takes none). Big Bunch: starts with 4. |
-| Spitter | Select it, then press and hold ~0.25 s without moving (more than 40 px of movement is a normal flick drag) to spray toward the finger; the stream follows it; release stops it. Spraying does not use its action: spray first, then flick (or skip, or spray again, or pick another figure). 20 drops/s, 800 px/s, range 450, each drop pushes 20 impulse (a 3 s spray slides a resting mass-1 figure about 280 px; it nudges and redirects, no more). 4 s of water per combat, shrinking size and mass in proportion down to 50% at empty; a blue arc shows the water. Big Gulp: radius 68, mass 1.6, 6 s of water. |
-| Absorber | Its OWN flick hitting an opposing figure with a smaller radius at 300 px/s or more absorbs it (one at a time): the figure leaves play at once (win/loss ignore it), is drawn shrinking inside, and shrinks for 3 rounds (counted at each round tick); then it counts as knocked off. A hit on the Absorber by a teammate of the held figure at 500 px/s or more frees it at its reduced size; if the Absorber falls off, the held figure pops out where it fell. Bosses, boss pieces and uneatable figures cannot be absorbed. Big Belly: radius 80, mass 3 (can absorb Duwall and Bumper, radius 70). |
+| Cluster | Starts as 3 clustlings in ONE rigid body: one circle collision shape of radius 45 per clustling (a tight triangle for 3, a diamond for 4), each drawn as its own small figure, mass 0.73 each (rotation locked). Tap the board instead of flicking: tosses the clustling nearest that direction at 950 px/s (its circle leaves the body, which re-centres); it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Tosses replace flicking, but you can toss as many times per turn as you like (after each toss settles a toss window opens: tap the board for another, or Skip; "Done tossing"); cannot toss the last one. (Toss and Flick keeps the action instead.) Enemy Clusters still toss once. A loose clustling that touches its own cluster (after 0.4 s) rejoins it in the nearest free spot (the cluster grows back; a full cluster takes none). Big Bunch: starts with 4. |
+| Spitter | Select it, then press and hold ~0.25 s without moving (more than 40 px of movement is a normal flick drag) to spray toward the finger; the stream follows it; release stops it. Spraying does not use its action: spray first, then flick (or skip, or spray again, or pick another figure); after its flick settles a spray window opens (hold to spray, "Done spraying" ends the turn), sharing the same water. Enemy Spitters still spray before their flick only. 20 drops/s, 800 px/s, range 450, each drop pushes 20 impulse (a 3 s spray slides a resting mass-1 figure about 280 px; it nudges and redirects, no more). 4 s of water per combat, shrinking size and mass in proportion down to 50% at empty; a blue arc shows the water. Big Gulp: radius 68, mass 1.6, 6 s of water. |
+| Absorber | Its OWN flick hitting an opposing figure with a smaller radius at 150 px/s or more absorbs it (one at a time): the figure leaves play at once (win/loss ignore it), is drawn shrinking inside, and shrinks for 3 rounds (counted at each round tick); then it counts as knocked off. A hit on the Absorber by a teammate of the held figure at 1100 px/s or more frees it at its reduced size (Tight Grip: never); if the Absorber falls off, the held figure pops out where it fell. Bosses, boss pieces and uneatable figures cannot be absorbed. Big Belly: radius 80, mass 3 (can absorb Duwall and Bumper, radius 70). |
 | Eater | Eats any figure of either team it touches with a smaller radius (not uneatable bosses/pieces): victim counts as knocked off; Eater grows (60% of victim's area, 70% of its mass; caps radius 110, mass 4). |
 | Engineer | Tap empty board: place ONE turret (radius 30, mass 0.35, not a Figure). It fires a 260-impulse pellet every 1.5 s at the nearest opposing board figure within 520 px, on BOTH sides' turns, only while figures are moving. |
 
@@ -203,11 +203,11 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Crazy Man | Hype | 1 | Wider Aura | Aura radius +30%. |
 | Crazy Man | Hype | 2 | Pep Talk | Teammates in the aura gain +25% flick power. |
 | Crazy Man | Hype | 3 | Thick Skin | Teammates in the aura gain +30% knockback resistance. |
-| Glue Guy | Sticky | 1 | Goo Chain | Chains of up to 5. |
-| Glue Guy | Sticky | 2 | Sticky Flicks | +1 flick for every figure he is stuck to. |
-| Glue Guy | Sticky | 3 | Thin Prey | Opponents stuck to him lose 50% mass while stuck. |
+| Glue Guy | Sticky | 1 | Sticky Grip | Can stick to up to 3 figures at once. |
+| Glue Guy | Sticky | 2 | Sticky Mess | Can stick to up to 5 figures at once. |
+| Glue Guy | Sticky | 3 | Sticky Flicks | +1 flick for every figure he is stuck to. |
 | Glue Guy | Tar | 1 | Tar Drag | An enemy stuck to it flicks 30% weaker. |
-| Glue Guy | Tar | 2 | Locked Down | An enemy stuck to it can't flick. |
+| Glue Guy | Tar | 2 | Locked Down | An enemy stuck to it flicks 50% weaker. |
 | Glue Guy | Tar | 3 | Heavy Tar | +100% mass and +100% flick power while stuck. |
 | Juicer | Slick | 1 | Long Trail | Trail lasts 5 rounds. |
 | Juicer | Slick | 2 | Strong Push | Trail push +50%. |
@@ -260,7 +260,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Absorber | Gut | 1 | Big Belly | Bigger: can swallow Duwalls and Bumpers. |
 | Absorber | Gut | 2 | Quick Digest | Immediately shrinks the absorbed unit by 50%. |
 | Absorber | Gut | 3 | Three Stomachs | Can hold 3 figures. |
-| Absorber | Spit | 1 | Tight Grip | Escape threshold +50%. |
+| Absorber | Spit | 1 | Tight Grip | Hits never free a held figure (it still pops out where it fell if the Absorber is knocked off). |
 | Absorber | Spit | 2 | Spit Out | Tap to spit the held figure out at high speed (uses its action). |
 | Absorber | Spit | 3 | Spit Bomb | Spat figures explode on impact. |
 | Alchemist | Potency | 1 | Strong Brew | Douse +75% (from +50%). |
@@ -329,12 +329,12 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Sneaky Bomber | Stealth | 1 | Blur | Enemy shots at it are less accurate. |
 | Sneaky Bomber | Stealth | 2 | Ambush | If no enemy hits it during the enemy's turn, it explodes. |
 | Sneaky Bomber | Stealth | 3 | Big Stealth Blast | Explosion force and radius +25%. |
-| Speedo | Dash | 1 | Triple Dash | 3 flicks per turn. |
-| Speedo | Dash | 2 | Building Speed | Each flick in a turn is 15% stronger than the last. |
-| Speedo | Dash | 3 | Quad Dash | 4 flicks per turn. |
+| Speedo | Dash | 1 | Building Speed | Each flick in a turn is 15% stronger than the last. |
+| Speedo | Dash | 2 | Flick Fury | +10% knockback dealt for each flick Speedo has taken this combat (up to 10 flicks). |
+| Speedo | Dash | 3 | Triple Dash | 3 flicks per turn. |
 | Speedo | Zip | 1 | Quick Legs | +25% flick power. |
 | Speedo | Zip | 2 | Heavy Legs | +50% mass. |
-| Speedo | Zip | 3 | Kill Rush | A knockoff earns an extra flick. |
+| Speedo | Zip | 3 | Hard Hitter | +25% knockback dealt. |
 | Bloodluster | Frenzy | 1 | Light Stacks | Damping stacks +20% per kill (from +35%). |
 | Bloodluster | Frenzy | 2 | First Blood | Its first kill each combat recharges an ally. |
 | Bloodluster | Frenzy | 3 | Stackless | No damping stacks. |
@@ -350,9 +350,9 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Bumper | Spring | 1 | Springier | Launch x1.5 (from x1.3). |
 | Bumper | Spring | 2 | Springiest | Launch x1.8 and increased flick power. |
 | Bumper | Spring | 3 | Ultra Spring | Launch x2. |
-| Bumper | Bulk | 1 | Heavy Frame | +30% mass. |
-| Bumper | Bulk | 2 | Armored | Takes half knockback. |
-| Bumper | Bulk | 3 | Easy Rolling | Normal flick power and damping. |
+| Bumper | Bulk | 1 | Heavy Frame | +15% mass. |
+| Bumper | Bulk | 2 | Armored | Takes 25% less knockback. |
+| Bumper | Bulk | 3 | Easy Rolling | Flick power and damping move halfway back toward normal (0.85, x1.3). |
 | Eater | Appetite | 1 | Tasty Treats | +$1 per meal. |
 | Eater | Appetite | 2 | Bigger Belly | Growth cap radius 140 (from 110). |
 | Eater | Appetite | 3 | Equal Eater | Can eat figures its own size. |
@@ -493,7 +493,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | 2 | Swarm | 8 Swarmling | random | 3 |
 | 2 | Banshee | 5 Ghost | Open Field | 1 |
 | 2 | Powder Keg | Land Miner, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
-| 2 | Glue Gang | Glue Guy with Goo Chain + 2 Splitter | random | 1 |
+| 2 | Glue Gang | Glue Guy with Sticky Grip (3 at once) + 2 Splitter | random | 1 |
 | 2 | Juice Bar | Juicer, 2 Speedo, Bummer | random | 1 |
 | 2 | Ultimate Shieldon | just the Ultimate Shieldon (enemy-only, radius 110, mass 5, average flick power; at the end of each of its turns, once settled, it raises a 240 degree steel-blue shield centered on the nearest player figure; the back 120 degrees stay open (dashed orange ring); the shield is a collision polygon: hits from the shield side take 10% of the normal knockback on it and bounce the attacker off, open-side hits land normally; it drops when the Ultimate Shieldon is flicked; AI: after a move it prefers no player figures on its open side and the open side pointing along a long way to a table edge) | Open Field | 1 |
 | 3 | Mirror Match | one enemy per combat slot cycling through YOUR deck's figure types (economy ones become Grunts), each with copies of your equipment/finish/upgrade for that slot; mass/power/accuracy x1.1 | random | 1 |

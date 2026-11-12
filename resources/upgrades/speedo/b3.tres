@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Kill Rush"
-description = "A knockoff earns an extra flick."
-ability_overrides = {"kill_extra_flick": true}
+display_name = "Hard Hitter"
+description = "+25% knockback dealt."
+ability_overrides = {"knockback_dealt_bonus": 0.25}

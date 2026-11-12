@@ -67,6 +67,9 @@ var _state := State.PLAYER_TURN
 var _players: Array[Figure] = []
 var _enemies: Array[Figure] = []
 var _last_player_flicker: Figure
+## What the bonus offer is for: "flick" (a bonus flick), "spray" (a Spitter may spray after its flick) or "toss" (a Cluster may toss
+## another clustling). The Skip button ends the offer.
+var _bonus_mode := "flick"
 var _bonus_figure: Figure  # Speedo: the figure that may take its extra flick right now
 var _enemy_flicks := 1  # flicks the enemy side takes per turn (from RunManager; per-unit bosses: see _enemy_flicks_now)
 var _last_flicker: Figure  # the enemy that flicked last (for no_repeat_enemy)
@@ -405,7 +408,7 @@ func _begin_aim(index: int, pos: Vector2) -> void:
 	_spraying = false
 	_hold_time = 0.0
 	var spray := _selected.ability.get_spray_stats(_selected)
-	_hold_pending = not spray.is_empty() and spray.water > 0.0 and _selected.flickable and _bonus_figure == null
+	_hold_pending = not spray.is_empty() and spray.water > 0.0 and _selected.flickable and (_bonus_figure == null or _bonus_mode == "spray")
 	_update_aim(pos)
 
 
@@ -435,6 +438,8 @@ func _update_aim(pos: Vector2) -> void:
 		return
 	if _hold_pending and (pos - _touch_start).length() >= min_pull_distance:
 		_hold_pending = false  # moved: it is a flick drag
+	if _bonus_figure != null and _bonus_mode != "flick":
+		return  # (a spray / toss window: no flicking, so no aim line)
 	var impulse := _flick_impulse(pos)
 	if impulse == Vector2.ZERO:
 		aim_line.clear()
@@ -458,6 +463,13 @@ func _release_aim(pos: Vector2) -> void:
 		_end_spray()
 		return
 	var impulse := _flick_impulse(pos)
+	if _bonus_figure != null and _bonus_mode != "flick":
+		# A spray / toss window: no flicking. A tap on empty board tosses (Cluster); everything else just waits for Skip.
+		var was_empty := _press_was_empty
+		_cancel_aim()
+		if impulse == Vector2.ZERO and was_empty and _bonus_mode == "toss":
+			_tap_empty_board(pos)
+		return
 	if impulse == Vector2.ZERO:
 		if _bonus_figure != null:
 			_skip_bonus_flick()  # a tap: no extra flick
@@ -535,9 +547,11 @@ func _takeover_player_flick(figure: Figure) -> void:
 
 
 ## Speedo: after its flick settles, the player may flick it again (or tap to skip).
-func _offer_bonus_flick(figure: Figure) -> void:
+func _offer_bonus_flick(figure: Figure, mode := "flick") -> void:
 	_bonus_figure = figure
-	var bloodlust := _bloodlust_ready(figure)
+	_bonus_mode = mode
+	ui.skip_button.text = {"flick": "Skip bonus flick", "spray": "Done spraying", "toss": "Done tossing"}[mode]
+	var bloodlust := mode == "flick" and _bloodlust_ready(figure)
 	if bloodlust:
 		figure.bonus_flicks_used += 1
 		figure.ability.on_bloodlust_bonus(figure)  # its damping stacks up
@@ -553,6 +567,10 @@ func _offer_bonus_flick(figure: Figure) -> void:
 
 
 func _bonus_text(figure: Figure, bloodlust := false) -> String:
+	if _bonus_mode == "spray":
+		return "%s can still spray: hold on the board (or Skip to end the turn)" % figure.data.display_name
+	if _bonus_mode == "toss":
+		return "%s can toss another clustling: tap the board (or Skip to end the turn)" % figure.data.display_name
 	return "%sBonus flick! %s can flick again (drag, or Skip to end turn)" % ["Bloodlust! " if bloodlust else "", figure.data.display_name]
 
 
@@ -565,7 +583,11 @@ func _skip_bonus_flick() -> void:
 	_deselect()
 	_flick_kills = 0  # (a skipped Bloodlust bonus is not offered again)
 	if is_instance_valid(figure):
-		figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+		if _bonus_mode == "flick":
+			figure.turn_flicks = figure.ability.get_flicks_per_turn(figure)
+		else:
+			figure.flickable = false  # (a spray / toss window: its action is done)
+	_bonus_mode = "flick"
 	_state = State.SETTLING
 	_finish_player_turn()
 
@@ -599,6 +621,7 @@ func _fire_shot(figure: Figure, pos: Vector2) -> void:
 	_on_any_flick(figure, Vector2.ZERO)
 	_last_player_flicker = figure
 	_bonus_figure = null
+	_bonus_mode = "flick"
 	_deselect()
 	_state = State.SETTLING
 	_finish_player_turn()
@@ -663,7 +686,10 @@ func _end_spray() -> void:
 	if is_instance_valid(figure):
 		figure.ability.set_spray(figure, false)
 	_cancel_aim()
-	ui.show_your_turn("Drag to flick, or hold to spray again")
+	if _bonus_figure != null and _bonus_mode == "spray":
+		ui.show_your_turn(_bonus_text(_bonus_figure))
+	else:
+		ui.show_your_turn("Drag to flick, or hold to spray again")
 
 
 ## Enemy Spitter: sprays toward `point` for a while (before its flick, which it still takes).
@@ -824,6 +850,13 @@ func _finish_player_turn() -> void:
 	if _bonus_available(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
 		_offer_bonus_flick(_last_player_flicker)
 		return
+	# After its action settles a Spitter may still spray, and a Cluster that tossed may toss again (never flick).
+	var last = _last_player_flicker
+	if _is_alive(last) and last.team == Figure.Team.PLAYER:
+		var post: String = last.ability.wants_post_action(last)
+		if post != "":
+			_offer_bonus_flick(last, post)
+			return
 	while not _bonus_queue.is_empty():  # figures granted a flick right now (Energizer's Instant Recharge...)
 		var queued = _bonus_queue.pop_front()
 		if _is_alive(queued) and queued.team == Figure.Team.PLAYER:
