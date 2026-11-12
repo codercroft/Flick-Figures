@@ -8,7 +8,7 @@ extends CanvasLayer
 ## Extra height (game units) the combat scene keeps free at the bottom for the strip.
 const STRIP_RESERVE := 250.0
 const STRIP_HEIGHT := 190.0
-const EXTRA_FIGURES := ["swarmling", "sniper", "splitter_mini", "skull_ball", "clustling", "slime_small", "slime_medium", "slime_large", "wall_piece"]
+const EXTRA_FIGURES := ["swarmling", "sniper", "splitter_mini", "skull_ball", "clustling", "slime_small", "slime_medium", "slime_large", "wall_piece", "ultimate_shieldon"]
 
 static var tab := "Figures"
 static var place_data: FigureData

@@ -190,6 +190,26 @@ func get_turret_stats(figure: Figure) -> Dictionary:
 	return stats if not stats.is_empty() else second.get_turret_stats(figure)
 
 
+func get_reverse_stats(figure: Figure) -> Dictionary:
+	var stats := first.get_reverse_stats(figure)
+	return stats if not stats.is_empty() else second.get_reverse_stats(figure)
+
+
+func can_reverse(figure: Figure) -> bool:
+	return first.can_reverse(figure) or second.can_reverse(figure)
+
+
+func use_reverse(figure: Figure, direction := Vector2.ZERO) -> bool:
+	if first.can_reverse(figure):
+		return first.use_reverse(figure, direction)
+	return second.use_reverse(figure, direction)
+
+
+func get_ai_shield(figure: Figure) -> Dictionary:
+	var info := first.get_ai_shield(figure)
+	return info if not info.is_empty() else second.get_ai_shield(figure)
+
+
 func get_mine_stats(figure: Figure) -> Dictionary:
 	var stats := first.get_mine_stats(figure)
 	return stats if not stats.is_empty() else second.get_mine_stats(figure)

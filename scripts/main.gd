@@ -197,7 +197,30 @@ func _exit_tree() -> void:
 		RunManager.combat = null
 
 
+## Wikka Wat: reverses the fastest-moving Wikka Wat of the player's that can be reversed right now. True if one was.
+func try_reverse_tap() -> bool:
+	var best: Figure = null
+	var best_speed := 0.0
+	for figure in _players:
+		if _is_alive(figure) and figure.ability.can_reverse(figure) and figure.linear_velocity.length() > best_speed:
+			best = figure
+			best_speed = figure.linear_velocity.length()
+	return best != null and best.ability.use_reverse(best)
+
+
+## Enemy Wikka Wats look every few physics frames whether a reverse or redirect would set up a better hit.
+func _enemy_wikka_step() -> void:
+	if _state != State.ENEMY_TURN or Engine.get_physics_frames() % 3 != 0:
+		return
+	for enemy in _enemies:
+		if _is_alive(enemy) and not enemy.ability.get_reverse_stats(enemy).is_empty() and enemy.ability.can_reverse(enemy):
+			var direction := ai.choose_wikka_reverse(enemy, _players, board.get_table_rect())
+			if direction != Vector2.ZERO:
+				enemy.ability.use_reverse(enemy, direction)
+
+
 func _physics_process(_delta: float) -> void:
+	_enemy_wikka_step()
 	if SandboxSetup.active and SandboxSetup.free_flick:
 		for figure in _all_figures():
 			if _is_alive(figure) and not figure.flickable:
@@ -230,6 +253,12 @@ func _process(delta: float) -> void:
 # Written against touch events; "emulate touch from mouse" makes the mouse work too.
 
 func _input(event: InputEvent) -> void:
+	# Wikka Wat: while things move after the player's flick, a tap anywhere reverses a moving Wikka Wat.
+	if _state == State.SETTLING and event is InputEventScreenTouch and event.pressed and not RunInfo.is_open \
+			and not (ui.is_over_power_bar(event.position) or _top_bar.is_over(event.position)) \
+			and not (SandboxSetup.active and sandbox != null and sandbox.is_over_ui(event.position)):
+		try_reverse_tap()
+		return
 	# Only the player's turn (and the run-over screen) takes touches. Everything else is ignored.
 	if _state != State.PLAYER_TURN and _state != State.AIMING and _state != State.GAME_OVER:
 		return

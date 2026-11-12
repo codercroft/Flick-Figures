@@ -5,7 +5,7 @@ extends RefCounted
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, MINE, SLIME, COIN,
 		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG,
-		TRIANGLE, BOX, CLUSTER, SPRAYER, MAW }
+		TRIANGLE, BOX, CLUSTER, SPRAYER, MAW, REVERSE }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -69,6 +69,11 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			for i in 8:
 				var spike := Vector2.from_angle(TAU * i / 8.0)
 				canvas.draw_line(center + spike * s * 0.5, center + spike * s * 0.95, color, w)
+		Icon.REVERSE:  # a U-turn arrow
+			canvas.draw_arc(center + Vector2(s * 0.1, 0), s * 0.6, -PI / 2.0, PI / 2.0, 14, color, w)
+			canvas.draw_line(center + Vector2(s * 0.1, -s * 0.6), center + Vector2(-s * 0.5, -s * 0.6), color, w)
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(-s * 0.1, s * 0.25), center + Vector2(-s * 0.55, s * 0.6),
+					center + Vector2(-s * 0.1, s * 0.95)]), color, w)
 		Icon.DOUBLE:  # two chevrons: two flicks
 			for x in [-s * 0.5, s * 0.3]:
 				canvas.draw_polyline(PackedVector2Array([

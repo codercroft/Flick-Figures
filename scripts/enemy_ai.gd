@@ -126,6 +126,12 @@ const TOUCH_MARGIN := 4.0
 @export var mine_lane_bonus := 30.0
 @export var mine_lane_reach := 45.0
 @export var mine_count_cap := 3
+## Wikka Wat: reverses (or Seek's redirect) when the new path is worth this much more than the current one; Ultimate Shieldon:
+## ending a move with a player figure on its open side costs `shield_exposed_penalty` each, and its open side pointing along
+## a long way to the table edge earns up to `shield_far_edge_bonus`.
+@export var wikka_reverse_margin := 60.0
+@export var shield_exposed_penalty := 60.0
+@export var shield_far_edge_bonus := 80.0
 ## Goo Chain Glue Guy: bonus per extra player figure close to the target that the chain could pick up, and how close.
 @export var glue_chain_bonus := 60.0
 @export var glue_chain_reach := 150.0
@@ -573,6 +579,8 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		if other.team != enemy.team and target_velocity.length() > other.stop_speed:  # pushing the target through our own juice
 			var slide_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
 			score += juice_push_bonus * mini(_arena.juice_pieces_on_path(other.global_position, slide_end, other.radius, enemy.team), 3)
+	# Ultimate Shieldon: where it ends up decides what its shield faces and which side is open.
+	score += _shield_position_value(enemy, contact, players, table) * weight * 0.5
 	# Landmines: a path through a player mine sets it off under us; a player figure shoved across our mines is worth it;
 	# a Land Miner's flick drops mines along the way (worth more across the player's flick lanes).
 	score -= mine_path_penalty * mini(_mines_near_path(_other_team(enemy.team), enemy.global_position, contact), mine_count_cap)
@@ -688,6 +696,101 @@ func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure],
 				best_score = score
 				best = {"kind": "reposition", "score": score, "direction": direction, "speed": speed, "distance": distance}
 	return best
+
+
+## Wikka Wat: what the straight path from the figure's position along `direction` is worth over `distance` px: the first
+## figure it would touch (a player figure: a hit with a knock-off chance and a bonus for a cluster around it; an ally: a
+## penalty), minus a self knock-off risk if it ends off the table.
+func _wikka_path_value(figure: Figure, direction: Vector2, distance: float, speed: float, table: Rect2) -> float:
+	var best_along := INF
+	var best: Figure = null
+	for node in get_tree().get_nodes_in_group("figures"):
+		var other := node as Figure
+		if other == figure or other.knocked_off:
+			continue
+		var offset := other.global_position - figure.global_position
+		var along := offset.dot(direction)
+		if along <= 0.0 or along > distance + other.radius:
+			continue
+		if absf(offset.cross(direction)) <= figure.radius + other.radius and along < best_along:
+			best_along = along
+			best = other
+	var value := 0.0
+	if best != null:
+		if best.team == figure.team:
+			value = -ally_hit_penalty
+		else:
+			value = hit_player_bonus + kill_bonus * _leave_chance(best, best.global_position, direction * speed * 0.8, table)
+			for player in get_tree().get_nodes_in_group("figures"):
+				var near := player as Figure
+				if near != best and not near.knocked_off and near.team == best.team \
+						and near.global_position.distance_to(best.global_position) <= 220.0:
+					value += 25.0  # a cluster
+	var end := figure.global_position + direction * minf(distance, best_along if best != null else distance)
+	if not table.grow(-figure.radius).has_point(end):
+		value -= self_knock_off_penalty * 0.7
+	return value
+
+
+## Wikka Wat: the direction it should be reversed (or redirected, with Seek) to RIGHT NOW, or Vector2.ZERO to keep going.
+## It reverses when the new path is clearly worth more than the current one (after missing, or to bounce back into a cluster).
+func choose_wikka_reverse(figure: Figure, players: Array[Figure], table: Rect2) -> Vector2:
+	var stats := figure.ability.get_reverse_stats(figure)
+	var velocity := figure.linear_velocity
+	var speed := velocity.length()
+	if stats.is_empty() or speed < 1.0:
+		return Vector2.ZERO
+	var distance := _travel_distance(figure, speed)
+	var current := _wikka_path_value(figure, velocity / speed, distance, speed, table)
+	var best := Vector2.ZERO
+	var best_value := current + wikka_reverse_margin
+	var options: Array[Vector2] = [-velocity / speed]
+	if stats.get("seek", false):  # Seek: toward each opponent in reach
+		for player in players:
+			if is_instance_valid(player) and not player.knocked_off and player.global_position.distance_to(figure.global_position) <= distance + player.radius:
+				options.append((player.global_position - figure.global_position).normalized())
+	for option in options:
+		var value := _wikka_path_value(figure, option, distance, speed, table)
+		if value > best_value:
+			best_value = value
+			best = option
+	return best
+
+
+## Ultimate Shieldon: how good it is to stand at `point`: player figures on its OPEN side (the 120 degrees opposite the nearest
+## player figure, which the shield will face) cost, and an open side that points toward a far table edge earns a bonus.
+func _shield_position_value(enemy: Figure, point: Vector2, players: Array[Figure], table: Rect2) -> float:
+	var info := enemy.ability.get_ai_shield(enemy)
+	if info.is_empty():
+		return 0.0
+	var nearest: Figure = null
+	var nearest_distance := INF
+	for player in players:
+		if is_instance_valid(player) and not player.knocked_off and player.global_position.distance_to(point) < nearest_distance:
+			nearest = player
+			nearest_distance = player.global_position.distance_to(point)
+	if nearest == null:
+		return 0.0
+	var open_direction := -(nearest.global_position - point).normalized()
+	var open_half := deg_to_rad(360.0 - float(info.arc)) / 2.0
+	var value := 0.0
+	for player in players:
+		if player != nearest and is_instance_valid(player) and not player.knocked_off \
+				and absf((player.global_position - point).angle_to(open_direction)) <= open_half:
+			value -= shield_exposed_penalty
+	var edge := _distance_to_edge_along(point, open_direction, table)
+	value += shield_far_edge_bonus * clampf(edge / 900.0, 0.0, 1.0)
+	return value
+
+
+## How far a ray from `point` along `direction` travels before leaving `table`.
+func _distance_to_edge_along(point: Vector2, direction: Vector2, table: Rect2) -> float:
+	var best := INF
+	if absf(direction.x) > 0.001:
+		best = minf(best, ((table.end.x if direction.x > 0.0 else table.position.x) - point.x) / direction.x)
+	if absf(direction.y) > 0.001:
+		best = minf(best, ((table.end.y if direction.y > 0.0 else table.position.y) - point.y) / direction.y)
+	return maxf(best, 0.0)
 
 
 ## How many player Alchemist zones the straight path from `from` to `to` touches (our figure would be Doused).
@@ -1205,7 +1308,8 @@ func _choose_reposition(enemy: Figure, shape: CircleShape2D, players: Array[Figu
 		if not _first_hit(enemy, shape, direction, reposition_distance + 30.0).is_empty():
 			continue
 		# Prefer ending up closer to the nearest player figure (and, near the edge, farther from it).
-		var score := -_nearest_distance(end, players) - zone_path_penalty * _zone_crossings(enemy, enemy.global_position, end)
+		var score := -_nearest_distance(end, players) - zone_path_penalty * _zone_crossings(enemy, enemy.global_position, end) \
+				+ _shield_position_value(enemy, end, players, table)
 		if enemy.would_be_in_aura(end):
 			score += aura_stay_bonus  # stay close to (or move into) an allied Crazy Man's aura
 		# Do not move into a player Bummer's aura; our own Bummer likes ending next to player figures.

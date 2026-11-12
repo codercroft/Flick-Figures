@@ -94,6 +94,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Cha-ching | 1 | 55 | 1 | 1 | 0.7 | 1 | Savings / Bounty | economy |
 | Common | Crazy Man | 1 | 55 | 1 | 1 | 1 | 1 | Frenzy / Hype | - |
 | Uncommon | Land Miner | 1 | 55 | 1 | 1 | 0.7 | 1 | Multi-Mine / Smart Bombs | - |
+| Uncommon | Wikka Wat | 1 | 58 | 1.1 | 1 | 0.7 | 1 | Scratch / Seek | - |
 | Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Sticky / Tar | - |
 | Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Firehose / Sprinkler | - |
 | Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
@@ -132,6 +133,7 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 1200) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. When a set-off (Bombo's Shrapnel upgrade) detonates it, it fires a rocket at the nearest opposing figure on the table instead of exploding where it stands (it stays put and keeps its action). Twin Rockets: 2 rockets per shot (a tap fans them +-6 degrees around the tapped point; a detonation sends one at each of the 2 nearest opposing figures, both at the same one if only one is left). |
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
 | Land Miner | Average stats. Whenever it MOVES faster than 60 px/s (its own flick, a hit, a shove, Rally's nudge, an explosion; either side's turn) it adds the distance to a counter and drops a landmine every 400 px of total travel (the first after 400 px; the counter keeps running between movements; a full-power flick travels about 1590 px = 4 mines). Max 12 live mines per Land Miner (oldest removed first); no mine outside the table or within 40 px of another mine. A mine is a small team-colored marker (ring = player white / enemy red, faint trigger circle) that blocks and collides with nothing and stays for the combat. An OPPOSING figure whose center comes within 70 px sets it off: blast radius 180, force 1800 (x1.3 explosion multiplier; between Bombo 200 / 900 and Sneaky Bomber), then it is gone. Mine blasts follow the friendly-explosion rule (player mines never push player figures; enemy mines push everyone, their own side included), count for Blast Cap and Glow-in-the-dark, and explosions never set mines off. AI: paths through player mines cost 120 per mine, shoving a player figure across its own mines earns 110, a Land Miner's moves earn 30 per player flick lane near each mine they would drop (and it considers 1-3 spacings long mine-laying flicks when it has nothing better). |
+| Wikka Wat | Radius 58, mass 1, flick power x1.1. While it is MOVING on its own side's turn (its own flick, or bumped by a teammate) and faster than 120 px/s, a TAP anywhere on the screen (during the settle after your flick) fully reverses its momentum: same speed, opposite direction, a "Wikka!" popup and a small pink double-arrow effect. It is not a flick. One charge per turn; charges refill at every turn change (unused ones do not carry over). A pip above it per charge shows what is left (filled = ready). The enemy AI reverses when the new path is worth 60+ more than the current one (after missing, or back into a cluster), and uses Seek's redirect toward any opponent in reach. |
 | Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Goo Chain: several figures, stuck figures turn sticky, chain cap 5. |
 | Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures the way Juicer was moving when it laid each piece (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
 | Magnet | While on the board bends the path of moving OPPOSING figures within 500 px (none inside 150 px; up to 1600 px/s^2 at the edge). Implodes when knocked off (radius 300, strength 1800, 0.4 s; 440 / 2700 if wearing Short Fuse). Big Magnet: radius 700, 2300. |
@@ -219,6 +221,12 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Land Miner | Smart Bombs | 1 | Bigger Mines | Mine radius and force +30%. |
 | Land Miner | Smart Bombs | 2 | Tighter Pattern | Mines drop a bit more often (x0.8 = 320 px); radius and force +15% more. |
 | Land Miner | Smart Bombs | 3 | Homing Mines | Mines drift toward moving opponents within about 250 px (a gentle pull); they stay put otherwise. |
+| Wikka Wat | Scratch | 1 | Double Wikka | Can reverse twice per turn. |
+| Wikka Wat | Scratch | 2 | Wicked Scratch | Each reverse gives +25% speed and +25% knockback dealt (per use) until it rests. |
+| Wikka Wat | Scratch | 3 | Triple Wikka | Can reverse three times per turn. |
+| Wikka Wat | Seek | 1 | Seeking Reverse | The reverse sends it toward the nearest opponent (same speed). |
+| Wikka Wat | Seek | 2 | Hit and Run | Hitting an opponent refreshes the reverse for this turn. |
+| Wikka Wat | Seek | 3 | Bloodscent | +20% flick power and +20% mass per kill for the rest of the combat (up to 5 stacks, `max_kill_stacks`). |
 | Magnet | Field | 1 | Big Magnet | Bigger, stronger pull. |
 | Magnet | Field | 2 | Repel Pulse | Once per combat, after flicking, tap it to briefly reverse the pull and push opponents away. |
 | Magnet | Field | 3 | Repel Pulses | The push can be used once per turn. |
@@ -487,6 +495,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | 2 | Powder Keg | Land Miner, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
 | 2 | Glue Gang | Glue Guy with Goo Chain + 2 Splitter | random | 1 |
 | 2 | Juice Bar | Juicer, 2 Speedo, Bummer | random | 1 |
+| 2 | Ultimate Shieldon | just the Ultimate Shieldon (enemy-only, radius 110, mass 5, average flick power; at the end of each of its turns, once settled, it raises a 240 degree steel-blue shield centered on the nearest player figure; the back 120 degrees stay open (dashed orange ring); the shield is a collision polygon: hits from the shield side take 10% of the normal knockback on it and bounce the attacker off, open-side hits land normally; it drops when the Ultimate Shieldon is flicked; AI: after a move it prefers no player figures on its open side and the open side pointing along a long way to a table edge) | Open Field | 1 |
 | 3 | Mirror Match | one enemy per combat slot cycling through YOUR deck's figure types (economy ones become Grunts), each with copies of your equipment/finish/upgrade for that slot; mass/power/accuracy x1.1 | random | 1 |
 | 3 | The Collector | Eater (size and mass x1.3, feeds on its own Grunts) + 4 Grunt | random | 1 |
 | 3 | Siege | Engineer (turret placed before your first flick), 2 Shieldon Ooper, Duwall | Fortress Walls | 1 |

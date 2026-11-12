@@ -210,6 +210,25 @@ func get_pin_radius(_figure: Figure) -> float:
 	return 0.0
 
 
+## Wikka Wat: the reverse it may use while moving ({charges_left, per_turn, seek}, {} = none). `can_reverse` says whether it can
+## be used right now; `use_reverse(figure, direction)` reverses (or redirects) its momentum. The enemy AI reads these.
+func get_reverse_stats(_figure: Figure) -> Dictionary:
+	return {}
+
+
+func can_reverse(_figure: Figure) -> bool:
+	return false
+
+
+func use_reverse(_figure: Figure, _direction := Vector2.ZERO) -> bool:
+	return false
+
+
+## Ultimate Shieldon, for the enemy AI: {arc} while it has a shield mechanic, else {}.
+func get_ai_shield(_figure: Figure) -> Dictionary:
+	return {}
+
+
 ## Land Miner: the mines it lays while moving ({spacing, trigger_radius, radius, force}, {} = none). The enemy AI reads it.
 func get_mine_stats(_figure: Figure) -> Dictionary:
 	return {}
