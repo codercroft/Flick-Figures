@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Land Miner"
-description = "Drops a mine every ~700 px it travels on its own flick; an opposing figure that gets close sets it off."
+description = "Drops a mine every 400 px it moves (even when shoved); an opposing figure that gets close sets it off."
 rarity = 1
 label = "LM"
 icon = 10

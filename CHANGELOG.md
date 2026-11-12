@@ -4,6 +4,15 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-12: Land Miner buffs
+- Mines hit much harder: base blast radius 140 -> 180, force 600 -> 1800 (about between Bombo 200 / 900 and Sneaky Bomber); upgrade multipliers stack on top (Bigger Mines 234 / 2340, Tighter Pattern 269 / 2691, Bigger Bangs force 2520).
+- Mines drop every 400 px of total travel (was 700 px of own-flick travel): about 4 on a full-power flick (3.98); Multi-Mine x0.67 / x0.5 overall -> spacing 268 / 200 (about 6 / 8 mines), Smart Bombs tier 2 x0.8 -> 320.
+- Land Miner now drops mines whenever it moves faster than `min_mine_speed` (60 px/s): own flicks, hits, shoves, Rally's nudge, explosions, either side's turn. The distance counter is never reset between movements. The old flick-only tracking (`on_flicked` / `on_stopped`) is gone.
+- Cap 8 -> 12 live mines per Land Miner (oldest removed first, `max_mines`). No mine drops outside the table (also covers mid-knockoff) or within `min_mine_gap` (40 px) of any existing mine (the counter still advances, so the next mine comes a full spacing later).
+- AI: mine path penalty 60 -> 120, push-across-own-mines bonus 70 -> 110 (the blasts are stronger), lane bonus per mine 45 -> 30 (a Land Miner now drops about 4x as many mines per move), mine-laying candidates now 1.1 / 2.1 / 3.1 spacings long. Land Miner description updated ("Drops a mine every 400 px it moves (even when shoved)...").
+- Tests: `tools/land_miner_test.gd` extended (base numbers, shove drops, counter carry-over, outside-table and gap rules, new upgrade numbers); all pass.
+- Open: with mines this strong and plentiful, an enemy Land Miner's lanes may need tuning after playtesting (the AI's mine-laying value is still a first guess).
+
 ## 2026-11-11: Nuke fix, Juicer direction, Firecracker out, Land Miner in
 - Blastoid Nuke tier 3 (Quake Warheads): root cause of "the earthquake replaces the big hit": the Nuke path (tiers 1-3 stack) shrinks the rocket radius to 68 px, smaller than the rocket's distance to the figure it touches (74 px), so its blast never reached the target. A rocket that hits an opponent now (1) slams THAT opponent along the rocket's direction with `direct_hit_multiplier` (2.5) x the rocket's normal knockback on a touching figure (`blast_force` x the explosion multiplier x `direct_hit_falloff` 0.55, @exports on the ability; about 6000 px/s at tier 3, which flings a Grunt off the table), (2) the rocket's normal reduced-radius blast still goes off, and (3) every OTHER opponent gets the Earthquake shove (the target is excluded). `on_projectile_hit` now also receives the rocket's direction.
 - Juicer: trail pieces push moving opponents the way Juicer was MOVING when it laid the piece again (it had been flipped to "back the way it came"); the on-hit splash still points outward and Slick tier 3 (steer to edge) is untouched. Description updated.

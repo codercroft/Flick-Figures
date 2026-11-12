@@ -121,9 +121,9 @@ const TOUCH_MARGIN := 4.0
 ## Land Miner: a shot path through a PLAYER mine's trigger radius sets it off under our shooter (cost per mine, at most
 ## `mine_count_cap`); shoving a player figure across one of OUR mines earns `mine_push_bonus` per mine; a Land Miner's flick
 ## earns `mine_lane_bonus` per player flick lane (player figure -> enemy figure) each mine it would drop lies near (at most 2 per mine).
-@export var mine_path_penalty := 60.0
-@export var mine_push_bonus := 70.0
-@export var mine_lane_bonus := 45.0
+@export var mine_path_penalty := 120.0
+@export var mine_push_bonus := 110.0
+@export var mine_lane_bonus := 30.0
 @export var mine_lane_reach := 45.0
 @export var mine_count_cap := 3
 ## Goo Chain Glue Guy: bonus per extra player figure close to the target that the chain could pick up, and how close.
@@ -673,7 +673,7 @@ func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure],
 	var safe_area := table.grow(-reposition_edge_margin)
 	for i in 16:
 		var direction := Vector2.from_angle(TAU * i / 16.0)
-		for factor in [1.1, 2.1]:
+		for factor in [1.1, 2.1, 3.1]:
 			var distance: float = stats.spacing * factor
 			var speed := distance * enemy.linear_damp + enemy.stop_speed
 			var end := _flight_end(enemy, enemy.global_position, direction * speed, table)

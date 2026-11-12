@@ -122,27 +122,62 @@ func _all() -> void:
 	_check(miner.ability.get_flicks_per_turn(miner) == 1, "average figure")
 	var full_travel: float = (2400.0 * lm.flick_power_multiplier / lm.mass - miner.stop_speed) / miner.linear_damp
 	print("    full-power travel ~%d px, spacing %d" % [full_travel, miner.ability.mine_spacing])
-	_check(full_travel / miner.ability.mine_spacing >= 2.0 and full_travel / miner.ability.mine_spacing < 3.0, "a full-power flick drops about 2 mines (%.2f x spacing)" % (full_travel / miner.ability.mine_spacing))
+	_check(full_travel / miner.ability.mine_spacing >= 3.5 and full_travel / miner.ability.mine_spacing < 4.5, "a full-power flick drops about 4 mines (%.2f x spacing)" % (full_travel / miner.ability.mine_spacing))
 	_flick(miner, Vector2(0, 220))  # a partial flick that stays on the table
 	await _until(func(): return miner.is_resting() or _main._state == 0, 15.0)
 	await create_timer(0.5).timeout
 	var dropped := _mines(0)
 	var travel := start.distance_to(miner.global_position)
 	print("    travel %d px, %d mines" % [travel, dropped.size()])
-	_check(dropped.size() == int(travel / miner.ability.mine_spacing), "one mine per spacing traveled (%d mines over %d px)" % [dropped.size(), travel])
+	_check(absi(dropped.size() - int(travel / miner.ability.mine_spacing)) <= 1, "one mine per spacing traveled (%d mines over %d px)" % [dropped.size(), travel])
 	if dropped.size() > 0:
 		var first: Node = dropped[0]
 		_check(absf(first.global_position.distance_to(start) - miner.ability.mine_spacing) < 60.0, "the first mine is ~N px from the start, not at the start (%d px)" % first.global_position.distance_to(start))
 		_check(first.team == 0, "mine belongs to the player")
 
+	print("Base numbers, shoved movement, carry-over, outside table, minimum gap")
+	await _start([_entry(lm, 0, Vector2(540, 1500))])
+	miner = _main._players[0]
+	var ab0 = miner.ability
+	_check(ab0.mine_spacing == 400.0 and ab0.explosion_radius == 180.0 and ab0.explosion_force == 1800.0 and ab0.max_mines == 12, "base: spacing 400, blast 180 / 1800, cap 12")
+	_check(2400.0 / 1.5 / ab0.mine_spacing > 3.5 and 2400.0 / 1.5 / ab0.mine_spacing < 4.5, "a full-power flick drops about 4 mines (%.1f)" % (1590.0 / ab0.mine_spacing))
+	var p0: Vector2 = miner.global_position
+	miner.linear_velocity = Vector2(0, -1000)  # shoved (no flick of its own)
+	await _until(func(): return miner.is_resting(), 10.0)
+	var shoved := _mines(0).size()
+	var shoved_travel := p0.distance_to(miner.global_position)
+	_check(shoved >= 1 and absi(shoved - int(shoved_travel / 400.0)) <= 1, "a shove drops mines too (%d over %d px)" % [shoved, shoved_travel])
+	for m in _mines():
+		m.queue_free()
+	await _frames(2)
+	ab0._since_drop = 0.0
+	ab0._last_position = Vector2.INF
+	miner.global_position = Vector2(540, 1400)
+	await _frames(2)
+	var base_pos: Vector2 = miner.global_position
+	miner.linear_velocity = Vector2(300, 0)
+	await _frames(6)
+	miner.linear_velocity = Vector2.ZERO
+	await _frames(3)
+	var half := _mines(0).size()
+	var carried: float = ab0._since_drop
+	miner.linear_velocity = Vector2(-300, 0)
+	await _frames(6)
+	miner.linear_velocity = Vector2.ZERO
+	print("    counter after first nudge %d px" % carried)
+	_check(half == 0 and carried > 0.0 and ab0._since_drop > carried, "the distance counter keeps running between movements")
+	_check(not ab0.maybe_drop(miner, Vector2(5, 5)), "no mine outside the table")
+	_check(ab0.maybe_drop(miner, Vector2(540, 900)) and not ab0.maybe_drop(miner, Vector2(560, 900)), "no mine within 40 px of another mine")
+
 	print("Cap, trigger rules, friendly blasts")
 	await _start([_entry(lm, 0, Vector2(540, 1500)), _entry(grunt, 0, Vector2(300, 1000)), _entry(grunt, 1, Vector2(540, 600)), _entry(grunt, 1, Vector2(800, 700))])
 	miner = _main._players[0]
 	miner.ability.max_mines = 3
+	miner.ability.min_mine_gap = 0.0
 	for i in 5:
-		miner.ability._drop(miner, Vector2(100 + i * 10, 1700))
+		miner.ability.maybe_drop(miner, Vector2(150 + i * 60, 1500))
 	await _frames(3)
-	var cap_count := _mines(0).filter(func(m): return m.global_position.y > 1650).size()
+	var cap_count := _mines(0).filter(func(m): return m.global_position.y > 1450).size()
 	_check(cap_count == 3, "max 3 mines per Land Miner, oldest removed (%d)" % cap_count)
 	for m in _mines():
 		m.queue_free()
@@ -150,9 +185,9 @@ func _all() -> void:
 	var ally = _main._players[1]
 	var enemy_a = _main._enemies[0]
 	var enemy_b = _main._enemies[1]
-	miner.ability._drop(miner, ally.global_position + Vector2(20, 0))  # next to our own figure
-	miner.ability._drop(miner, enemy_b.global_position + Vector2(0, 110))  # near enemy B but outside its trigger radius
-	miner.ability._drop(miner, enemy_a.global_position + Vector2(0, 60))  # triggered by enemy A
+	miner.ability.maybe_drop(miner, ally.global_position + Vector2(20, 0))  # next to our own figure
+	miner.ability.maybe_drop(miner, enemy_b.global_position + Vector2(0, 110))  # near enemy B but outside its trigger radius
+	miner.ability.maybe_drop(miner, enemy_a.global_position + Vector2(0, 60))  # triggered by enemy A
 	await _frames(6)
 	_check(_mines(0).size() == 2, "only the mine an opposing figure came near went off (%d left)" % _mines(0).size())
 	_check(ally.linear_velocity.length() < 1.0 and ally.global_position.distance_to(Vector2(300, 1000)) < 2.0, "the player's own mine blast does not push player figures")
@@ -161,17 +196,17 @@ func _all() -> void:
 	await create_timer(1.0).timeout
 
 	print("Enemy mines push their own side too; homing")
-	await _start([_entry(lm, 1, Vector2(540, 400)), _entry(grunt, 1, Vector2(600, 700)), _entry(grunt, 0, Vector2(540, 800))])
+	await _start([_entry(lm, 1, Vector2(540, 400)), _entry(grunt, 1, Vector2(600, 700)), _entry(grunt, 0, Vector2(540, 800)), _entry(grunt, 0, Vector2(800, 1500))])
 	var emin = _main._enemies[0]
 	var eally = _main._enemies[1]
-	var player_fig = _main._players[0]
-	emin.ability._drop(emin, Vector2(560, 780))  # the player figure is 20 px from it
+	var player_fig = _main._players[1]
+	emin.ability.maybe_drop(emin, Vector2(560, 780))  # the player figure is 20 px from it
 	await _frames(6)
 	_check(_mines(1).is_empty(), "an enemy mine went off under the player figure")
 	_check(eally.linear_velocity.length() > 5.0 or eally.global_position.distance_to(Vector2(600, 700)) > 3.0, "the enemy's own explosion still pushes its own side")
 	await create_timer(1.0).timeout
 	emin.ability.homing_range = 250.0
-	emin.ability._drop(emin, Vector2(300, 700))
+	emin.ability.maybe_drop(emin, Vector2(300, 700))
 	var mine: Node = _mines(1)[0]
 	var before: Vector2 = mine.global_position
 	await _frames(10)
@@ -185,11 +220,11 @@ func _all() -> void:
 	_check(not is_instance_valid(mine) or mine.global_position.distance_to(before) > 1.0, "a homing mine drifts toward a moving opponent in range")
 
 	print("Land Miner upgrade numbers")
-	for case in [[Vector2(0, 1), 469.0, 140.0, 600.0], [Vector2(0, 2), 469.0, 140.0, 840.0], [Vector2(0, 3), 350.0, 140.0, 840.0],
-			[Vector2(1, 1), 700.0, 182.0, 780.0], [Vector2(1, 2), 560.0, 209.3, 897.0], [Vector2(1, 3), 560.0, 209.3, 897.0]]:
+	for case in [[Vector2(0, 1), 268.0, 180.0, 1800.0], [Vector2(0, 2), 268.0, 180.0, 2520.0], [Vector2(0, 3), 200.0, 180.0, 2520.0],
+			[Vector2(1, 1), 400.0, 234.0, 2340.0], [Vector2(1, 2), 320.0, 269.1, 2691.0], [Vector2(1, 3), 320.0, 269.1, 2691.0]]:
 		await _start([_entry(lm, 0, Vector2(540, 1500), case[0])])
 		var a = _main._players[0].ability
-		var ok: bool = absf(a.mine_spacing - case[1]) < 8.0 and absf(a.explosion_radius - case[2]) < 2.0 and absf(a.explosion_force - case[3]) < 3.0
+		var ok: bool = absf(a.mine_spacing - case[1]) < 5.0 and absf(a.explosion_radius - case[2]) < 2.0 and absf(a.explosion_force - case[3]) < 6.0
 		_check(ok, "%s: spacing %.0f radius %.0f force %.0f homing %.0f" % [case[0], a.mine_spacing, a.explosion_radius, a.explosion_force, a.homing_range])
 		if case[0] == Vector2(1, 3):
 			_check(a.homing_range == 250.0, "Smart Bombs tier 3 homing range 250")

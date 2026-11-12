@@ -1,51 +1,60 @@
 class_name LandMinerAbility
 extends FigureAbility
-## Land Miner: while it moves from its OWN flick it drops a landmine every `mine_spacing` px of distance traveled (the
-## first one after that many px, not at the start). A full-power flick travels about 1600 px, so 700 drops about 2.
-## Mines are small markers that block nothing and stay for the rest of the combat (at most `max_mines` per Land
-## Miner, the oldest goes first). An OPPOSING figure coming within a mine's trigger radius sets it off (see LandMine).
+## Land Miner: whenever it MOVES (faster than `min_mine_speed`: its own flick, a hit, a push, Rally's nudge, an explosion,
+## on either side's turn) it adds the distance it travels to a counter and drops a landmine every `mine_spacing` px of total
+## travel (the first after that many px, not at the start; the counter keeps running between movements). A full-power flick
+## travels about 1590 px, so 400 drops about 4. Mines are small markers that block nothing and stay for the rest of the combat
+## (at most `max_mines` per Land Miner, the oldest goes first). No mine drops outside the table or within `min_mine_gap` px of
+## another mine. An OPPOSING figure coming within a mine's trigger radius sets it off (see LandMine).
 
 ## Distance (px) traveled between mines.
-@export var mine_spacing := 700.0
+@export var mine_spacing := 400.0
+## Only movement faster than this (px/s) counts toward the next mine.
+@export var min_mine_speed := 60.0
+## No mine is dropped within this many px of an existing mine.
+@export var min_mine_gap := 40.0
 ## Live mines per Land Miner; the oldest is removed when a new one would exceed it.
-@export var max_mines := 8
+@export var max_mines := 12
 ## How close (center to center, px) an opposing figure must come to set a mine off.
 @export var trigger_radius := 70.0
-## The blast of one mine (a Bombo's is 200 / 900). Glow-in-the-dark scales the radius.
-@export var explosion_radius := 140.0
-@export var explosion_force := 600.0
+## The blast of one mine (a Bombo's is 200 / 900, a Sneaky Bomber's 270 / ?). Glow-in-the-dark scales the radius.
+@export var explosion_radius := 180.0
+@export var explosion_force := 1800.0
 ## Smart Bombs tier 3: mines drift toward MOVING opposing figures within this range (0 = they stay put), at up to
 ## `homing_speed` px/s.
 @export var homing_range := 0.0
 @export var homing_speed := 220.0
 
-var _flicking := false
 var _since_drop := 0.0
 var _last_position := Vector2.INF
 var _mines: Array = []  # (untyped: a mine that went off is freed, and a freed object can't pass through a typed filter)
 
 
-func on_flicked(figure: Figure, _impulse: Vector2) -> void:
-	_flicking = true
-	_since_drop = 0.0
-	_last_position = figure.global_position
-
-
-func on_stopped(_figure: Figure) -> void:
-	_flicking = false
-
-
 func on_physics_process(figure: Figure, _delta: float) -> void:
-	if not _flicking or figure.knocked_off or not figure.is_inside_tree() or figure.on_deck:
+	if figure.knocked_off or not figure.is_inside_tree():
+		_last_position = Vector2.INF
 		return
 	var position := figure.global_position
 	if _last_position == Vector2.INF:
 		_last_position = position
-	_since_drop += position.distance_to(_last_position)
+	if figure.linear_velocity.length() >= min_mine_speed:
+		_since_drop += position.distance_to(_last_position)  # (the counter keeps running between movements)
 	_last_position = position
 	while _since_drop >= mine_spacing:
 		_since_drop -= mine_spacing
-		_drop(figure, position)
+		maybe_drop(figure, position)
+
+
+## Drops a mine at `at` unless it is outside the table or within `min_mine_gap` of another mine. Returns whether it did.
+func maybe_drop(figure: Figure, at: Vector2) -> bool:
+	var combat := RunManager.combat
+	if combat != null and not combat.board.get_table_rect().has_point(at):
+		return false
+	for node in figure.get_tree().get_nodes_in_group("mines"):
+		if node is LandMine and not node.is_queued_for_deletion() and node.global_position.distance_to(at) < min_mine_gap:
+			return false
+	_drop(figure, at)
+	return true
 
 
 func _drop(figure: Figure, at: Vector2) -> void:
