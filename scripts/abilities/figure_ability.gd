@@ -48,6 +48,12 @@ func get_explosion_multiplier(_figure: Figure, _source: Figure) -> float:
 	return 1.0
 
 
+## Modifier: how much of an explosion's push counts as SHELL damage (Duwall) on `figure`. Separate from
+## get_explosion_multiplier, so an explosion-proof figure can still be cracked (1.0 = full, 0.5 = half).
+func get_explosion_damage_multiplier(_figure: Figure) -> float:
+	return 1.0
+
+
 ## Modifier: how many flicks this figure gets per turn (the extra ones come after the board settles).
 func get_flicks_per_turn(_figure: Figure) -> int:
 	return 1

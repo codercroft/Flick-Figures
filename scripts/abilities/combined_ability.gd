@@ -55,6 +55,10 @@ func get_knockback_multiplier(figure: Figure, source: Figure) -> float:
 	return first.get_knockback_multiplier(figure, source) * second.get_knockback_multiplier(figure, source)
 
 
+func get_explosion_damage_multiplier(figure: Figure) -> float:
+	return first.get_explosion_damage_multiplier(figure) * second.get_explosion_damage_multiplier(figure)
+
+
 func get_explosion_multiplier(figure: Figure, source: Figure) -> float:
 	return first.get_explosion_multiplier(figure, source) * second.get_explosion_multiplier(figure, source)
 

@@ -13,7 +13,7 @@ extends FigureAbility
 @export var shell_strength := 8000.0
 ## What it becomes when the shell breaks.
 @export var broken_form: FigureData
-## Explosion pushes (impulse) count as shell damage times this.
+## Shell damage from an explosion = the push it gives Duwall (impulse, before knockback multipliers) x this.
 @export var explosion_damage_scale := 1.0
 ## Cracks appear at these fractions of the shell strength (light, then heavy).
 @export var light_crack_at := 1.0 / 3.0
@@ -88,7 +88,7 @@ func shell_fraction() -> float:
 func get_shell_state(_figure: Figure) -> Dictionary:
 	if broken:
 		return {}
-	return {"remaining": shell_strength - damage, "max": shell_strength}
+	return {"remaining": shell_strength - damage, "max": shell_strength, "explosion_scale": explosion_damage_scale}
 
 
 ## What a hit would add to the shell (the AI uses this to value cracking it).

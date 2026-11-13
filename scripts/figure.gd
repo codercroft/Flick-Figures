@@ -717,8 +717,12 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 func take_explosion(impulse: Vector2, source: Figure) -> void:
 	unglue()
 	var multiplier := ability.get_explosion_multiplier(self, source)
+	# Shell damage is separate from the push: it uses the raw impulse times the ability's damage multiplier
+	# (Bomb Shelter blocks the push but only halves the damage).
+	var damage_multiplier := ability.get_explosion_damage_multiplier(self)
+	if damage_multiplier > 0.0:
+		ability.on_took_explosion(self, impulse * damage_multiplier)  # (Duwall's shell)
 	if multiplier > 0.0:
-		ability.on_took_explosion(self, impulse * multiplier)  # (Duwall's shell)
 		take_knockback(impulse * multiplier, source)
 
 

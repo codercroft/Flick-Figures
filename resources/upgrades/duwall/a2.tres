@@ -9,5 +9,5 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Bomb Shelter"
-description = "Immune to explosions."
+description = "No explosion push; shell takes half explosion damage."
 extra_effect = SubResource("fx")

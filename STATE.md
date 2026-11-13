@@ -140,7 +140,7 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. |
 | Alchemist | Tap empty board: debuff zone radius 150 (placing uses its action). Opposing figures inside take x1.5 knockback. Touching/passing through Douses an opposing figure for 2 rounds (keeps the x1.5). One zone per Alchemist. |
 | Bummer | Aura radius 180: an opposing figure whose body touches it loses control when its side tries to flick it: it auto-flicks with an AI "takeover" shot aimed to hurt itself/its friends (0.9 s delay). Boss bodies never aim themselves off the table: a taken-over boss body flicks at 25% of normal power (`takeover_boss_power_cap`) and only with shots whose predicted stopping point is at least 1.5 x its radius + 150 px from every table edge; if none is safe it passes and the flick is wasted. |
-| Duwall | Radius 70, mass 2.5, flick x1.5, takes half knockback. A shell absorbs impact damage (8000 = about 3 big hits); at the threshold it bursts and becomes a Grunt for the combat. Bomb Shelter: immune to explosion knockback. |
+| Duwall | Radius 70, mass 2.5, flick x1.5, takes half knockback. A shell absorbs impact damage (8000 = about 3 big hits); at the threshold it bursts and becomes a Grunt for the combat. Explosions (enemy blasts, mines, rockets) crack the shell: damage = the push impulse x 1.0 (`explosion_damage_scale`); player-side blasts never push or crack a player Duwall. Bomb Shelter: no explosion push, half explosion shell damage. |
 | Energizer | The first allied figure it hits during its flick becomes flickable again (enemy: removed from the cycle). |
 | Ghost | During its own side's turn it wraps to the opposite edge whenever it leaves the table, keeping velocity (no limit). On the other side's turn it falls normally. Full Haunt: also wraps once per opponent turn. |
 | Piggy Bank | Mass and size scale with money: 1x at $0, 2x at $20, 3.5x at $50, soft cap 4x; also deals proportionally more knockback. |
@@ -282,7 +282,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Cluster | Rebound | 2 | Toss and Flick | Can toss and flick in the same turn. |
 | Cluster | Rebound | 3 | Homing Pieces | Loose clustlings slide home at the end of your turn. |
 | Duwall | Shell | 1 | Thick Shell | Shell 50% tougher. |
-| Duwall | Shell | 2 | Bomb Shelter | Immune to explosions. |
+| Duwall | Shell | 2 | Bomb Shelter | No explosion push; shell takes half explosion damage. |
 | Duwall | Shell | 3 | Regrowth | The shell regrows 25% per round. |
 | Duwall | Ram | 1 | Heavy Ram | Flick power x1.75 (from x1.5). |
 | Duwall | Ram | 2 | Shell Smash | +30% knockback dealt while the shell holds. |
@@ -495,7 +495,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | 2 | Powder Keg | Land Miner, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
 | 2 | Glue Gang | Glue Guy with Sticky Grip (3 at once) + 2 Splitter | random | 1 |
 | 2 | Juice Bar | Juicer, 2 Speedo, Bummer | random | 1 |
-| 2 | Ultimate Shieldon | just the Ultimate Shieldon (enemy-only, radius 110, mass 5, average flick power; at the end of each of its turns, once settled, it raises a 240 degree steel-blue shield centered on the nearest player figure; the back 120 degrees stay open (dashed orange ring); the shield is a collision polygon: hits from the shield side take 10% of the normal knockback on it and bounce the attacker off, open-side hits land normally; it drops when the Ultimate Shieldon is flicked; AI: after a move it prefers no player figures on its open side and the open side pointing along a long way to a table edge) | Open Field | 1 |
+| 2 | Ultimate Shieldon | just the Ultimate Shieldon (enemy-only, radius 110, mass 5, average flick power; at the end of each of its turns, once settled, it raises a 240 degree steel-blue shield centered on the nearest player figure; the back 120 degrees stay open (dashed orange ring); the shield is a collision polygon: hits from the shield side take 10% of the normal knockback on it and bounce the attacker off, open-side hits (and any hit while no shield is up) take x2 knockback (`open_knockback_multiplier`); it drops when the Ultimate Shieldon is flicked; AI: after a move it prefers no player figures on its open side and the open side pointing along a long way to a table edge) | Open Field | 1 |
 | 3 | Mirror Match | one enemy per combat slot cycling through YOUR deck's figure types (economy ones become Grunts), each with copies of your equipment/finish/upgrade for that slot; mass/power/accuracy x1.1 | random | 1 |
 | 3 | The Collector | Eater (size and mass x1.3, feeds on its own Grunts) + 4 Grunt | random | 1 |
 | 3 | Siege | Engineer (turret placed before your first flick), 2 Shieldon Ooper, Duwall | Fortress Walls | 1 |

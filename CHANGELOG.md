@@ -4,6 +4,11 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-13: Duwall explosion damage, Ultimate Shieldon knockback
+- Explosions now crack Duwall's shell by the raw push impulse x `DuwallAbility.explosion_damage_scale` (1.0), independent of knockback multipliers (enemy blasts, Land Miner mines, rockets all go through `Figure.take_explosion`). New hook `get_explosion_damage_multiplier`: Bomb Shelter still blocks the push and now takes half damage (`ExplosionImmunityEffect.shell_damage_multiplier` 0.5). Player-side blasts still skip player figures entirely, so no push and no crack. The AI's blast value uses the same damage numbers.
+- Ultimate Shieldon takes x2 knockback (`open_knockback_multiplier`) from hits on its open side (and while no shield is up); the shield side still takes x0.1 and deflects as before.
+- Test: `tools/duwall_blast_test.gd`.
+
 ## 2026-11-12: Balance pass (Bumper, Speedo, Glue Guy, Absorber, Spitter, Cluster, Bummer)
 - Bumper Bulk halved: Heavy Frame +15% mass, Armored x0.75 knockback taken (on top of the figure's 0.75), Easy Rolling flick power 0.85 and damping x1.3.
 - Speedo Dash is now Building Speed (+15% per flick) / Flick Fury (+10% knockback dealt per flick taken this combat, `flick_knockback_per_flick`, cap `max_flick_stacks` 10 flicks) / Triple Dash (3 flicks). Quad Dash and the Zip Kill Rush (`kill_extra_flick`, the `_extra` flick counter) are removed; Zip tier 3 is Hard Hitter (+25% knockback dealt, `knockback_dealt_bonus`). Saves: no migration needed, the upgrade slots keep their (path, tier) and the same number of tiers.

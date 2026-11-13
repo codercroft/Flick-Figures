@@ -13,6 +13,8 @@ extends FigureAbility
 ## Share of knockback the Shieldon takes from hits that come from the shield side.
 @export var shield_knockback_multiplier := 0.1
 @export var arc_steps := 20
+## Knockback taken from hits on the OPEN side (or while no shield is up). The shield side keeps its tiny multiplier above.
+@export var open_knockback_multiplier := 2.0
 
 var _shield: CollisionPolygon2D
 var _angle := 0.0  # world direction (radians) the shield is centered on
@@ -74,7 +76,7 @@ func covers(figure: Figure, point: Vector2) -> bool:
 func get_knockback_multiplier(figure: Figure, source: Figure) -> float:
 	if _shield != null and source != null and covers(figure, source.global_position):
 		return shield_knockback_multiplier
-	return 1.0
+	return open_knockback_multiplier
 
 
 func _toward_nearest_opponent(figure: Figure) -> Vector2:

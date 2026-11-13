@@ -1097,7 +1097,7 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 		if figure.team == Figure.Team.PLAYER:
 			var shell := figure.ability.get_shell_state(figure)
 			if not shell.is_empty():
-				value += shell_crack_bonus * clampf(push.length() * figure.ability.get_explosion_multiplier(figure, source) / shell.remaining, 0.0, 1.0)
+				value += shell_crack_bonus * clampf(push.length() * figure.ability.get_explosion_damage_multiplier(figure) * float(shell.get("explosion_scale", 1.0)) / shell.remaining, 0.0, 1.0)
 			total += value
 		else:
 			total -= value * blast_ally_factor
