@@ -854,6 +854,10 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 			continue
 		other.take_explosion(direction * force * (1.0 - distance / blast_radius), source)
 		other.ability.on_exploded.call_deferred(other, source)
+		if source_team >= 0 and other.team != source_team:  # Wet Explosions: the figures it pushes get Doused
+			var douse := RunManager.explosion_douse(source_team)
+			if not douse.is_empty():
+				other.douse(int(douse.rounds), float(douse.knockback), true)
 
 
 ## True if an explosion (or implosion) set off by `source_team` does not push `victim`: the player's own blasts never

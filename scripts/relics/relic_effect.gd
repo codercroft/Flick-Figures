@@ -60,6 +60,27 @@ func on_first_enemy_turn(_main) -> float:
 	return 0.0
 
 
+## An enemy turn is about to start (player-held relic). `index` counts enemy turns this combat from 0 (1 = the second).
+## Return how many seconds the enemy should wait (for an animation), 0 for none.
+func on_enemy_turn_start(_main, _index: int) -> float:
+	return 0.0
+
+
+## The same for an ENEMY-held relic: a player turn is about to start (`index` 0 = the first, 1 = the second).
+func on_player_turn_start(_main, _index: int) -> void:
+	pass
+
+
+## True: on the player's first turn of each combat they flick twice (Out the Gate).
+func grants_first_turn_extra_flick() -> bool:
+	return false
+
+
+## Explosions set off by the side that holds this relic Douse the opposing figures they push: {rounds, knockback} or {}.
+func get_explosion_douse() -> Dictionary:
+	return {}
+
+
 ## --- Enemy relics (act 3 elites): the same relics, written for the enemy side. Defaults do nothing. ---
 
 ## Multiplies the flick power of an ENEMY figure (main = the Main node).
@@ -91,6 +112,11 @@ func on_player_figure_falling(_main, _figure: Figure) -> bool:
 
 ## Extra money after every won combat.
 func get_income_bonus() -> int:
+	return 0
+
+
+## Extra money per figure still on the table after a won combat (on top of the normal income per figure).
+func get_income_per_figure_bonus() -> int:
 	return 0
 
 

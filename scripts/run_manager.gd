@@ -300,6 +300,44 @@ func relic_shows_aim_bounce() -> bool:
 	return false
 
 
+## An enemy turn is about to start: held relics may act (Safety Net on the second one). Returns seconds the enemy waits.
+func relic_enemy_turn_start(main, index: int) -> float:
+	var wait := 0.0
+	for relic in relics:
+		if relic.effect != null:
+			wait = maxf(wait, relic.effect.on_enemy_turn_start(main, index))
+	return wait
+
+
+## A player turn is about to start: ENEMY-held relics may act (Safety Net on the player's second turn).
+func enemy_relic_player_turn_start(main, index: int) -> void:
+	for relic in enemy_relics:
+		if relic.effect != null:
+			relic.effect.on_player_turn_start(main, index)
+
+
+## Out the Gate: the player flicks twice on the first turn of each combat.
+func relic_extra_first_flick() -> bool:
+	for relic in relics:
+		if relic.effect != null and relic.effect.grants_first_turn_extra_flick():
+			return true
+	return false
+
+
+## Wet Explosions: the Douse ({rounds, knockback}, strongest wins) that explosions set off by `source_team` give the
+## opposing figures they push, or {} for none. The player's relics count for the PLAYER side, enemy relics for the ENEMY side.
+func explosion_douse(source_team: int) -> Dictionary:
+	var list: Array[RelicData] = relics if source_team == Figure.Team.PLAYER else (enemy_relics if source_team == Figure.Team.ENEMY else [] as Array[RelicData])
+	var best := {}
+	for relic in list:
+		if relic.effect == null:
+			continue
+		var douse: Dictionary = relic.effect.get_explosion_douse()
+		if not douse.is_empty() and (best.is_empty() or douse.knockback > best.knockback):
+			best = douse
+	return best
+
+
 ## True if a relic saves a player's figure that was about to be knocked off.
 func relic_saves_figure(main, figure: Figure) -> bool:
 	for relic in relics:
@@ -818,7 +856,11 @@ func add_equipment(item: EquipmentData) -> void:
 ## Pays for a won combat: income_per_figure for each figure still on the table, plus each figure's
 ## own income_bonus (Cha-ching), plus `equipment_bonus` (Coin Purse). Call it before combat_won().
 func award_income(figures_on_table: Array[FigureData], equipment_bonus := 0) -> void:
-	var base := figures_on_table.size() * config.income_per_figure
+	var per_figure := config.income_per_figure
+	for relic in relics:
+		if relic.effect != null:
+			per_figure += relic.effect.get_income_per_figure_bonus()  # Rich Boys
+	var base := figures_on_table.size() * per_figure
 	var bonus := equipment_bonus
 	for figure in figures_on_table:
 		bonus += figure.income_bonus

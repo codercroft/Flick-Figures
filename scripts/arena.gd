@@ -31,6 +31,7 @@ var _bricks: Array[Dictionary] = []  # {body, rounds}
 var _zones: Array[Dictionary] = []  # {kind, center, radius, inner, pull, rounds, node, inside}
 var _temp_pins: Array[TempPin] = []  # Pinhead's pins
 var _shield_walls: Array[ShieldWall] = []  # Shieldon Ooper's walls
+var _edge_walls: Array[Dictionary] = []  # Safety Net walls: {wall, top (bool: top edge, else bottom)}
 var _starter_walls: Array[ShieldWall] = []  # the Starter Walls relic's walls (one enemy turn)
 var _alchemy_zones: Array[AlchemyZone] = []  # Alchemist's debuff zones (the power-placed _zones below are different)
 var _turrets: Array[Turret] = []  # Engineer's turrets
@@ -402,6 +403,55 @@ func place_starter_wall(owner_figure: Figure, center: Vector2, size: Vector2) ->
 	wall.pop_up()
 	_starter_walls.append(wall)
 	return true
+
+
+## Safety Net (relic): a full-width wall just outside the table's `top` or bottom edge, so nothing on that side can be knocked
+## off it. A real arena-layer body like every wall (the enemy AI's shape casts see it); it pops up and stays until
+## remove_edge_walls(). Returns false if there is already one on that edge.
+func place_edge_wall(team: int, table: Rect2, top: bool, thickness: float, overhang: float) -> bool:
+	for entry in _edge_walls:
+		if entry.top == top and is_instance_valid(entry.wall):
+			return false
+	var size := Vector2(table.size.x + overhang * 2.0, thickness)
+	var wall := ShieldWall.new()
+	wall.size = size
+	wall.team = team
+	wall.collision_layer = Figure.LAYER_ARENA
+	wall.collision_mask = 0
+	var material := PhysicsMaterial.new()
+	material.bounce = clampf(wall_bounce, 0.0, 1.0)
+	material.friction = 0.0
+	wall.physics_material_override = material
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	shape.shape = rect
+	wall.add_child(shape)
+	wall.position = Vector2(table.get_center().x, table.position.y - thickness / 2.0 if top else table.end.y + thickness / 2.0)
+	add_child(wall)
+	wall.pop_up()
+	_edge_walls.append({"wall": wall, "top": top})
+	return true
+
+
+func remove_edge_walls() -> void:
+	for entry in _edge_walls:
+		if is_instance_valid(entry.wall):
+			remove_child(entry.wall)  # out of the physics space right away
+			entry.wall.queue_free()
+	_edge_walls.clear()
+
+
+## True if `point` (outside `table`) is past an edge a Safety Net wall currently covers: a figure going there stops instead.
+func edge_protected(point: Vector2, table: Rect2) -> bool:
+	for entry in _edge_walls:
+		if not is_instance_valid(entry.wall):
+			continue
+		if entry.top and point.y < table.position.y:
+			return true
+		if not entry.top and point.y > table.end.y:
+			return true
+	return false
 
 
 func remove_starter_walls() -> void:

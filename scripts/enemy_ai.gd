@@ -897,6 +897,8 @@ func _slide_ratio_uncached(figure: Figure, from: Vector2, velocity: Vector2, tab
 		var sim := _simulate_flight(figure, from, velocity)
 		for point in sim.points:
 			if not table.has_point(point):
+				if _arena != null and _arena.edge_protected(point, table):
+					return 0.5  # a Safety Net wall covers that edge: it stops there instead of falling off
 				return 1.3
 		var edge_now := _distance_to_edge(from, velocity / speed, table)
 		if edge_now <= 0.0:

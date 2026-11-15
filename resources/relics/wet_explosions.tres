@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RelicData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/relic_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/relics/wet_explosions_effect.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_1"]
+script = ExtResource("2")
+
+[resource]
+script = ExtResource("1")
+display_name = "Wet Explosions"
+label = "WX"
+description = "Your explosions Douse the enemies they hit: +30% knockback taken for 2 rounds."
+color = Color(0.35, 0.7, 0.95, 1)
+rarity = 0
+effect = SubResource("Resource_1")

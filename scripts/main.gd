@@ -110,6 +110,9 @@ var player_flicks := 0
 ## Second Wind: set once it has brought a figure back this combat.
 var second_wind_used := false
 var enemy_flicks_made := 0  # enemy flicks this combat (the Opening Act enemy relic doubles the first)
+var _player_turns_started := 0  # player turns this combat (an enemy Safety Net acts on the second)
+var _gate_pending := false  # Out the Gate: the first player turn still owes its second flick
+var _gate_window := false  # the second flick is on offer (Skip button shown)
 var _enemy_turns_taken := 0  # enemy turns started this combat (relics act on the first)
 var _figures_lost := 0  # player figures knocked off for good (Clean Sheet)
 
@@ -237,7 +240,7 @@ func _physics_process(_delta: float) -> void:
 ## Watchdog: the turn loop should always finish, but if it ever gets stuck, recover.
 func _process(delta: float) -> void:
 	ui.set_powers_enabled(_state == State.PLAYER_TURN)
-	ui.set_bonus_visible(_bonus_figure != null and (_state == State.PLAYER_TURN or _state == State.AIMING))
+	ui.set_bonus_visible((_bonus_figure != null or _gate_window) and (_state == State.PLAYER_TURN or _state == State.AIMING))
 	if _hold_pending and _state == State.AIMING:
 		_hold_time += delta
 		if _hold_time >= spray_hold_seconds:
@@ -329,6 +332,12 @@ func _start_player_turn(new_round := true) -> void:
 	_clear_temp_buffs(Figure.Team.PLAYER)
 	arena.remove_starter_walls()  # Starter Walls: they only last through the enemy turn
 	_cancel_power()
+	if new_round:
+		arena.remove_edge_walls()  # Safety Net: the player's wall only lasts through the enemy's turn
+		RunManager.enemy_relic_player_turn_start(self, _player_turns_started)  # an enemy Safety Net covers the top edge
+		_player_turns_started += 1
+		if _player_turns_started == 1:
+			_gate_pending = RunManager.relic_extra_first_flick()  # Out the Gate
 	if new_round:
 		for figure in _all_figures():
 			if _is_alive(figure):
@@ -575,6 +584,15 @@ func _bonus_text(figure: Figure, bloodlust := false) -> String:
 
 
 func _skip_bonus_flick() -> void:
+	if _gate_window and _bonus_figure == null:  # Out the Gate: no second flick, the enemy is next
+		_gate_window = false
+		aim_line.clear()
+		_aim_figure = null
+		_touch_index = -1
+		_deselect()
+		_state = State.SETTLING
+		_to_enemy_turn()
+		return
 	var figure := _bonus_figure
 	_bonus_figure = null
 	aim_line.clear()
@@ -875,6 +893,17 @@ func _finish_player_turn() -> void:
 		_update_status()
 		_start_player_turn(false)
 		return
+	if _gate_pending:  # Out the Gate: the first turn's SECOND flick (normal cycle rules, can be skipped)
+		_gate_pending = false
+		_gate_window = true
+		ui.skip_button.text = "Skip second flick"
+		_start_player_turn(false)
+		ui.show_your_turn("Out the Gate! Flick a second figure (or Skip)")
+		return
+	_to_enemy_turn()
+
+
+func _to_enemy_turn() -> void:
 	if SandboxSetup.active and SandboxSetup.ai_off:
 		_begin_manual_enemy_turn()
 		return
@@ -923,6 +952,7 @@ func _end_turn_for_all() -> void:
 
 func _run_enemy_turn() -> void:
 	_end_turn_for_all()  # (the player's turn is over)
+	arena.remove_edge_walls()  # an enemy Safety Net only lasts through the player's turn
 	_clear_temp_buffs(Figure.Team.ENEMY)
 	var serial := _turn_serial
 	_state = State.ENEMY_TURN
@@ -939,12 +969,13 @@ func _run_enemy_turn() -> void:
 	_place_enemy_turrets()
 	_place_enemy_zones()
 	_enemy_tap_abilities()
+	var wait := RunManager.relic_enemy_turn_start(self, _enemy_turns_taken)  # Safety Net: the wall for the second turn
 	if _enemy_turns_taken == 0:
-		var wait := RunManager.relic_first_enemy_turn(self)  # Starter Walls: walls pop up before the first shot
-		if wait > 0.0:
-			await get_tree().create_timer(wait).timeout
-			if serial != _turn_serial:
-				return
+		wait = maxf(wait, RunManager.relic_first_enemy_turn(self))  # Starter Walls: walls pop up before the first shot
+	if wait > 0.0:
+		await get_tree().create_timer(wait).timeout
+		if serial != _turn_serial:
+			return
 	_enemy_turns_taken += 1
 	# The enemy side takes _enemy_flicks flicks. Each one is the best shot of ANY enemy figure.
 	# The total is read every round: in the per-unit boss fights it changes as pieces appear or fall off.
@@ -1585,6 +1616,7 @@ func _knock_off_fallen_figures() -> void:
 func _on_any_flick(figure: Figure, _impulse: Vector2) -> void:
 	_flicker = figure
 	_flick_kills = 0
+	_gate_window = false  # (Out the Gate: the second flick has been taken)
 
 
 func _count_kill(fallen: Figure) -> void:

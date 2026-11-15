@@ -5,6 +5,8 @@ extends StaticBody2D
 
 var size := Vector2(170.0, 24.0)
 var owner_figure: Figure
+## Walls with no owner figure (Safety Net) use this team for their ring color.
+var team := -1
 ## Spikes path: x speed a figure leaves with after it hits the wall; whether opponents that hit it get Doused.
 var launch := 1.0
 var douses := false
@@ -22,7 +24,8 @@ func pop_up(duration := 0.25) -> void:
 
 func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(lerpf(0.6, 1.0, clampf(_pop, 0.0, 1.0)), maxf(_pop, 0.02)))
-	var team_color := Figure.ENEMY_RING if owner_figure != null and owner_figure.team == Figure.Team.ENEMY else Figure.PLAYER_RING
+	var wall_team: int = owner_figure.team if owner_figure != null else team
+	var team_color := Figure.ENEMY_RING if wall_team == Figure.Team.ENEMY else Figure.PLAYER_RING
 	var rect := Rect2(-size / 2.0, size)
 	draw_rect(rect, Color(0.45, 0.55, 0.7))
 	draw_rect(rect, Color(0.8, 0.88, 1.0), false, 4.0)

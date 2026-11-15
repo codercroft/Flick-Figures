@@ -36,7 +36,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 ### Win / loss
 - Win: every enemy is off the table. Mad Creator: the Creator off the table wins (summons vanish). Slime/Skull-o-tron: all pieces/balls off.
 - Loss: all player figures off, or (The Wall) any wall piece's front edge reaches the deck line.
-- On a combat win: money = $1 per own figure still on the table that "pays income" (Splitter minis do not) + each figure's `income_bonus` (Cha-ching 2, 3 upgraded) + Coin Purse +$1 + Lucky Coin +$1 + node bonus (elite +$2, boss +$5).
+- On a combat win: money = $1 per own figure still on the table that "pays income" (Splitter minis do not) + each figure's `income_bonus` (Cha-ching 2, 3 upgraded) + Coin Purse +$1 + Lucky Coin +$2 + Rich Boys +$1 per figure + node bonus (elite +$2, boss +$5).
 
 ---
 
@@ -378,21 +378,25 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Common | Grippy Table | Your figures stop 30% sooner. |
 | Common | Costume Change | Equip, unequip and swap equipment in the Inventory during combat, on your own turn (nothing moving, not mid-aim). Costs no flick; effects apply at once. |
 | Common | Home Field | Your figures take half knockback in your bottom third of the board. |
-| Common | Lucky Coin (economy) | +$1 after every won combat. |
+| Common | Lucky Coin (economy) | +$2 after every won combat. |
+| Common | Wet Explosions | Your explosions (figures, rockets, landmines, Bomb Drop, implosions) Douse the enemies they hit: +30% knockback taken for 2 rounds (the shared Doused status: only the strongest Douse applies). |
 | Uncommon | Blast Cap | Explosions are 50% bigger. |
 | Uncommon | Bully | 2x knockback against figures near the table edge. |
 | Uncommon | Clean Sheet | Win a combat without losing a figure to gain a random power. |
 | Uncommon | Gravity Well | Magnet-type pulls are twice as strong. |
 | Uncommon | Trophy Case | Figure rewards offer one more choice. |
+| Uncommon | Rich Boys (economy) | After a won combat each figure that pays income pays $2 instead of $1 (Splitter minis and loose clustlings still pay nothing). |
 | Uncommon | Underdog | +50% flick power while you have fewer figures on the table than the enemy. |
 | Rare | Last One Standing | Your final remaining figure gets 2x flick power and takes half knockback. |
 | Rare | Opening Act | The first flick of each combat has 2x power. |
 | Rare | Starter Walls | Before the enemy's first turn, a wall pops up in front of each unflicked figure on the deck. It lasts that turn. |
+| Rare | Safety Net | At the start of the enemy's SECOND turn of each combat a full-width wall covers the bottom edge of the table (below the deck strip), so your figures can't be knocked off the bottom. It lasts that turn. |
+| Boss | Out the Gate | On your first turn of each combat you flick twice (a second figure, normal cycle rules; the Skip button skips it) before the enemy acts. |
 | Boss | Extra Pocket | +1 deck slot. |
 | Boss | Second Wind | The first of your figures knocked off each combat returns to the deck strip. (Only from boss rewards.) |
 
 Exact numbers: Blast Cap x1.5 radius; Bully x2 within 200 px of the edge; Grippy Table: damping x1/0.7; Home Field x0.5 in the bottom third; Last One Standing x2 power, x0.5 knockback; Opening Act first flick x2; Underdog x1.5 power; Gravity Well x2 pulls (Magnet, Magnet Charm, Magnet Throw); Trophy Case +1 figure choice; Extra Pocket +1 deck slot (Boss rarity, boss reward only); Starter Walls pops a 190 x 26 wall above every unflicked deck figure before the enemy's first turn (lasts that turn); Second Wind returns the first knocked-off figure each combat to its deck slot; Clean Sheet gives a random power if no figure was lost; Aim Assist shows the first bounce.
-The enemy-side versions (Ascension 8+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act (never economy relics).
+The enemy-side versions (Ascension 8+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act, Wet Explosions (the enemy's explosions Douse your figures) and Safety Net (a wall covers the TOP edge during your second turn, so enemies cannot be knocked off the top); never economy relics, never Rich Boys or Out the Gate.
 
 ### Powers (12; 3 slots; used up when used; using one never ends the turn)
 | Power | Effect (numbers) |

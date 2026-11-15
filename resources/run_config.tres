@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=108 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=112 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -71,6 +71,10 @@
 [ext_resource type="Resource" path="res://resources/relics/trophy_case.tres" id="133"]
 [ext_resource type="Resource" path="res://resources/relics/gravity_well.tres" id="134"]
 [ext_resource type="Resource" path="res://resources/relics/clean_sheet.tres" id="135"]
+[ext_resource type="Resource" path="res://resources/relics/wet_explosions.tres" id="relic_wx"]
+[ext_resource type="Resource" path="res://resources/relics/rich_boys.tres" id="relic_rb"]
+[ext_resource type="Resource" path="res://resources/relics/safety_net.tres" id="relic_sn"]
+[ext_resource type="Resource" path="res://resources/relics/out_the_gate.tres" id="relic_og"]
 [ext_resource type="Script" path="res://scripts/encounter_data.gd" id="149"]
 [ext_resource type="Resource" path="res://resources/encounters/banshee.tres" id="150"]
 [ext_resource type="Resource" path="res://resources/encounters/swarm.tres" id="151"]
@@ -165,7 +169,7 @@ upgrade_trees = Array[ExtResource("tree_script")]([ExtResource("tree_aggro_bom")
 upgrade_trees = Array[ExtResource("tree_script")]([ExtResource("tree_aggro_bom"), ExtResource("tree_blastoid"), ExtResource("tree_cha_ching"), ExtResource("tree_crazy_man"), ExtResource("tree_land_miner"), ExtResource("tree_glue_guy"), ExtResource("tree_juicer"), ExtResource("tree_magnet"), ExtResource("tree_rally"), ExtResource("tree_shieldon_ooper"), ExtResource("tree_splitter"), ExtResource("tree_spitter"), ExtResource("tree_absorber"), ExtResource("tree_alchemist"), ExtResource("tree_bummer"), ExtResource("tree_cluster"), ExtResource("tree_duwall"), ExtResource("tree_energizer"), ExtResource("tree_ghost"), ExtResource("tree_piggy_bank"), ExtResource("tree_pinhead"), ExtResource("tree_powerhouse"), ExtResource("tree_pusher"), ExtResource("tree_sneaky_bomber"), ExtResource("tree_speedo"), ExtResource("tree_bloodluster"), ExtResource("tree_bombo"), ExtResource("tree_bumper"), ExtResource("tree_eater"), ExtResource("tree_engineer"), ExtResource("tree_wikka_wat")])
 start_with_relics = false
 starting_relic_count = 3
-relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135"), ExtResource("relic_sw"), ExtResource("rel_cc")])
+relic_pool = Array[ExtResource("120")]([ExtResource("121"), ExtResource("122"), ExtResource("123"), ExtResource("125"), ExtResource("126"), ExtResource("127"), ExtResource("128"), ExtResource("129"), ExtResource("130"), ExtResource("131"), ExtResource("132"), ExtResource("133"), ExtResource("134"), ExtResource("135"), ExtResource("relic_sw"), ExtResource("rel_cc"), ExtResource("relic_wx"), ExtResource("relic_rb"), ExtResource("relic_sn"), ExtResource("relic_og")])
 acts = 3
 difficulty = ExtResource("140")
 map = ExtResource("141")

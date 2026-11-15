@@ -36,6 +36,10 @@ func _physics_process(delta: float) -> void:
 			continue
 		# (nudge, not a force: a resting figure's first slow frames would otherwise be zeroed by the settle logic)
 		figure.nudge(offset / distance * strength * (1.0 - distance / radius) * delta)
+		if source_team >= 0 and figure.team != source_team:  # Wet Explosions: pulled opponents get Doused
+			var douse := RunManager.explosion_douse(source_team)
+			if not douse.is_empty():
+				figure.douse(int(douse.rounds), float(douse.knockback), true)
 	if _age >= seconds:
 		queue_free()
 
