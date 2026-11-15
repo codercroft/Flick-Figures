@@ -740,10 +740,12 @@ func _tap_empty_board(pos: Vector2) -> void:
 		return
 	var tap := _selected.ability.get_tap_ability(_selected)
 	if not tap.is_empty() and tap.kind == "point":  # Ghost's teleport...
-		if tap.ready and _selected.ability.use_tap_ability(_selected, pos):
+		if not tap.ready:
+			ui.show_your_turn("Not ready")
+		elif _selected.ability.use_tap_ability(_selected, pos):
 			_after_tap_ability(_selected, tap)
 		else:
-			ui.show_your_turn("Not ready")
+			ui.show_your_turn("Can't go there: pick a free spot on the table")
 		return
 	var toss := _selected.ability.get_toss_stats(_selected)
 	if not toss.is_empty():  # Cluster: tap = toss a clustling toward that spot (instead of flicking)
@@ -1736,14 +1738,19 @@ func explode_at(point: Vector2, radius: float, force: float) -> void:
 
 
 ## Swaps two figures' positions (Swap).
-func swap_figures(a: Figure, b: Figure) -> void:
+## Swaps two figures' positions exactly and stops both. Returns false (nothing changed) if the pair is not valid.
+func swap_figures(a: Figure, b: Figure) -> bool:
+	if a == b or not _is_alive(a) or not _is_alive(b) or a.is_glued() or b.is_glued():
+		return false
 	var pos_a := a.global_position
-	a.global_position = b.global_position
-	b.global_position = pos_a
+	var pos_b := b.global_position
+	a.teleport_to(pos_b)
+	b.teleport_to(pos_a)
 	for figure in [a, b]:
-		figure.linear_velocity = Vector2.ZERO
 		if figure.team == Figure.Team.PLAYER:
 			figure.on_deck = board.deck_rect.has_point(figure.global_position)
+			figure._update_collision()
+	return a.global_position.distance_to(pos_b) < 1.0 and b.global_position.distance_to(pos_a) < 1.0
 
 
 func can_rewind() -> bool:
@@ -1870,14 +1877,27 @@ func _try_power_target(pos: Vector2) -> void:
 				_activate_power(_power_slot, [own])
 		PowerEffect.Target.TWO_FIGURES:
 			var figure := _figure_at(pos, -1)
-			if figure == null or _power_targets.has(figure):
+			if figure == null:  # empty space: cancel, the power is kept
+				_cancel_power()
+				_resume_player_turn()
+				notice("Cancelled")
+				return
+			var first = _power_targets[0] if not _power_targets.is_empty() else null
+			if figure == first:  # the same figure again: unselect it
+				figure.selected = false
+				_power_targets.clear()
+				notice(effect.prompt)
+				return
+			var problem := effect.target_problem(self, figure, first)
+			if problem != "":
+				notice(problem)
 				return
 			_power_targets.append(figure)
 			figure.selected = true
 			if _power_targets.size() == 2:
 				_activate_power(_power_slot, _power_targets.duplicate())
 			else:
-				notice("Tap the second figure")
+				notice("%s selected: tap the second figure (tap empty space to cancel)" % figure.data.display_name)
 		PowerEffect.Target.POINT:
 			if board.board_rect.has_point(pos):
 				_activate_power(_power_slot, [pos])
@@ -1902,6 +1922,7 @@ func _activate_power(slot: int, targets: Array) -> void:
 	var power: PowerData = RunManager.powers[slot]
 	_cancel_power()
 	if not power.effect.apply(self, targets):
+		notice("That did not work: the power is kept")
 		return  # it could not be done: the power is kept
 	RunManager.use_power(slot)
 	ui.set_powers(RunManager.powers)

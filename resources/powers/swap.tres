@@ -9,6 +9,6 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Swap"
-description = "Tap two figures to swap their positions."
+description = "Tap two figures to swap places. Tap empty space to cancel."
 color = Color(0.3, 0.75, 0.6, 1)
 effect = SubResource("Resource_1")

@@ -83,7 +83,7 @@ func _all() -> void:
 	print("Wikka Wat reverse")
 	await _start([_entry(ww, 0, Vector2(540, 1500)), _entry(grunt, 1, Vector2(900, 400))])
 	var w = _main._players[0]
-	_flick(w)
+	_flick(w, Vector2(0, 60))
 	await create_timer(0.25).timeout
 	_check(_main._state == 2, "settling after the flick")
 	var before: Vector2 = w.linear_velocity
@@ -91,7 +91,7 @@ func _all() -> void:
 	await physics_frame
 	var after: Vector2 = w.linear_velocity
 	print("    %s -> %s" % [before, after])
-	_check(ok and after.dot(before) < 0.0 and absf(after.length() - before.length()) < before.length() * 0.08, "a tap reverses it: same speed, opposite direction")
+	_check(ok and after.dot(before) < 0.0 and absf(after.length() / before.length() - 1.5) < 0.1, "a tap reverses it: x1.5 speed, opposite direction (x%.2f)" % (after.length() / before.length()))
 	_check(not _main.try_reverse_tap(), "only one use per turn at base")
 	var ev := InputEventScreenTouch.new()
 	ev.pressed = true
@@ -120,7 +120,7 @@ func _all() -> void:
 	before = w.linear_velocity
 	w.ability.use_reverse(w)
 	await physics_frame
-	_check(absf(w.linear_velocity.length() / before.length() - 1.25) < 0.08, "each use gives +25%% speed (x%.2f)" % (w.linear_velocity.length() / before.length()))
+	_check(absf(w.linear_velocity.length() / before.length() - 1.875) < 0.12, "each use gives x1.5 +25%% on top = x1.875 (x%.2f)" % (w.linear_velocity.length() / before.length()))
 	_check(absf(ab.get_dealt_knockback_bonus(w, null) - 0.25) < 0.001, "and +25% knockback dealt")
 	await _until(func(): return not is_instance_valid(w) or w.is_resting(), 15.0)
 	_check(ab.get_dealt_knockback_bonus(w, null) == 0.0, "the bonus ends when it comes to rest")
@@ -138,7 +138,7 @@ func _all() -> void:
 	near = (nearest.global_position - w.global_position).normalized()
 	w.ability.use_reverse(w)
 	await physics_frame
-	_check(w.linear_velocity.normalized().dot(near) > 0.97 and absf(w.linear_velocity.length() - before.length()) < before.length() * 0.08, "Seek: redirects toward the nearest opponent at the same speed")
+	_check(w.linear_velocity.normalized().dot(near) > 0.97 and absf(w.linear_velocity.length() / before.length() - 1.5) < 0.1, "Seek: redirects toward the nearest opponent at x1.5 speed")
 	await _until(func(): return _main._state == 0, 25.0)
 
 	print("Seek refresh and kill stacks")
@@ -203,7 +203,7 @@ func _all() -> void:
 	for c in boss.get_children():
 		if c is CollisionPolygon2D:
 			shapes += 1
-	_check(shapes == 1, "the shield is a collision polygon on the body")
+	_check(shapes == 3, "the shield is 3 collision polygon segments on the body")
 	_main._enemies[0].ability.on_flicked(boss, Vector2.ZERO)
 	_check(not sab.has_shield(), "it drops when the Ultimate Shieldon is flicked")
 

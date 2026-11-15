@@ -87,12 +87,17 @@ func use_tap_ability(figure: Figure, point: Vector2) -> bool:
 	var combat = RunManager.combat
 	if combat == null or _teleported:
 		return false
+	# Refuse spots off the table or overlapping any other figure, wall or pin.
 	if not combat.arena.is_spot_free(figure.get_world_2d().direct_space_state, combat.board.board_rect, point, figure.radius):
 		return false
-	_teleported = true
-	figure.global_position = point
+	var was_on_deck := figure.on_deck
 	figure.on_deck = false
 	figure._update_collision()
+	if not figure.teleport_to(point):  # (the move did not stick: put things back, nothing is used up)
+		figure.on_deck = was_on_deck
+		figure._update_collision()
+		return false
+	_teleported = true
 	figure.show_popup("Boo!", Color(0.85, 0.9, 1.0))
 	return true
 

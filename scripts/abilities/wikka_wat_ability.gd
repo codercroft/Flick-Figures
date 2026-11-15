@@ -1,11 +1,14 @@
 class_name WikkaWatAbility
 extends FigureAbility
 ## Wikka Wat: while it is MOVING on its own side's turn (its own flick, or a bump from a teammate) the player can TAP the
-## screen to fully reverse its momentum: same speed, opposite direction (Seek path: toward the nearest opponent instead).
+## screen to reverse its momentum at `reverse_speed_multiplier` (1.5x) the speed, opposite direction (Seek path: toward the
+## nearest opponent instead, same 1.5x).
 ## It is not a flick. Charges (`reverses_per_turn`) are refilled every turn change and do not carry over.
 ## Scratch path: more charges, and each use adds speed and knockback until it rests. Seek path: redirect, refresh on hit,
 ## and a growing flick power and mass per kill.
 
+## Every reverse multiplies its speed by this (also the Seek redirect). Scratch tier 2's `speed_bonus` stacks on top.
+@export var reverse_speed_multiplier := 1.5
 ## Reverses per turn (Scratch tiers 1 and 3 raise it).
 @export var reverses_per_turn := 1
 ## It must be moving faster than this (px/s) to be reversed.
@@ -13,7 +16,7 @@ extends FigureAbility
 ## Scratch tier 2: each use multiplies its speed by 1 + this, and adds this much knockback dealt (per use) until it rests.
 @export var speed_bonus := 0.0
 @export var knockback_bonus := 0.0
-## Seek tier 1: the reverse points at the nearest opponent (same speed) instead of straight back.
+## Seek tier 1: the reverse points at the nearest opponent (x1.5 speed, like every reverse) instead of straight back.
 @export var redirect_to_nearest := false
 ## Seek tier 2: hitting an opponent refills the charges for this turn.
 @export var refresh_on_hit := false
@@ -29,7 +32,8 @@ var _base_mass := 0.0
 
 
 func get_reverse_stats(_figure: Figure) -> Dictionary:
-	return {"charges_left": maxi(reverses_per_turn - _used, 0), "per_turn": reverses_per_turn, "seek": redirect_to_nearest}
+	return {"charges_left": maxi(reverses_per_turn - _used, 0), "per_turn": reverses_per_turn, "seek": redirect_to_nearest,
+			"speed_factor": reverse_speed_multiplier * (1.0 + speed_bonus)}
 
 
 ## True if a reverse could be used right now: moving fast enough, on its own side's turn, a charge left.
@@ -48,7 +52,7 @@ func use_reverse(figure: Figure, direction := Vector2.ZERO) -> bool:
 	if not can_reverse(figure):
 		return false
 	var velocity := figure.linear_velocity
-	var speed := velocity.length() * (1.0 + speed_bonus)
+	var speed := velocity.length() * reverse_speed_multiplier * (1.0 + speed_bonus)
 	var heading := direction.normalized() if direction != Vector2.ZERO else -velocity.normalized()
 	if direction == Vector2.ZERO and redirect_to_nearest:
 		var toward := _toward_nearest_opponent(figure)

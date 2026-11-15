@@ -749,35 +749,38 @@ func choose_wikka_reverse(figure: Figure, players: Array[Figure], table: Rect2) 
 		for player in players:
 			if is_instance_valid(player) and not player.knocked_off and player.global_position.distance_to(figure.global_position) <= distance + player.radius:
 				options.append((player.global_position - figure.global_position).normalized())
+	# The reversed path is faster (x reverse_speed_multiplier, Scratch's bonus on top), so it also travels farther.
+	var new_speed := speed * float(stats.get("speed_factor", 1.0))
+	var new_distance := _travel_distance(figure, new_speed)
 	for option in options:
-		var value := _wikka_path_value(figure, option, distance, speed, table)
+		var value := _wikka_path_value(figure, option, new_distance, new_speed, table)
 		if value > best_value:
 			best_value = value
 			best = option
 	return best
 
 
-## Ultimate Shieldon: how good it is to stand at `point`: player figures on its OPEN side (the 120 degrees opposite the nearest
-## player figure, which the shield will face) cost, and an open side that points toward a far table edge earns a bonus.
+## Ultimate Shieldon: how good it is to stand at `point`. Its shield will be raised turned so that its INTACT segments face
+## the player figures (`plan_angle`: the nearest one first); every player figure that no intact segment would cover costs
+## `shield_exposed_penalty` (so broken segments matter), and an open side pointing toward a far table edge earns a bonus.
+## With every segment broken there is no shield any more and this is worth nothing.
 func _shield_position_value(enemy: Figure, point: Vector2, players: Array[Figure], table: Rect2) -> float:
 	var info := enemy.ability.get_ai_shield(enemy)
-	if info.is_empty():
+	if info.is_empty() or int(info.get("intact", 1)) <= 0:
 		return 0.0
-	var nearest: Figure = null
-	var nearest_distance := INF
+	var shield = info.get("ability")
+	var positions: Array[Vector2] = []
 	for player in players:
-		if is_instance_valid(player) and not player.knocked_off and player.global_position.distance_to(point) < nearest_distance:
-			nearest = player
-			nearest_distance = player.global_position.distance_to(point)
-	if nearest == null:
+		if is_instance_valid(player) and not player.knocked_off:
+			positions.append(player.global_position)
+	if positions.is_empty():
 		return 0.0
-	var open_direction := -(nearest.global_position - point).normalized()
-	var open_half := deg_to_rad(360.0 - float(info.arc)) / 2.0
+	var arc_angle: float = shield.plan_angle(point, enemy.team, positions)
 	var value := 0.0
-	for player in players:
-		if player != nearest and is_instance_valid(player) and not player.knocked_off \
-				and absf((player.global_position - point).angle_to(open_direction)) <= open_half:
+	for position in positions:
+		if not shield.bearing_covered(arc_angle, (position - point).angle()):
 			value -= shield_exposed_penalty
+	var open_direction := -Vector2.from_angle(arc_angle)
 	var edge := _distance_to_edge_along(point, open_direction, table)
 	value += shield_far_edge_bonus * clampf(edge / 900.0, 0.0, 1.0)
 	return value

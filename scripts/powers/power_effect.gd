@@ -24,6 +24,12 @@ func can_use(_main) -> String:
 	return ""
 
 
+## For TWO_FIGURES / OWN_FIGURE / ENEMY powers: "" if `figure` may be tapped (`first` is the figure already chosen, or
+## null), else a short reason shown to the player (the tap is ignored).
+func target_problem(_main, _figure, _first) -> String:
+	return ""
+
+
 ## Do the thing. `targets` holds what was tapped: Figures, or one Vector2 for POINT.
 ## Return false if it could not be done (the power is not used up).
 func apply(_main, _targets: Array) -> bool:

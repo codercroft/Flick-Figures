@@ -977,6 +977,23 @@ func tick_round() -> void:
 		queue_redraw()
 
 
+## Puts the body exactly at `point` and stops it. Written to the physics server as well as the node, so the move
+## sticks even when a physics step is pending; also forgets the velocity history (collision knockback maths).
+## Returns whether the figure really is there afterwards.
+func teleport_to(point: Vector2) -> bool:
+	global_position = point
+	var body := get_rid()
+	if body.is_valid():
+		PhysicsServer2D.body_set_state(body, PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rotation, point))
+		PhysicsServer2D.body_set_state(body, PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	linear_velocity = Vector2.ZERO
+	_last_velocity = Vector2.ZERO
+	_prev_velocity = Vector2.ZERO
+	_slow_frames = 0
+	queue_redraw()
+	return global_position.distance_to(point) < 1.0
+
+
 func return_to_deck() -> void:
 	linear_velocity = Vector2.ZERO
 	global_position = deck_position
