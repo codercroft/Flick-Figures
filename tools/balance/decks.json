@@ -1,0 +1,55 @@
+{
+	"_about": "The 5 mid-run decks for sim 3 (edit freely). Figures, finishes, equipment and relics are found by display name; upgrade is [path, tier] with path 0 = A, 1 = B and tier 1-3. A deck is normally 4 figures (5 with Extra Pocket).",
+	"decks": [
+		{
+			"name": "Bruisers",
+			"relics": ["Grippy Table"],
+			"slots": [
+				{"figure": "Powerhouse", "upgrade": [0, 2], "finish": "Glitter"},
+				{"figure": "Duwall", "upgrade": [0, 2], "equipment": "Anchor"},
+				{"figure": "Pusher", "upgrade": [1, 1]},
+				{"figure": "Bumper"}
+			]
+		},
+		{
+			"name": "Blasters",
+			"relics": ["Blast Cap"],
+			"slots": [
+				{"figure": "Bombo", "upgrade": [0, 2]},
+				{"figure": "Blastoid", "upgrade": [0, 1]},
+				{"figure": "Sneaky Bomber"},
+				{"figure": "Aggro-bom", "upgrade": [0, 1], "finish": "Glow-in-the-dark"}
+			]
+		},
+		{
+			"name": "Control",
+			"relics": ["Aim Assist"],
+			"slots": [
+				{"figure": "Magnet", "upgrade": [0, 1]},
+				{"figure": "Alchemist", "upgrade": [0, 1]},
+				{"figure": "Shieldon Ooper", "equipment": "Weighted Boots"},
+				{"figure": "Engineer"}
+			]
+		},
+		{
+			"name": "Skirmishers",
+			"relics": ["Opening Act"],
+			"slots": [
+				{"figure": "Speedo", "upgrade": [0, 2]},
+				{"figure": "Ghost", "upgrade": [1, 1]},
+				{"figure": "Bloodluster"},
+				{"figure": "Wikka Wat", "upgrade": [0, 1], "equipment": "Spiked Helmet"}
+			]
+		},
+		{
+			"name": "Tricksters",
+			"relics": ["Home Field"],
+			"slots": [
+				{"figure": "Splitter"},
+				{"figure": "Cluster", "upgrade": [0, 1]},
+				{"figure": "Land Miner", "upgrade": [0, 1]},
+				{"figure": "Rally", "upgrade": [0, 2], "finish": "Metallic"}
+			]
+		}
+	]
+}

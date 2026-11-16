@@ -1,0 +1,598 @@
+[
+	{
+		"enemy": 3,
+		"i": 0,
+		"impulse": [
+			508.54,
+			-814.24
+		],
+		"ms": 36,
+		"target": "Bodyguards"
+	},
+	{
+		"enemy": 2,
+		"i": 1,
+		"impulse": [
+			-472.43,
+			-835.71
+		],
+		"ms": 129,
+		"target": "Bent Lane"
+	},
+	{
+		"enemy": 0,
+		"i": 2,
+		"impulse": [
+			888.42,
+			-363.75
+		],
+		"ms": 42,
+		"target": "Glass Cannons"
+	},
+	{
+		"enemy": 1,
+		"i": 3,
+		"impulse": [
+			-546.26,
+			-539.84
+		],
+		"ms": 33,
+		"target": "Pushover"
+	},
+	{
+		"enemy": 0,
+		"i": 4,
+		"impulse": [
+			-1198.77,
+			-54.38
+		],
+		"ms": 33,
+		"target": "Tinderbox"
+	},
+	{
+		"enemy": 0,
+		"i": 5,
+		"impulse": [
+			276.52,
+			-392.35
+		],
+		"ms": 35,
+		"target": "Ghost Patrol"
+	},
+	{
+		"enemy": 3,
+		"i": 6,
+		"impulse": [
+			-336,
+			-717.19
+		],
+		"ms": 243,
+		"target": "The Setup"
+	},
+	{
+		"enemy": 0,
+		"i": 7,
+		"impulse": [
+			-573.55,
+			435.25
+		],
+		"ms": 47,
+		"target": "Sticky Situation"
+	},
+	{
+		"enemy": 0,
+		"i": 8,
+		"impulse": [
+			1237.08,
+			-737.04
+		],
+		"ms": 63,
+		"target": "Fortress"
+	},
+	{
+		"enemy": 0,
+		"i": 9,
+		"impulse": [
+			288.27,
+			-814.49
+		],
+		"ms": 460,
+		"target": "Speed Trap"
+	},
+	{
+		"enemy": 3,
+		"i": 10,
+		"impulse": [
+			-441.37,
+			-568.85
+		],
+		"ms": 23,
+		"target": "Demolition Crew"
+	},
+	{
+		"enemy": 0,
+		"i": 11,
+		"impulse": [
+			762.07,
+			1470.24
+		],
+		"ms": 195,
+		"target": "Well-Rounded Squad"
+	},
+	{
+		"enemy": 1,
+		"i": 12,
+		"impulse": [
+			-1036.97,
+			-816.75
+		],
+		"ms": 75,
+		"target": "Fireworks"
+	},
+	{
+		"enemy": 0,
+		"i": 13,
+		"impulse": [
+			-618.82,
+			-262.01
+		],
+		"ms": 19,
+		"target": "Bumper Duo"
+	},
+	{
+		"enemy": 1,
+		"i": 14,
+		"impulse": [
+			935.19,
+			931.57
+		],
+		"ms": 143,
+		"target": "Big Brother"
+	},
+	{
+		"enemy": 1,
+		"i": 15,
+		"impulse": [
+			-660.22,
+			-696.93
+		],
+		"ms": 83,
+		"target": "Shield Wall"
+	},
+	{
+		"enemy": 0,
+		"i": 16,
+		"impulse": [
+			1040.4,
+			289.76
+		],
+		"ms": 52,
+		"target": "Pinball Wizard"
+	},
+	{
+		"enemy": 6,
+		"i": 17,
+		"impulse": [
+			-277.23,
+			-120.78
+		],
+		"ms": 437,
+		"target": "Swarm"
+	},
+	{
+		"enemy": 4,
+		"i": 18,
+		"impulse": [
+			578.43,
+			1331.81
+		],
+		"ms": 485,
+		"target": "Banshee"
+	},
+	{
+		"enemy": 3,
+		"i": 19,
+		"impulse": [
+			1196.76,
+			-88.19
+		],
+		"ms": 81,
+		"target": "Powder Keg"
+	},
+	{
+		"enemy": 0,
+		"i": 20,
+		"impulse": [
+			837.13,
+			69.36
+		],
+		"ms": 137,
+		"target": "Glue Gang"
+	},
+	{
+		"enemy": 3,
+		"i": 21,
+		"impulse": [
+			-603.91,
+			-266.27
+		],
+		"ms": 383,
+		"target": "Juice Bar"
+	},
+	{
+		"enemy": 3,
+		"i": 22,
+		"impulse": [
+			-519.39,
+			-407.23
+		],
+		"ms": 86,
+		"target": "Mirror Match"
+	},
+	{
+		"enemy": 0,
+		"i": 23,
+		"impulse": [
+			-1380.27,
+			-410.42
+		],
+		"ms": 165,
+		"target": "The Collector"
+	},
+	{
+		"enemy": 0,
+		"i": 24,
+		"impulse": [
+			-305.7,
+			1407.18
+		],
+		"ms": 998,
+		"target": "Siege"
+	},
+	{
+		"enemy": 2,
+		"i": 25,
+		"impulse": [
+			993.49,
+			-423.52
+		],
+		"ms": 78,
+		"target": "Bloodbath"
+	},
+	{
+		"enemy": 0,
+		"i": 26,
+		"impulse": [
+			33.93,
+			-1439.6
+		],
+		"ms": 13,
+		"target": "Ultimate Shieldon"
+	},
+	{
+		"choice": "pass",
+		"i": 27,
+		"ms": 0,
+		"target": "The Wall"
+	},
+	{
+		"enemy": 3,
+		"i": 28,
+		"impulse": [
+			-9.67,
+			-575.92
+		],
+		"ms": 226,
+		"target": "Sniper Squad"
+	},
+	{
+		"enemy": 0,
+		"i": 29,
+		"impulse": [
+			-3211.97,
+			-2104.48
+		],
+		"ms": 36,
+		"target": "Slime"
+	},
+	{
+		"enemy": 0,
+		"i": 30,
+		"impulse": [
+			-8439.38,
+			-381.6
+		],
+		"ms": 26,
+		"target": "Skull-o-tron"
+	},
+	{
+		"enemy": 0,
+		"i": 31,
+		"impulse": [
+			4242.6,
+			-3301.78
+		],
+		"ms": 44,
+		"target": "Trangle"
+	},
+	{
+		"enemy": 0,
+		"i": 32,
+		"impulse": [
+			-1009.04,
+			-385.01
+		],
+		"ms": 16,
+		"target": "Mad Creator"
+	},
+	{
+		"enemy": 1,
+		"i": 33,
+		"impulse": [
+			-49.23,
+			-1439.16
+		],
+		"ms": 30,
+		"target": "Bodyguards"
+	},
+	{
+		"enemy": 2,
+		"i": 34,
+		"impulse": [
+			-682.78,
+			228.5
+		],
+		"ms": 92,
+		"target": "Bent Lane"
+	},
+	{
+		"enemy": 1,
+		"i": 35,
+		"impulse": [
+			829.45,
+			-483.34
+		],
+		"ms": 40,
+		"target": "Glass Cannons"
+	},
+	{
+		"enemy": 1,
+		"i": 36,
+		"impulse": [
+			-1150.58,
+			-57.25
+		],
+		"ms": 54,
+		"target": "Pushover"
+	},
+	{
+		"enemy": 0,
+		"i": 37,
+		"impulse": [
+			-1431.65,
+			-154.83
+		],
+		"ms": 43,
+		"target": "Tinderbox"
+	},
+	{
+		"enemy": 1,
+		"i": 38,
+		"impulse": [
+			-519.4,
+			-498.62
+		],
+		"ms": 27,
+		"target": "Ghost Patrol"
+	},
+	{
+		"enemy": 3,
+		"i": 39,
+		"impulse": [
+			663.52,
+			821.51
+		],
+		"ms": 43,
+		"target": "The Setup"
+	},
+	{
+		"enemy": 1,
+		"i": 40,
+		"impulse": [
+			-1410.62,
+			-289.39
+		],
+		"ms": 70,
+		"target": "Sticky Situation"
+	},
+	{
+		"enemy": 3,
+		"i": 41,
+		"impulse": [
+			-939.67,
+			196.5
+		],
+		"ms": 78,
+		"target": "Fortress"
+	},
+	{
+		"enemy": 3,
+		"i": 42,
+		"impulse": [
+			358.01,
+			-786.33
+		],
+		"ms": 248,
+		"target": "Speed Trap"
+	},
+	{
+		"enemy": 3,
+		"i": 43,
+		"impulse": [
+			776.47,
+			1212.72
+		],
+		"ms": 31,
+		"target": "Demolition Crew"
+	},
+	{
+		"enemy": 0,
+		"i": 44,
+		"impulse": [
+			-1079.42,
+			231.67
+		],
+		"ms": 166,
+		"target": "Well-Rounded Squad"
+	},
+	{
+		"enemy": 0,
+		"i": 45,
+		"impulse": [
+			-377.11,
+			986.37
+		],
+		"ms": 342,
+		"target": "Fireworks"
+	},
+	{
+		"enemy": 1,
+		"i": 46,
+		"impulse": [
+			-958.06,
+			-313.33
+		],
+		"ms": 27,
+		"target": "Bumper Duo"
+	},
+	{
+		"enemy": 1,
+		"i": 47,
+		"impulse": [
+			453.67,
+			156.78
+		],
+		"ms": 87,
+		"target": "Big Brother"
+	},
+	{
+		"enemy": 2,
+		"i": 48,
+		"impulse": [
+			616.17,
+			736.16
+		],
+		"ms": 115,
+		"target": "Shield Wall"
+	},
+	{
+		"enemy": 1,
+		"i": 49,
+		"impulse": [
+			-264.17,
+			147.18
+		],
+		"ms": 68,
+		"target": "Pinball Wizard"
+	},
+	{
+		"enemy": 1,
+		"i": 50,
+		"impulse": [
+			-227.38,
+			199.36
+		],
+		"ms": 551,
+		"target": "Swarm"
+	},
+	{
+		"enemy": 3,
+		"i": 51,
+		"impulse": [
+			-681.55,
+			1429.88
+		],
+		"ms": 173,
+		"target": "Banshee"
+	},
+	{
+		"enemy": 3,
+		"i": 52,
+		"impulse": [
+			242.42,
+			-1175.26
+		],
+		"ms": 105,
+		"target": "Powder Keg"
+	},
+	{
+		"enemy": 0,
+		"i": 53,
+		"impulse": [
+			-1177,
+			829.62
+		],
+		"ms": 203,
+		"target": "Glue Gang"
+	},
+	{
+		"enemy": 0,
+		"i": 54,
+		"impulse": [
+			-1195.86,
+			1038.74
+		],
+		"ms": 183,
+		"target": "Juice Bar"
+	},
+	{
+		"enemy": 0,
+		"i": 55,
+		"impulse": [
+			967.76,
+			897.69
+		],
+		"ms": 156,
+		"target": "Mirror Match"
+	},
+	{
+		"enemy": 0,
+		"i": 56,
+		"impulse": [
+			-688.65,
+			1264.66
+		],
+		"ms": 125,
+		"target": "The Collector"
+	},
+	{
+		"enemy": 0,
+		"i": 57,
+		"impulse": [
+			-701.55,
+			161.96
+		],
+		"ms": 191,
+		"target": "Siege"
+	},
+	{
+		"enemy": 0,
+		"i": 58,
+		"impulse": [
+			-292.09,
+			914.49
+		],
+		"ms": 231,
+		"target": "Bloodbath"
+	},
+	{
+		"enemy": 0,
+		"i": 59,
+		"impulse": [
+			-172.67,
+			-1429.61
+		],
+		"ms": 3,
+		"target": "Ultimate Shieldon"
+	}
+]

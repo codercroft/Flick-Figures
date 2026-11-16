@@ -1,0 +1,82 @@
+run,ascension,category,item,price,bought
+9,0,figure,Energizer,5,0
+9,0,figure,Aggro-bom,3,0
+9,0,figure,Splitter,3,0
+9,0,swap,Swap a figure,3,0
+9,0,relic,Relic: Grippy Table (Common),10,0
+9,0,power,Power: Glue Puddle,4,0
+9,0,equipment,Equipment: Rubber Ring (Common),5,0
+9,0,upgrade,Upgrade,20,0
+9,0,finish,Finish: Glow-in-the-dark,7,0
+125,0,figure,Wikka Wat,5,1
+125,0,figure,Glue Guy,3,0
+125,0,figure,Aggro-bom,3,0
+125,0,swap,Swap a figure,3,0
+125,0,relic,Relic: Lucky Coin (Common),10,0
+125,0,power,Power: Extra Turn,4,0
+125,0,equipment,Equipment: Parachute (Rare),5,0
+125,0,upgrade,Upgrade,20,0
+125,0,finish,Finish: Rubber,7,0
+18,0,figure,Splitter,3,1
+18,0,figure,Magnet,3,0
+18,0,figure,Piggy Bank,5,0
+18,0,swap,Swap a figure,3,0
+18,0,relic,Relic: Blast Cap (Uncommon),12,0
+18,0,power,Power: Shrink Ray,4,0
+18,0,equipment,Equipment: Wings (Rare),5,0
+18,0,upgrade,Upgrade,20,0
+18,0,finish,Finish: Glitter,7,0
+74,0,figure,Juicer,3,0
+74,0,figure,Aggro-bom,3,0
+74,0,figure,Shieldon Ooper,3,0
+74,0,swap,Swap a figure,3,0
+74,0,relic,Relic: Wet Explosions (Common),10,0
+74,0,power,Power: Rewind,4,0
+74,0,equipment,Equipment: Mr Potential's Skull (Common),5,0
+74,0,upgrade,Upgrade,20,0
+74,0,finish,Finish: Rubber,7,1
+74,0,figure,Glue Guy,3,0
+74,0,figure,Pusher,5,0
+74,0,figure,Eater,8,0
+74,0,swap,Swap a figure,3,0
+74,0,relic,Relic: Clean Sheet (Uncommon),12,1
+74,0,power,Power: Bubble Shield,4,0
+74,0,equipment,Equipment: Magnet Charm (Uncommon),5,0
+74,0,upgrade,Upgrade,20,0
+74,0,finish,Finish: Rubber,7,0
+98,0,figure,Splitter,3,1
+98,0,figure,Cha-ching,3,0
+98,0,figure,Spitter,3,0
+98,0,swap,Swap a figure,3,0
+98,0,relic,Relic: Home Field (Common),10,0
+98,0,power,Power: Super Flick,4,0
+98,0,equipment,Equipment: Anchor (Uncommon),5,0
+98,0,upgrade,Upgrade,20,0
+98,0,finish,Finish: Translucent,7,0
+63,0,figure,Blastoid,3,1
+63,0,figure,Crazy Man,3,0
+63,0,figure,Magnet,3,0
+63,0,swap,Swap a figure,3,0
+63,0,relic,Relic: Home Field (Common),10,0
+63,0,power,Power: Bomb Drop,4,0
+63,0,equipment,Equipment: Lucky Charm (Uncommon),5,0
+63,0,upgrade,Upgrade,20,0
+63,0,finish,Finish: Glow-in-the-dark,7,0
+143,0,figure,Blastoid,3,0
+143,0,figure,Shieldon Ooper,3,0
+143,0,figure,Wikka Wat,5,1
+143,0,swap,Swap a figure,3,0
+143,0,relic,Relic: Costume Change (Common),10,0
+143,0,power,Power: Earthquake,4,0
+143,0,equipment,Equipment: Short Fuse (Uncommon),5,0
+143,0,upgrade,Upgrade,20,0
+143,0,finish,Finish: Glitter,7,0
+159,0,figure,Spitter,3,1
+159,0,figure,Magnet,3,0
+159,0,figure,Energizer,5,0
+159,0,swap,Swap a figure,3,0
+159,0,relic,Relic: Wet Explosions (Common),10,0
+159,0,power,Power: Earthquake,4,0
+159,0,equipment,Equipment: Banana Peel (Common),5,0
+159,0,upgrade,Upgrade,20,0
+159,0,finish,Finish: Glow-in-the-dark,7,0

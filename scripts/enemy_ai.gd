@@ -229,6 +229,12 @@ const TOUCH_MARGIN := 4.0
 ## Aim error (degrees, either way) for an enemy whose FigureData accuracy is 0. At 1 it is perfect.
 @export var max_aim_error_degrees := 20.0
 
+@export_group("Balance sims")
+## Balance sims only (the PlayerBot sets these around its own calls and puts them back): an accuracy that replaces every
+## figure's own (-1 = off) and a search tier that replaces the fight's (0 = off, 1 regular, 2 elite, 3 boss).
+@export var accuracy_override := -1.0
+@export var tier_override := 0
+
 @export_group("Debug")
 ## Draw each enemy's chosen shot (red = attack, orange = via ally, yellow = reposition).
 @export var debug_draw_shots := false:
@@ -242,6 +248,9 @@ var _arena: Arena
 var _floor_on := false
 var _bends := false
 var _pull_sources: Array[Figure] = []
+## The side the shooter being examined fights (the opposing team). The enemy AI always shoots at the player's side; the
+## balance sims' PlayerBot reuses the same evaluation for the player's side, so nothing below hard-codes a team.
+var _foe := Figure.Team.PLAYER
 var _self_penalty := 0.0  # the self-knock-off penalty for the enemy being examined
 var _fast_slides := false  # skip the stepped simulation for secondary slides (explosion pushes, ally chains)
 var _slide_cache := {}  # (figure, from, velocity) -> slide ratio, cleared each decision
@@ -339,6 +348,8 @@ func _prepare() -> void:
 
 ## 1 regular, 2 elite (elite fights and elite-flagged enemies), 3 boss.
 func _tier(enemy: Figure) -> int:
+	if tier_override > 0:
+		return tier_override
 	var node := RunManager.node
 	if node != null and node.type == MapNode.Type.BOSS:
 		return 3
@@ -382,6 +393,7 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var power := enemy.data.flick_power_multiplier * enemy.aura_flick_multiplier() * enemy.ability.get_flick_power_multiplier(enemy)
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
+	_foe = _other_team(enemy.team)
 	var tier := _tier(enemy)
 	var depth := _depth(tier)
 	var offsets := _angle_offsets(depth)
@@ -496,7 +508,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	if not blast.is_empty() and blast.when == "hit":
 		combo += _blast_value(contact, blast, enemy, null, players, table)
 	combo += _aggro_value(enemy, direction, _travel_distance(enemy, speed), players, table)  # Aggro-bom
-	if other.team == Figure.Team.PLAYER:
+	if other.team == _foe:
 		var knocked_off := _leave_chance(other, other.global_position, target_velocity, table)
 		var pushed_toward_edge := _push_progress(other, other.global_position, target_velocity, table)
 		var edge_weight := shove_edge_multiplier if enemy.ability.cancels_rebound(enemy) else 1.0
@@ -541,11 +553,11 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	# Absorber: a hard enough hit swallows a smaller player figure; a hard hit on a player Absorber frees our held ally.
 	var hit_speed: float = hit.get("velocity", Vector2.ZERO).length()
 	var absorb_need := enemy.ability.get_absorb_speed(enemy)
-	if absorb_need > 0.0 and other.team == Figure.Team.PLAYER and other.radius < enemy.radius \
+	if absorb_need > 0.0 and other.team == _foe and other.radius < enemy.radius \
 			and not other.data.uneatable and not other.data.boss_body and hit_speed >= absorb_need:
 		score += absorber_absorb_bonus * weight
 	var escape_need := other.ability.get_escape_speed(other)
-	if escape_need > 0.0 and other.team == Figure.Team.PLAYER and hit_speed >= escape_need:
+	if escape_need > 0.0 and other.team == _foe and hit_speed >= escape_need:
 		var held := other.ability.get_held_figure(other)
 		if held != null and held.team == enemy.team:
 			score += absorber_rescue_bonus * weight
@@ -553,14 +565,14 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	score += _rally_value(enemy, table) * weight
 	# Eater: touching a smaller figure eats it.
 	if enemy.ability.eats_smaller(enemy) and other.radius < enemy.radius and not other.data.uneatable:
-		if other.team == Figure.Team.PLAYER:
+		if other.team == _foe:
 			score += eater_eat_bonus
 		elif enemy.ability.wants_ally_food(enemy):
 			score += eater_feed_bonus + ally_hit_penalty  # cancels the generic ally-hit penalty: feeding is the plan
 		else:
 			score -= eater_ally_penalty
 	# Goo Chain Glue Guy: a hit glues it to the target, and the chain can reach player figures close to the target.
-	if other.team == Figure.Team.PLAYER and enemy.ability.get_glue_chain_cap(enemy) > 2:
+	if other.team == _foe and enemy.ability.get_glue_chain_cap(enemy) > 2:
 		var room: int = enemy.ability.get_glue_chain_cap(enemy) - 2
 		var joined := 0
 		for player in players:
@@ -574,7 +586,7 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 	# Passing through a player Alchemist's zone Douses our own figure.
 	score -= zone_path_penalty * _zone_crossings(enemy, enemy.global_position, contact)
 	if _arena != null:
-		var their_team := Figure.Team.PLAYER if enemy.team == Figure.Team.ENEMY else Figure.Team.ENEMY
+		var their_team := _foe
 		score -= juice_path_penalty * mini(_arena.juice_pieces_on_path(enemy.global_position, contact, enemy.radius, their_team), 3)
 		if other.team != enemy.team and target_velocity.length() > other.stop_speed:  # pushing the target through our own juice
 			var slide_end := other.global_position + target_velocity.normalized() * _travel_distance(other, target_velocity.length())
@@ -836,7 +848,8 @@ func _aggro_value(enemy: Figure, direction: Vector2, distance: float, players: A
 
 ## The enemy's aim error in radians (either way), from its accuracy.
 func _aim_error(enemy: Figure) -> float:
-	return deg_to_rad((1.0 - enemy.data.accuracy) * max_aim_error_degrees)
+	var accuracy := enemy.data.accuracy if accuracy_override < 0.0 else accuracy_override
+	return deg_to_rad((1.0 - accuracy) * max_aim_error_degrees)
 
 
 ## Chance (0 to 1) that a shot aimed `angle_off` radians away from the target's center still hits,
@@ -1078,7 +1091,7 @@ func _first_hit_along(shooter: Figure, shape: CircleShape2D, sim: Dictionary) ->
 ## a get_ai_blast() dictionary; `source` (the exploding figure) and `spared` are not pushed.
 func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Figure,
 		players: Array[Figure], table: Rect2) -> float:
-	var radius: float = blast.radius * RunManager.relic_explosion_multiplier(Figure.Team.ENEMY)
+	var radius: float = blast.radius * RunManager.relic_explosion_multiplier(source.team)
 	var force: float = blast.force * RunManager.explosion_force_multiplier()
 	var total := 0.0
 	_fast_slides = true
@@ -1086,7 +1099,7 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 		var figure := node as Figure
 		if figure == source or figure == spared or figure.knocked_off:
 			continue
-		if Figure.blast_immune(figure, Figure.Team.ENEMY):
+		if Figure.blast_immune(figure, source.team):
 			continue
 		var offset := figure.global_position - center
 		var distance := offset.length()
@@ -1099,7 +1112,7 @@ func _blast_value(center: Vector2, blast: Dictionary, source: Figure, spared: Fi
 		var value := blast_hit_bonus * clampf(change.length() / 300.0, 0.0, 1.0) \
 				+ kill_bonus * _leave_chance(figure, figure.global_position, change, table) \
 				+ edge_bonus * _push_progress(figure, figure.global_position, change, table)
-		if figure.team == Figure.Team.PLAYER:
+		if figure.team == _foe:
 			var shell := figure.ability.get_shell_state(figure)
 			if not shell.is_empty():
 				value += shell_crack_bonus * clampf(push.length() * figure.ability.get_explosion_damage_multiplier(figure) * float(shell.get("explosion_scale", 1.0)) / shell.remaining, 0.0, 1.0)
@@ -1119,7 +1132,7 @@ func _ally_chain_value(ally: Figure, velocity: Vector2, players: Array[Figure], 
 	var shape := CircleShape2D.new()
 	shape.radius = ally.radius
 	var hit := _shot_path(ally, shape, velocity / speed, speed)
-	if hit.is_empty() or hit.collider == null or hit.collider.team != Figure.Team.PLAYER:
+	if hit.is_empty() or hit.collider == null or hit.collider.team != _foe:
 		return 0.0
 	var victim: Figure = hit.collider
 	var outcome := _predict_collision(ally, victim, hit.velocity, hit.position)
@@ -1272,7 +1285,7 @@ func _bank_shot_via(enemy: Figure, shape: CircleShape2D, pin: Vector2, pin_radiu
 		return {}  # something is in the way of the first leg
 	var reach := minf((speed_after_pin - enemy.stop_speed) / enemy.linear_damp, leg2 + target.radius * 2.0)
 	var hit := _first_hit(enemy, shape, rebound, reach, bounce_at)
-	if hit.is_empty() or hit.collider == null or hit.collider.team != Figure.Team.PLAYER:
+	if hit.is_empty() or hit.collider == null or hit.collider.team != _foe:
 		return {}
 	var other: Figure = hit.collider
 	var hit_distance: float = hit.distance
@@ -1769,7 +1782,7 @@ func _best_projectile_shot(enemy: Figure, players: Array[Figure], table: Rect2) 
 		var direct := false
 		if not hit.is_empty():
 			reach = clampf(hit.distance, start_gap, wanted)
-			direct = hit.collider != null and hit.collider.team == Figure.Team.PLAYER
+			direct = hit.collider != null and hit.collider.team == _foe
 		var center: Vector2 = enemy.global_position + direction * reach
 		var score := _blast_value(center, blast, enemy, null, players, table)
 		if direct:

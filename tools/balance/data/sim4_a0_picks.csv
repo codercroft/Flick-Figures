@@ -1,0 +1,158 @@
+run,ascension,result,kind,name
+16,0,loss,figure,Spitter
+28,0,loss,figure,Energizer
+56,0,loss,figure,Land Miner
+56,0,loss,figure,Piggy Bank
+56,0,loss,relic,Opening Act
+56,0,loss,upgrade,Piggy Bank (reward duplicate)
+60,0,loss,figure,Glue Guy
+124,0,loss,figure,Spitter
+124,0,loss,equipment,Coin Purse
+128,0,loss,figure,Glue Guy
+128,0,loss,equipment,Parachute
+140,0,loss,figure,Aggro-bom
+148,0,loss,figure,Pusher
+156,0,loss,figure,Land Miner
+164,0,loss,figure,Crazy Man
+9,0,loss,figure,Powerhouse
+9,0,loss,figure,Shieldon Ooper
+9,0,loss,equipment,Jet Pack
+9,0,loss,relic,Safety Net
+17,0,loss,figure,Shieldon Ooper
+17,0,loss,equipment,Magnet Charm
+17,0,loss,figure,Alchemist
+17,0,loss,relic,Safety Net
+25,0,loss,figure,Aggro-bom
+29,0,loss,figure,Juicer
+33,0,loss,figure,Speedo
+37,0,loss,figure,Spitter
+45,0,loss,figure,Ghost
+45,0,loss,figure,Shieldon Ooper
+45,0,loss,relic,Safety Net
+45,0,loss,figure,Duwall
+69,0,loss,figure,Absorber
+73,0,loss,figure,Ghost
+73,0,loss,equipment,Weighted Boots
+77,0,loss,figure,Cluster
+77,0,loss,figure,Engineer
+77,0,loss,relic,Safety Net
+81,0,loss,figure,Alchemist
+81,0,loss,equipment,Short Fuse
+101,0,loss,figure,Speedo
+125,0,loss,figure,Shieldon Ooper
+125,0,loss,figure,Land Miner
+125,0,loss,equipment,Anchor
+125,0,loss,relic,Opening Act
+125,0,loss,figure,Pusher
+125,0,loss,equipment,Lucky Charm
+125,0,loss,figure,Ghost
+125,0,loss,relic,Second Wind
+125,0,loss,finish,Metallic
+125,0,loss,upgrade,Wikka Wat Scratch
+125,0,loss,figure,Engineer
+125,0,loss,equipment,Banana Peel
+125,0,loss,equipment,Jet Pack
+161,0,loss,figure,Energizer
+165,0,loss,figure,Speedo
+173,0,loss,figure,Pinhead
+173,0,loss,upgrade,Pinhead (reward duplicate)
+173,0,loss,relic,Starter Walls
+173,0,loss,figure,Crazy Man
+173,0,loss,figure,Absorber
+177,0,loss,figure,Juicer
+177,0,loss,upgrade,Juicer (reward duplicate)
+177,0,loss,relic,Safety Net
+189,0,loss,figure,Duwall
+193,0,loss,figure,Absorber
+197,0,loss,figure,Pinhead
+2,0,loss,figure,Blastoid
+18,0,loss,figure,Pusher
+18,0,loss,upgrade,Pusher (reward duplicate)
+18,0,loss,relic,Opening Act
+18,0,loss,figure,Crazy Man
+22,0,loss,figure,Juicer
+26,0,loss,figure,Alchemist
+46,0,loss,figure,Land Miner
+46,0,loss,figure,Blastoid
+46,0,loss,relic,Safety Net
+50,0,loss,figure,Crazy Man
+54,0,loss,figure,Rally
+70,0,loss,figure,Splitter
+70,0,loss,upgrade,Splitter (reward duplicate)
+70,0,loss,relic,Starter Walls
+74,0,loss,figure,Ghost
+74,0,loss,figure,Splitter
+74,0,loss,relic,Opening Act
+74,0,loss,relic,Aim Assist
+74,0,loss,figure,Duwall
+74,0,loss,upgrade,Ghost Haunt
+74,0,loss,figure,Wikka Wat
+74,0,loss,equipment,Rubber Ring
+74,0,loss,relic,Second Wind
+74,0,loss,finish,Glitter
+74,0,loss,upgrade,Ghost Haunt
+74,0,loss,figure,Eater
+74,0,loss,equipment,Jet Pack
+74,0,loss,upgrade,Duwall (reward duplicate)
+74,0,loss,relic,Costume Change
+74,0,loss,figure,Bummer
+74,0,loss,equipment,Jet Pack
+90,0,loss,figure,Sneaky Bomber
+98,0,loss,figure,Blastoid
+98,0,loss,equipment,Lucky Charm
+98,0,loss,figure,Rally
+98,0,loss,equipment,Rubber Ring
+98,0,loss,relic,Starter Walls
+98,0,loss,upgrade,Blastoid (reward duplicate)
+106,0,loss,figure,Speedo
+110,0,loss,figure,Shieldon Ooper
+110,0,loss,equipment,Rubber Ring
+138,0,loss,figure,Eater
+166,0,loss,figure,Ghost
+174,0,loss,figure,Magnet
+174,0,loss,equipment,Wings
+174,0,loss,upgrade,Magnet (reward duplicate)
+174,0,loss,relic,Opening Act
+182,0,loss,figure,Piggy Bank
+190,0,loss,figure,Alchemist
+194,0,loss,figure,Juicer
+3,0,loss,figure,Pinhead
+7,0,loss,figure,Pusher
+7,0,loss,figure,Glue Guy
+7,0,loss,relic,Starter Walls
+11,0,loss,figure,Duwall
+39,0,loss,figure,Rally
+39,0,loss,equipment,Magnet Charm
+55,0,loss,figure,Magnet
+55,0,loss,equipment,Mr Potential's Skull
+59,0,loss,figure,Pusher
+63,0,loss,figure,Duwall
+63,0,loss,equipment,Lucky Charm
+63,0,loss,figure,Spitter
+63,0,loss,relic,Starter Walls
+63,0,loss,upgrade,Spitter (reward duplicate)
+71,0,loss,figure,Cha-ching
+75,0,loss,figure,Shieldon Ooper
+79,0,loss,figure,Energizer
+83,0,loss,figure,Powerhouse
+87,0,loss,figure,Cluster
+91,0,loss,figure,Spitter
+91,0,loss,equipment,Banana Peel
+107,0,loss,figure,Alchemist
+111,0,loss,figure,Magnet
+123,0,loss,figure,Cluster
+143,0,loss,figure,Pinhead
+143,0,loss,figure,Juicer
+143,0,loss,relic,Opening Act
+151,0,loss,figure,Magnet
+151,0,loss,figure,Land Miner
+151,0,loss,relic,Starter Walls
+151,0,loss,figure,Energizer
+159,0,loss,figure,Rally
+159,0,loss,figure,Ghost
+159,0,loss,relic,Safety Net
+159,0,loss,upgrade,Rally (reward duplicate)
+163,0,loss,figure,Duwall
+163,0,loss,figure,Alchemist
+163,0,loss,equipment,Anchor
+163,0,loss,relic,Last One Standing

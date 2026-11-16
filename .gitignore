@@ -24,3 +24,6 @@ mono_crash.*.json
 Thumbs.db
 .vscode/
 .idea/
+
+# balance sim helpers
+__pycache__/

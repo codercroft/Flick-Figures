@@ -1,0 +1,4 @@
+mode,fights,win_pct,avg_figures_lost,avg_player_turns,avg_sim_seconds,avg_wall_seconds,same_win_loss_as_realtime,same_turns_as_realtime,matches_realtime
+realtime (normal speed),30,40,3.57,7.7,42.4,42.49,30/30,30/30,reference
+fixed (--fixed-fps 60),30,43,3.43,7.8,43.1,0.58,19/30,6/30,yes (same averages; single fights diverge)
+x8 (Engine.time_scale 8; cut off after 22 of 30 fights),22,41,3.59,14.3,12.8,12.79,10/22,1/22,"NO (turns 14 vs 8, fights 13 s vs 42 s: settling and timers run on scaled time)"
