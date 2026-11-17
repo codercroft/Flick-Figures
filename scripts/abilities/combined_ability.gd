@@ -127,6 +127,11 @@ func get_bloodlust_cap(figure: Figure) -> int:
 	return maxi(first.get_bloodlust_cap(figure), second.get_bloodlust_cap(figure))
 
 
+func get_ai_decoy(figure: Figure) -> Dictionary:
+	var info := first.get_ai_decoy(figure)
+	return info if not info.is_empty() else second.get_ai_decoy(figure)
+
+
 func has_active_wall(figure: Figure) -> bool:
 	return first.has_active_wall(figure) or second.has_active_wall(figure)
 

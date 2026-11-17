@@ -97,18 +97,18 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Uncommon | Wikka Wat | 1 | 58 | 1.1 | 1 | 0.7 | 1 | Scratch / Seek | - |
 | Common | Glue Guy | 1 | 55 | 1 | 1 | 0.5 | 1 | Sticky / Tar | - |
 | Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Firehose / Sprinkler | - |
-| Common | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
+| Uncommon | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
 | Common | Magnet | 1.2 | 60 | 1 | 1 | 0.7 | 1 | Field / Collapse | - |
 | Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | Charge / Formation | - |
-| Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | Bulwark / Spikes | - |
-| Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Brood / Shrapnel | - |
+| Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | Bulwark / Decoy | - |
+| Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Brood / Lil Warrior | - |
 | Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | Potency / Brew | - |
 | Rare | Bummer | 1 | 60 | 1 | 1 | 0.7 | 1 | Gloom / Downer | - |
 | Uncommon | Absorber | 2 | 66 | 1.6 | 1.1 | 0.5 | 1 | Gut / Spit | - |
 | Uncommon | Cluster | 2.2 (3 x 0.73) | ~97 round the three (circles of 45) | 1 | 1 | 0.7 | 1 | Swarm / Rebound | - |
 | Uncommon | Duwall | 2.5 | 70 | 1.5 | 1 | 0.5 | 0.5 | Shell / Ram | - |
 | Uncommon | Energizer | 0.9 | 56 | 1 | 1 | 0.7 | 1 | Charge / Shock | - |
-| Uncommon | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Haunt / Phase | - |
+| Common | Ghost | 1 | 55 | 1 | 1 | 0.7 | 1 | Haunt / Phase | - |
 | Uncommon | Piggy Bank | 1.3 | 62 | 1 | 1 | 0.7 | 1 | Hoard / Spender | economy |
 | Uncommon | Pinhead | 1 | 60 | 1 | 1 | 0.7 | 1 | Pin Count / Bumper Pins | - |
 | Uncommon | Powerhouse | 1 | 60 | 2 | 1 | 0.7 | 1 | Might / Grit | - |
@@ -133,14 +133,14 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Blastoid | Drag = normal flick. Quick tap on the board = fires a projectile (1200 px/s, no range limit) that explodes (radius 170, force 1200) on a figure, wall or pin, or at the tapped point; Blastoid stays put. Either uses its action. When a set-off (Bombo's Shrapnel upgrade) detonates it, it fires a rocket at the nearest opposing figure on the table instead of exploding where it stands (it stays put and keeps its action). Twin Rockets: 2 rockets per shot (a tap fans them +-6 degrees around the tapped point; a detonation sends one at each of the 2 nearest opposing figures, both at the same one if only one is left). |
 | Crazy Man | Bounce 1; after each bump speed x1.3 (cap 3000). Aura radius 300: teammates flick x1.5 and take knockback /1.5. |
 | Land Miner | Average stats. Whenever it MOVES faster than 60 px/s (its own flick, a hit, a shove, Rally's nudge, an explosion; either side's turn) it adds the distance to a counter and drops a landmine every 400 px of total travel (the first after 400 px; the counter keeps running between movements; a full-power flick travels about 1590 px = 4 mines). Max 12 live mines per Land Miner (oldest removed first); no mine outside the table or within 40 px of another mine. A mine is a small team-colored marker (ring = player white / enemy red, faint trigger circle) that blocks and collides with nothing and stays for the combat. An OPPOSING figure whose center comes within 70 px sets it off: blast radius 180, force 1800 (x1.3 explosion multiplier; between Bombo 200 / 900 and Sneaky Bomber), then it is gone. Mine blasts follow the friendly-explosion rule (player mines never push player figures; enemy mines push everyone, their own side included), count for Blast Cap and Glow-in-the-dark, and explosions never set mines off. AI: paths through player mines cost 120 per mine, shoving a player figure across its own mines earns 110, a Land Miner's moves earn 30 per player flick lane near each mine they would drop (and it considers 1-3 spacings long mine-laying flicks when it has nothing better). |
-| Wikka Wat | Radius 58, mass 1, flick power x1.1. While it is MOVING on its own side's turn (its own flick, or bumped by a teammate) and faster than 120 px/s, a TAP anywhere on the screen (during the settle after your flick) reverses its momentum at 1.5x the speed (`reverse_speed_multiplier`), opposite direction, a "Wikka!" popup and a small pink double-arrow effect. It is not a flick. One charge per turn; charges refill at every turn change (unused ones do not carry over). A pip above it per charge shows what is left (filled = ready). The enemy AI reverses when the new path is worth 60+ more than the current one (after missing, or back into a cluster), and uses Seek's redirect toward any opponent in reach. |
+| Wikka Wat | Radius 58, mass 1, flick power x1.1. While it is MOVING on its own side's turn (its own flick, or bumped by a teammate) and faster than 120 px/s, a TAP anywhere on the screen (during the settle after your flick) reverses its momentum at 1.5x the speed (`reverse_speed_multiplier`), opposite direction, a "Wikka!" popup and a small pink double-arrow effect. It is not a flick. One charge per turn; charges refill at every turn change (unused ones do not carry over). A pip above it per charge shows what is left (filled = ready). Scratch tier 3 (Counter Wikka) adds one reverse per OTHER side's turn (a separate charge, usable while it moves after being hit; the tap works during the enemy turn). The enemy AI reverses when the new path is worth 60+ more than the current one (after missing, or back into a cluster), and uses Seek's redirect toward any opponent in reach. |
 | Glue Guy | A collision glues it to that figure (rigid joint) until that figure falls or an explosion hits. Sticky path: it can stick to up to 1 / 3 / 5 figures at once (Sticky Grip, Sticky Mess; every stuck figure is joined straight to Glue Guy, stuck figures never become sticky: no chains). |
 | Juicer | Drops trail pieces (every 80 px while faster than 150 px/s, radius 55, max 30, fade after 3 rounds) pushing MOVING OPPOSING figures the way Juicer was moving when it laid each piece (150 px/s^2, cap 1800). Hitting an opposing figure (>=150 px/s) adds 6 pieces in a ring (75 px) pushing outward. Any opposing figure touching a piece (moving or not) is lightly Doused: +20% knockback taken for 2 rounds, refreshed on contact, not stacking; an Alchemist's +50% Douse wins if the figure has both (lighter green tint for the juice). |
 | Magnet | While on the board bends the path of moving OPPOSING figures within 500 px (none inside 150 px; up to 1600 px/s^2 at the edge). Implodes when knocked off (radius 300, strength 1800, 0.4 s; 440 / 2700 if wearing Short Fuse). Big Magnet: radius 700, 2300. |
-| Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. |
+| Shieldon Ooper | When it stops after its own flick it props up a 190 x 26 wall 10 px in front of it facing the nearest opponent. One wall per Shieldon; it vanishes if Shieldon moves >6 px or is flicked/knocked off. Wall Chain walls the nearest teammate (on the board OR still on the deck). Decoy path: against the enemy AI only (enemies never roll it). |
 | Alchemist | Tap empty board: debuff zone radius 150 (placing uses its action). Opposing figures inside take x1.5 knockback. Touching/passing through Douses an opposing figure for 2 rounds (keeps the x1.5). One zone per Alchemist. |
 | Bummer | Aura radius 180: an opposing figure whose body touches it loses control when its side tries to flick it: it auto-flicks with an AI "takeover" shot aimed to hurt itself/its friends (0.9 s delay). Boss bodies never aim themselves off the table: a taken-over boss body flicks at 25% of normal power (`takeover_boss_power_cap`) and only with shots whose predicted stopping point is at least 1.5 x its radius + 150 px from every table edge; if none is safe it passes and the flick is wasted. |
-| Duwall | Radius 70, mass 2.5, flick x1.5, takes half knockback. A shell absorbs impact damage (8000 = about 3 big hits); at the threshold it bursts and becomes a Grunt for the combat. Explosions (enemy blasts, mines, rockets) crack the shell: damage = the push impulse x 1.0 (`explosion_damage_scale`); player-side blasts never push or crack a player Duwall. Bomb Shelter: no explosion push, half explosion shell damage. |
+| Duwall | Radius 70, mass 2.5, flick x1.5, takes half knockback. A shell absorbs impact damage (4000 = about 1.5 big hits); at the threshold it bursts and becomes a Grunt for the combat. Explosions (enemy blasts, mines, rockets) crack the shell: damage = the push impulse x 1.0 (`explosion_damage_scale`); player-side blasts never push or crack a player Duwall. Bomb Shelter: no explosion push, half explosion shell damage. |
 | Energizer | The first allied figure it hits during its flick becomes flickable again (enemy: removed from the cycle). |
 | Ghost | During its own side's turn it wraps to the opposite edge whenever it leaves the table, keeping velocity (no limit). On the other side's turn it falls normally. Full Haunt: also wraps once per opponent turn. |
 | Piggy Bank | Mass and size scale with money: 1x at $0, 2x at $20, 3.5x at $50, soft cap 4x; also deals proportionally more knockback. |
@@ -151,7 +151,7 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Speedo | Mass 0.6, flick x0.525; two flicks per turn (offered after the first settles; tap to skip). Dash path: Building Speed, Flick Fury (+10% knockback dealt per flick taken this combat, up to 10), Triple Dash (three flicks). Zip path ends in Hard Hitter (+25% knockback dealt). |
 | Bloodluster | Damping x1.667 (flicks about 60% as far). A flick that knocks an opposing figure off earns a bonus flick from where it stopped, chaining while each flick kills; each bonus adds +35% damping until the round ticks or it becomes flickable again (red pips + tint). |
 | Bombo | Explodes (radius 200, force 900) on its first hit after each flick and survives. Boom Boom: every hit. |
-| Bumper | Bounce 1, damping x1.6, flick x0.7, takes x0.75 knockback. Anything that bounces off it leaves 1.3x faster (not a pushing Pusher). |
+| Bumper | Bounce 1, damping x1.6, flick x0.7, takes x0.75 knockback. Anything that bounces off it leaves 1.18x faster (not a pushing Pusher). |
 | Cluster | Starts as 3 clustlings in ONE rigid body: one circle collision shape of radius 45 per clustling (a tight triangle for 3, a diamond for 4), each drawn as its own small figure, mass 0.73 each (rotation locked). Tap the board instead of flicking: tosses the clustling nearest that direction at 950 px/s (its circle leaves the body, which re-centres); it becomes its own flickable figure (Clustling: radius 45, mass 0.75, flick x0.7, pays no income) and the cluster shrinks and loses mass. Tosses replace flicking, but you can toss as many times per turn as you like (after each toss settles a toss window opens: tap the board for another, or Skip; "Done tossing"); cannot toss the last one. (Toss and Flick keeps the action instead.) Enemy Clusters still toss once. A loose clustling that touches its own cluster (after 0.4 s) rejoins it in the nearest free spot (the cluster grows back; a full cluster takes none). Big Bunch: starts with 4. |
 | Spitter | Select it, then press and hold ~0.25 s without moving (more than 40 px of movement is a normal flick drag) to spray toward the finger; the stream follows it; release stops it. Spraying does not use its action: spray first, then flick (or skip, or spray again, or pick another figure); after its flick settles a spray window opens (hold to spray, "Done spraying" ends the turn), sharing the same water. Enemy Spitters still spray before their flick only. 20 drops/s, 800 px/s, range 450, each drop pushes 20 impulse (a 3 s spray slides a resting mass-1 figure about 280 px; it nudges and redirects, no more). 4 s of water per combat, shrinking size and mass in proportion down to 50% at empty; a blue arc shows the water. Big Gulp: radius 68, mass 1.6, 6 s of water. |
 | Absorber | Its OWN flick hitting an opposing figure with a smaller radius at 150 px/s or more absorbs it (one at a time): the figure leaves play at once (win/loss ignore it), is drawn shrinking inside, and shrinks for 3 rounds (counted at each round tick); then it counts as knocked off. A hit on the Absorber by a teammate of the held figure at 1100 px/s or more frees it at its reduced size (Tight Grip: never); if the Absorber falls off, the held figure pops out where it fell. Bosses, boss pieces and uneatable figures cannot be absorbed. Big Belly: radius 80, mass 3 (can absorb Duwall and Bumper, radius 70). |
@@ -182,8 +182,8 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Aggro-bom | Fuse | 1 | Hair Trigger | Explodes every 3 hits. |
 | Aggro-bom | Fuse | 2 | Overcharge | Explosion power +25%. |
 | Aggro-bom | Fuse | 3 | Two-Hit Fuse | Explodes every 2 hits. |
-| Aggro-bom | Rage | 1 | Hit Fury | +10% knockback for each hit counted. |
-| Aggro-bom | Rage | 2 | Hit Bulk | +10% mass and flick power for each hit counted. |
+| Aggro-bom | Rage | 1 | Hit Fury | +20% knockback for each hit counted. |
+| Aggro-bom | Rage | 2 | Hit Bulk | +20% mass and flick power for each hit counted. |
 | Aggro-bom | Rage | 3 | Big Bang | Takes 5 hits to explode; the explosion has +50% power. |
 | Blastoid | Artillery | 1 | Big Rockets | Rocket radius +25%. |
 | Blastoid | Artillery | 2 | Twin Rockets | 2 rockets per shot. |
@@ -221,12 +221,12 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Land Miner | Smart Bombs | 1 | Bigger Mines | Mine radius and force +30%. |
 | Land Miner | Smart Bombs | 2 | Tighter Pattern | Mines drop a bit more often (x0.8 = 320 px); radius and force +15% more. |
 | Land Miner | Smart Bombs | 3 | Homing Mines | Mines drift toward moving opponents within about 250 px (a gentle pull); they stay put otherwise. |
-| Wikka Wat | Scratch | 1 | Double Wikka | Can reverse twice per turn. |
-| Wikka Wat | Scratch | 2 | Wicked Scratch | Each reverse also gives +25% speed (on top of the x1.5) and +25% knockback dealt (per use) until it rests. |
-| Wikka Wat | Scratch | 3 | Triple Wikka | Can reverse three times per turn. |
-| Wikka Wat | Seek | 1 | Seeking Reverse | The reverse sends it toward the nearest opponent (x1.5 speed). |
-| Wikka Wat | Seek | 2 | Hit and Run | Hitting an opponent refreshes the reverse for this turn. |
-| Wikka Wat | Seek | 3 | Bloodscent | +20% flick power and +20% mass per kill for the rest of the combat (up to 5 stacks, `max_kill_stacks`). |
+| Wikka Wat | Scratch | 1 | Scratch Fever | Each reversal adds +20% flick power and +10% mass for the rest of the combat (stacks up to 5, `max_scratch_stacks`). |
+| Wikka Wat | Scratch | 2 | Double Wikka | Can reverse twice per turn. |
+| Wikka Wat | Scratch | 3 | Counter Wikka | Can also reverse once during each opponent turn (while moving from a hit), on top of its normal reverses. |
+| Wikka Wat | Seek | 1 | Seeking Reverse | The reverse sends it toward the nearest opponent, at x2.0 speed (from x1.5). |
+| Wikka Wat | Seek | 2 | Hit and Run | Hitting an opponent refreshes the reverse for this turn. Reverse speed x2.5. |
+| Wikka Wat | Seek | 3 | Wicked Seek | Reverse speed x3.0, and each reverse also gives +25% speed and +25% knockback dealt (per use) until it rests. |
 | Magnet | Field | 1 | Big Magnet | Bigger, stronger pull. |
 | Magnet | Field | 2 | Repel Pulse | Once per combat, after flicking, tap it to briefly reverse the pull and push opponents away. |
 | Magnet | Field | 3 | Repel Pulses | The push can be used once per turn. |
@@ -242,15 +242,15 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Shieldon Ooper | Bulwark | 1 | Wide Wall | Wall 50% wider. |
 | Shieldon Ooper | Bulwark | 2 | Sturdy Wall | The wall survives small nudges (breaks past 40 px). |
 | Shieldon Ooper | Bulwark | 3 | Wall Chain | When it sets up a wall, the nearest teammate also sets one up, pointed at its nearest opponent. |
-| Shieldon Ooper | Spikes | 1 | Bouncy Wall | Wall bounce +50%. |
-| Shieldon Ooper | Spikes | 2 | Bumper Wall | The wall launches figures like a Bumper (x1.3). |
-| Shieldon Ooper | Spikes | 3 | Wet Wall | Enemies that hit the wall get Doused. |
+| Shieldon Ooper | Decoy | 1 | Decoy | On the enemy's FIRST turn of each combat the AI prefers shots at Shieldon and plans as if the wall were not there (it can bounce off it). Enemies never roll this path. |
+| Shieldon Ooper | Decoy | 2 | Bouncy Wall | Wall bounce +50%. |
+| Shieldon Ooper | Decoy | 3 | Hidden Wall | The AI never plans around the wall (all combat); the first-turn targeting stays. |
 | Splitter | Brood | 1 | Triple Split | 3 minis. |
 | Splitter | Brood | 2 | Big Minis | Minis 25% bigger. |
 | Splitter | Brood | 3 | Re-Split | Minis can split once more. |
-| Splitter | Shrapnel | 1 | Fast Burst | Minis burst out 50% faster. |
-| Splitter | Shrapnel | 2 | Full Force | Minis deal full knockback. |
-| Splitter | Shrapnel | 3 | Splinter Blast | The split makes a small explosion. |
+| Splitter | Lil Warrior | 1 | Heirloom | Each mini keeps its own copy of Splitter's equipment (the original returns to the bag after combat; a Coin Purse copy pays nothing). |
+| Splitter | Lil Warrior | 2 | Full Force | Minis deal full knockback. |
+| Splitter | Lil Warrior | 3 | Hand-Me-Down | Minis keep Splitter's finish. |
 | Spitter | Firehose | 1 | Big Gulp | Bigger and heavier, with more water. |
 | Spitter | Firehose | 2 | Pressure | Push per drop +50%. |
 | Spitter | Firehose | 3 | Steady Size | Doesn't shrink while spraying. |
@@ -284,9 +284,9 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Duwall | Shell | 1 | Thick Shell | Shell 50% tougher. |
 | Duwall | Shell | 2 | Bomb Shelter | No explosion push; shell takes half explosion damage. |
 | Duwall | Shell | 3 | Regrowth | The shell regrows 25% per round. |
-| Duwall | Ram | 1 | Heavy Ram | Flick power x1.75 (from x1.5). |
-| Duwall | Ram | 2 | Shell Smash | +30% knockback dealt while the shell holds. |
-| Duwall | Ram | 3 | Shrapnel Shell | The shell bursting explodes outward. |
+| Duwall | Ram | 1 | Shrapnel Shell | The shell bursting explodes outward. |
+| Duwall | Ram | 2 | Heavy Ram | Flick power x1.75 (from x1.5). |
+| Duwall | Ram | 3 | Shell Smash | +30% knockback dealt while the shell holds. |
 | Energizer | Charge | 1 | Recharge All | Recharges every ally it hits. |
 | Energizer | Charge | 2 | Overcharge | Recharged allies get +25% power on their next flick. |
 | Energizer | Charge | 3 | Instant Recharge | Recharged allies can flick immediately. |
@@ -314,8 +314,8 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Powerhouse | Might | 1 | Mega Power | Flick power x2.5. |
 | Powerhouse | Might | 2 | Giga Power | Flick power x3. |
 | Powerhouse | Might | 3 | Heavy First Hit | The first hit of each flick lands as if 2x heavier. |
-| Powerhouse | Grit | 1 | Normal Skin | Takes normal knockback. |
-| Powerhouse | Grit | 2 | Thick Skin | Takes half knockback. |
+| Powerhouse | Grit | 1 | Normal Skin | Takes x1.5 knockback from enemies (from x2). |
+| Powerhouse | Grit | 2 | Thick Skin | Takes normal (x1) knockback from enemies. |
 | Powerhouse | Grit | 3 | Parachute | Saves itself the first time it would fall off each combat. |
 | Pusher | Drive | 1 | Long Haul | Pushes for 2 s. |
 | Pusher | Drive | 2 | Longer Haul | Pushes for 3 s. |
@@ -347,9 +347,9 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Bombo | Shrapnel | 1 | Chain Blast | Its explosion sets off allied explosives. |
 | Bombo | Shrapnel | 2 | Boom Boom | Explodes on every hit. |
 | Bombo | Shrapnel | 3 | Last Gasp | Also explodes when knocked off. |
-| Bumper | Spring | 1 | Springier | Launch x1.5 (from x1.3). |
-| Bumper | Spring | 2 | Springiest | Launch x1.8 and increased flick power. |
-| Bumper | Spring | 3 | Ultra Spring | Launch x2. |
+| Bumper | Spring | 1 | Springier | Launch x1.3 (from x1.18). |
+| Bumper | Spring | 2 | Springiest | Launch x1.48 and increased flick power. |
+| Bumper | Spring | 3 | Ultra Spring | Launch x1.6. |
 | Bumper | Bulk | 1 | Heavy Frame | +15% mass. |
 | Bumper | Bulk | 2 | Armored | Takes 25% less knockback. |
 | Bumper | Bulk | 3 | Easy Rolling | Flick power and damping move halfway back toward normal (0.85, x1.3). |
@@ -491,7 +491,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | Act | Elite | Lineup | Arena | Flicks/turn |
 |---|---|---|---|---|
 | 1 | Bumper Duo | 2 Bumper (mass x1.5, bounce +0.1, bump ratio x1.4) | random | 1 |
-| 1 | Big Brother | Duwall (radius x1.5, mass x1.5, shell 16000) + 2 Grunt | random | 1 |
+| 1 | Big Brother | Duwall (radius x1.5, mass x1.5, shell 8000) + 2 Grunt | random | 1 |
 | 1 | Shield Wall | 3 Shieldon Ooper + Grunt | random | 1 |
 | 1 | Pinball Wizard | Crazy Man + 2 Speedo inside his aura | Corner Posts | 1 |
 | 2 | Swarm | 8 Swarmling | random | 3 |
@@ -514,8 +514,8 @@ Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a
 | 1 | The Wall | 5 Wall Pieces (mass 6, radius 88, damping x1.5) in a straight row | 1 (pieces never flick) | no | After every enemy turn ALL pieces creep 55 px toward the deck together; any front edge reaching the deck line loses. |
 | 1 | Sniper Squad | 5 Snipers (mass 0.4, radius 40, flick x1.5, accuracy 0.98) | 2 | no | Fragile, accurate. |
 | 2 | Trangle | 1 body, mass 8, radius 120, flick x2.8, concave-triangle collision shape | 2 | yes | Gets 12 rad/s spin on every flick (decays 1.8/s) so its hollows sweep figures. |
-| 2 | Slime | Large (r100, m5, flick x2) | 1 per slime piece on the table (cap 4) | yes | Splits (impact >=350 px/s) into 2 medium (r70, m2.4; split >=300), each into 2 small (r45, m0.9, never split). New pieces ignore hits 0.5 s and take half knockback until the next round. |
-| 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 4) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s, or ANY contact between an arm/ball and a pin (arena or Pinhead pin, no speed threshold, no waiting), breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
+| 2 | Slime | Large (r100, m5, flick x2) | 1 per slime piece on the table (cap 5) | yes | Splits (impact >=350 px/s) into 2 medium (r70, m2.4; split >=300), each into 2 small (r45, m0.9, never split). New pieces ignore hits 0.5 s and take half knockback until the next round. |
+| 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 5) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s, or ANY contact between an arm/ball and a pin (arena or Pinhead pin, no speed threshold, no waiting), breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
 | 3 | Mad Creator | Creator (r60, m3, bounce 0.9) in a 480 px box of 4 breakable walls (8000 health each) | 2 (first flick is always the Creator's) | no | While in the box it flicks itself 150-520 px; where it stops, the floor space under it (Grunt, Speedo, Bumper, Powerhouse) summons that figure in front of the box (max 5 summons). Player hits and explosions break walls. |
 Each act picks one of its two bosses at random at run start (no repeats). Boss accuracy is 0.7-0.98 (data), scaled by act only from Ascension 3. "Boss body" tag (Wall pieces, Trangle, Skull-o-tron core, Slime large, Mad Creator): when a Bummer takes one over, its shot must never go off the table.
 

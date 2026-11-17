@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Hit Fury"
-description = "+10% knockback for each hit counted."
-ability_overrides = {"rage_knockback_per_hit": 0.1}
+description = "+20% knockback for each hit counted."
+ability_overrides = {"rage_knockback_per_hit": 0.2}

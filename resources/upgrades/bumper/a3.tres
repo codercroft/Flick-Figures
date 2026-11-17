@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Ultra Spring"
-description = "Launch x2."
-ability_overrides = {"bump_ratio": 2.0}
+description = "Launch x1.6."
+ability_overrides = {"bump_ratio": 1.6}

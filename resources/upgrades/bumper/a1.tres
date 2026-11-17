@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Springier"
-description = "Launch x1.5 (from x1.3)."
-ability_overrides = {"bump_ratio": 1.5}
+description = "Launch x1.3 (from x1.18)."
+ability_overrides = {"bump_ratio": 1.3}

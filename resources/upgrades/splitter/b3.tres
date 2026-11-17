@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Splinter Blast"
-description = "The split makes a small explosion."
-ability_overrides = {"split_explosion_force": 600.0}
+display_name = "Hand-Me-Down"
+description = "Minis keep Splitter's finish."
+ability_overrides = {"minis_keep_finish": true}

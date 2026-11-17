@@ -7,6 +7,8 @@ extends Resource
 @export var figure: FigureData
 @export var path_a_name := "Path A"
 @export var path_b_name := "Path B"
+## Paths (0 = A, 1 = B) that enemies never roll or copy (Shieldon's Decoy only means something against the AI).
+@export var enemy_excluded_paths: Array[int] = []
 ## Three tiers each, in order.
 @export var path_a: Array[UpgradeData] = []
 @export var path_b: Array[UpgradeData] = []

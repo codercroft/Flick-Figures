@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Wet Wall"
-description = "Enemies that hit the wall get Doused."
-ability_overrides = {"wall_douses": true}
+display_name = "Hidden Wall"
+description = "The enemy never plans around the wall (and still goes for Shieldon on its first turn)."
+ability_overrides = {"decoy_hidden": true}

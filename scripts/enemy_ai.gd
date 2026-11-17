@@ -229,6 +229,11 @@ const TOUCH_MARGIN := 4.0
 ## Aim error (degrees, either way) for an enemy whose FigureData accuracy is 0. At 1 it is perfect.
 @export var max_aim_error_degrees := 20.0
 
+@export_group("Decoy")
+## Shieldon's Decoy upgrade: bonus for a shot that hits a Decoy Shieldon on the enemy's first turn (the AI also leaves its wall
+## out of its predictions that turn, or all combat with Hidden Wall).
+@export var decoy_target_bonus := 400.0
+
 @export_group("Balance sims")
 ## Balance sims only (the PlayerBot sets these around its own calls and puts them back): an accuracy that replaces every
 ## figure's own (-1 = off) and a search tier that replaces the fight's (0 = off, 1 regular, 2 elite, 3 boss).
@@ -251,6 +256,9 @@ var _pull_sources: Array[Figure] = []
 ## The side the shooter being examined fights (the opposing team). The enemy AI always shoots at the player's side; the
 ## balance sims' PlayerBot reuses the same evaluation for the player's side, so nothing below hard-codes a team.
 var _foe := Figure.Team.PLAYER
+var _ignored_walls := {}  # shooter team -> RIDs of walls (a Decoy Shieldon's) its predictions leave out
+var _cur_ignored: Array[RID] = []  # the walls left out for the shooter being examined
+var _first_enemy_turn := false
 var _self_penalty := 0.0  # the self-knock-off penalty for the enemy being examined
 var _fast_slides := false  # skip the stepped simulation for secondary slides (explosion pushes, ally chains)
 var _slide_cache := {}  # (figure, from, velocity) -> slide ratio, cleared each decision
@@ -336,6 +344,15 @@ func _shot_rank(shot: Dictionary) -> float:
 ## and which figures pull moving figures (Magnets)?
 func _prepare() -> void:
 	_arena = RunManager.combat.arena if RunManager.combat != null else null
+	_first_enemy_turn = RunManager.combat != null and RunManager.combat._enemy_turns_taken <= 1
+	_ignored_walls = {Figure.Team.PLAYER: [] as Array[RID], Figure.Team.ENEMY: [] as Array[RID]}
+	_cur_ignored = []
+	if _arena != null:
+		for wall in _arena.shield_walls():
+			if is_instance_valid(wall) and is_instance_valid(wall.owner_figure):
+				for side in [Figure.Team.PLAYER, Figure.Team.ENEMY]:
+					if _decoy_hides(side, wall.owner_figure):
+						_ignored_walls[side].append(wall.get_rid())
 	_pull_sources.clear()
 	_slide_cache.clear()
 	for node in get_tree().get_nodes_in_group("figures"):
@@ -344,6 +361,22 @@ func _prepare() -> void:
 			_pull_sources.append(figure)
 	_bends = not _pull_sources.is_empty() or (_arena != null and _arena.has_bending_floor())
 	_floor_on = _bends or (_arena != null and _arena.has_floor_effects())
+
+
+## Does a Decoy Shieldon (`owner`) keep its wall out of the predictions of the `side` that shoots at it? Tier 3 always; tier 1 only on
+## the enemy's first turn.
+func _decoy_hides(side: int, owner_figure: Figure) -> bool:
+	if owner_figure.team == side:
+		return false
+	var decoy := owner_figure.ability.get_ai_decoy(owner_figure)
+	return not decoy.is_empty() and (decoy.hidden or (side == Figure.Team.ENEMY and _first_enemy_turn))
+
+
+## Is `target` a Decoy Shieldon that the enemy AI prefers to shoot at right now (its first turn)?
+func _decoy_target(side: int, target: Figure) -> bool:
+	if target.team == side or side != Figure.Team.ENEMY or not _first_enemy_turn:
+		return false
+	return not target.ability.get_ai_decoy(target).is_empty()
 
 
 ## 1 regular, 2 elite (elite fights and elite-flagged enemies), 3 boss.
@@ -394,6 +427,7 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var max_speed := max_force * power / enemy.mass
 	var top_speed := minf(max_speed, reference_speed * power)
 	_foe = _other_team(enemy.team)
+	_cur_ignored = _ignored_walls.get(enemy.team, [] as Array[RID])
 	var tier := _tier(enemy)
 	var depth := _depth(tier)
 	var offsets := _angle_offsets(depth)
@@ -516,8 +550,10 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		score = hit_player_bonus + kill_bonus * knocked_off * kill_weight + edge_bonus * edge_weight * pushed_toward_edge
 		if kill_weight > 1.0:
 			score += bloodluster_kill_bonus * knocked_off  # a kill earns a bonus flick
-		if other.ability.has_active_wall(other):
-			score += shield_break_bonus  # moving a Shieldon drops its wall
+		if other.ability.has_active_wall(other) and not _decoy_hides(enemy.team, other):
+			score += shield_break_bonus  # moving a Shieldon drops its wall (unless the AI does not know about it)
+		if _decoy_target(enemy.team, other):
+			score += decoy_target_bonus  # Decoy: the first turn goes at Shieldon
 		if other.is_doused():
 			score += doused_target_bonus  # it takes extra knockback for a while
 		# A shelled Duwall: cracking the shell is progress, and what is left of it is toughness.
@@ -1379,7 +1415,9 @@ func _first_hit(shooter: Figure, shape: CircleShape2D, direction: Vector2, lengt
 	query.transform = Transform2D(0.0, from)
 	query.motion = direction * length
 	query.collision_mask = shooter.collision_mask
-	query.exclude = [shooter.get_rid()]
+	var skipped: Array[RID] = [shooter.get_rid()]
+	skipped.append_array(_cur_ignored)  # a Decoy Shieldon's wall is invisible to it
+	query.exclude = skipped
 	# A sweep misses figures that are already touching the shooter, so check those first: if the
 	# shot pushes into one, it is hit right away.
 	var touch_shape := CircleShape2D.new()
@@ -1424,6 +1462,7 @@ func _blocked_by_arena(figure: Figure, from: Vector2, direction: Vector2, distan
 	query.transform = Transform2D(0.0, from)
 	query.motion = direction * distance
 	query.collision_mask = Figure.LAYER_ARENA
+	query.exclude = _cur_ignored
 	var fractions := figure.get_world_2d().direct_space_state.cast_motion(query)
 	return fractions.size() >= 2 and fractions[1] < 1.0
 

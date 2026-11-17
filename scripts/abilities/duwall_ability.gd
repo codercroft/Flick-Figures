@@ -9,8 +9,8 @@ extends FigureAbility
 
 ## Total shell damage that breaks the shell: about 3 full-power Grunt hits. Measured headless: a full-power Grunt
 ## flick (impulse 2400) into a resting Duwall deals ~3100 from 250 px away and ~2700 from 450 px away (the speed
-## at contact falls with distance), so 3 hits = about 8000.
-@export var shell_strength := 8000.0
+## at contact falls with distance), so 1.5 hits = about 4000.
+@export var shell_strength := 4000.0
 ## What it becomes when the shell breaks.
 @export var broken_form: FigureData
 ## Shell damage from an explosion = the push it gives Duwall (impulse, before knockback multipliers) x this.

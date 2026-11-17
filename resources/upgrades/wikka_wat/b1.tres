@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Seeking Reverse"
-description = "The reverse sends it toward the nearest opponent (x1.5 speed)."
-ability_overrides = {"redirect_to_nearest": true}
+description = "The reverse sends it toward the nearest opponent, at x2.0 speed (from x1.5)."
+ability_overrides = {"redirect_to_nearest": true, "reverse_speed_multiplier": 2.0}

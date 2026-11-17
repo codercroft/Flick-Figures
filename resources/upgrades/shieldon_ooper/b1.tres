@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Bouncy Wall"
-description = "Wall bounce +50%."
-ability_overrides = {"wall_bounce_multiplier": 1.5}
+display_name = "Decoy"
+description = "On the enemy's first turn it prefers shots at Shieldon and plans as if the wall were not there (so it can bounce off it)."
+ability_overrides = {"decoy_first_turn": true}

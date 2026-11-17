@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Bloodscent"
-description = "+20% flick power and +20% mass per kill for the rest of the combat (up to 5)."
-ability_overrides = {"kill_power_bonus": 0.2, "kill_mass_bonus": 0.2}
+display_name = "Wicked Seek"
+description = "Reverse speed x3.0, and each reverse also gives +25% speed and +25% knockback dealt until it rests."
+ability_overrides = {"reverse_speed_multiplier": 3.0, "speed_bonus": 0.25, "knockback_bonus": 0.25}

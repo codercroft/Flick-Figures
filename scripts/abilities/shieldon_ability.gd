@@ -12,8 +12,13 @@ extends FigureAbility
 ## than this (px/s).
 @export var move_tolerance := 6.0
 @export var move_speed := 30.0
-## Spikes path: the wall's bounce (x), launch (x speed after bouncing off it) and whether it Douses opponents that hit it.
+## Decoy path: the wall's bounce (x) (Bouncy Wall, tier 2).
 @export var wall_bounce_multiplier := 1.0
+## Decoy tier 1: on the enemy's FIRST turn of the combat its AI prefers shots at this Shieldon and plans as if the wall were
+## not there. Tier 3 (`decoy_hidden`): the AI never plans around the wall, all combat. They only mean something against the AI.
+@export var decoy_first_turn := false
+@export var decoy_hidden := false
+## Old Spikes path (no upgrade uses these any more): launch (x speed after bouncing off the wall) and Dousing opponents that hit it.
 @export var wall_launch := 1.0
 @export var wall_douses := false
 ## Bulwark path (Wall Chain): the nearest teammate also sets up a wall, pointed at its nearest opponent.
@@ -65,13 +70,13 @@ func _wall_props() -> Dictionary:
 	return {"bounce": wall_bounce_multiplier, "launch": wall_launch, "douses": wall_douses}
 
 
-## Wall Chain: the nearest teammate on the board props up a wall toward its own nearest opponent.
+## Wall Chain: the nearest teammate (on the board or still on the deck) props up a wall toward its own nearest opponent.
 func _wall_for_ally(figure: Figure, combat) -> void:
 	var best: Figure = null
 	var best_distance := INF
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other == null or other == figure or other.knocked_off or other.team != figure.team or other.on_deck:
+		if other == null or other == figure or other.knocked_off or other.team != figure.team:  # (a teammate still on the deck counts: it is the usual case early on)
 			continue
 		var d := other.global_position.distance_to(figure.global_position)
 		if d < best_distance:
@@ -108,6 +113,13 @@ func on_knocked_off(figure: Figure) -> void:
 
 func has_active_wall(_figure: Figure) -> bool:
 	return _spot != Vector2.INF
+
+
+## Enemy AI: {first_turn_target, hidden_wall} for a Decoy Shieldon, {} otherwise.
+func get_ai_decoy(_figure: Figure) -> Dictionary:
+	if not decoy_first_turn and not decoy_hidden:
+		return {}
+	return {"target_first_turn": true, "hidden": decoy_hidden}
 
 
 func _remove_wall(figure: Figure) -> void:

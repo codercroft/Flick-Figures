@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Fast Burst"
-description = "Minis burst out 50% faster."
-ability_multipliers = {"burst_speed": 1.5}
+display_name = "Heirloom"
+description = "Each mini keeps its own copy of Splitter's equipment."
+ability_overrides = {"minis_keep_equipment": true}

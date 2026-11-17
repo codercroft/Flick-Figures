@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Triple Wikka"
-description = "Can reverse three times per turn."
-ability_overrides = {"reverses_per_turn": 3}
+display_name = "Counter Wikka"
+description = "Can also reverse once during each opponent turn (while moving from a hit), on top of its normal reverses."
+ability_overrides = {"opponent_reverses_per_turn": 1}

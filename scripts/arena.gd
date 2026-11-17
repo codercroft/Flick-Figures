@@ -384,6 +384,11 @@ func has_temp_pin(owner_figure: Figure) -> bool:
 
 # --- Shieldon Ooper's walls and the Alchemist's zones -----------------------------------
 
+## Shieldon Ooper's walls (the enemy AI asks which of them to leave out of its predictions: Decoy upgrades).
+func shield_walls() -> Array[ShieldWall]:
+	return _shield_walls
+
+
 ## Props up a wall for `owner_figure` (replacing its old one). Fails (false) if a figure is in the way.
 func place_shield_wall(owner_figure: Figure, center: Vector2, size: Vector2, wall_rotation: float, props := {}) -> bool:
 	remove_shield_wall(owner_figure)

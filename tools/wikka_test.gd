@@ -108,19 +108,26 @@ func _all() -> void:
 	_check(not w.ability.can_reverse(w), "not reversible when not moving")
 
 	print("Scratch / Seek tiers")
-	for case in [[Vector2(0, 1), 2], [Vector2(0, 3), 3]]:
+	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(0, 1))])
+	var ab = _main._players[0].ability
+	_check(ab.reverses_per_turn == 1 and is_equal_approx(ab.scratch_power_per_reverse, 0.2) and is_equal_approx(ab.scratch_mass_per_reverse, 0.1), "Scratch tier 1: +20% flick power and +10% mass per reversal")
+	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(0, 2))])
+	_check(_main._players[0].ability.reverses_per_turn == 2, "Scratch tier 2: Double Wikka (2 reverses per turn)")
+	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(0, 3))])
+	_check(_main._players[0].ability.reverses_per_turn == 2 and _main._players[0].ability.opponent_reverses_per_turn == 1, "Scratch tier 3: 2 reverses plus 1 on the opponent's turn")
+	for case in [[Vector2(1, 1), 2.0], [Vector2(1, 2), 2.5], [Vector2(1, 3), 3.0]]:
 		await _start([_entry(ww, 0, Vector2(540, 1500), case[0])])
-		_check(_main._players[0].ability.reverses_per_turn == case[1], "%s: %d reverses per turn" % [case[0], case[1]])
-	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(0, 2)), _entry(grunt, 1, Vector2(900, 700))])
+		_check(is_equal_approx(_main._players[0].ability.reverse_speed_multiplier, case[1]), "Seek %s: reverse speed x%.1f" % [case[0], case[1]])
+	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(1, 3)), _entry(grunt, 1, Vector2(900, 700))])
 	w = _main._players[0]
-	var ab = w.ability
-	_check(ab.reverses_per_turn == 2 and ab.speed_bonus == 0.25 and ab.knockback_bonus == 0.25, "Scratch tier 2: +25% speed and knockback, 2 uses")
+	ab = w.ability
+	_check(ab.speed_bonus == 0.25 and ab.knockback_bonus == 0.25, "Seek tier 3 (Wicked Seek): +25% speed and knockback")
 	_flick(w, Vector2(50, 0))
 	await create_timer(0.25).timeout
 	before = w.linear_velocity
 	w.ability.use_reverse(w)
 	await physics_frame
-	_check(absf(w.linear_velocity.length() / before.length() - 1.875) < 0.12, "each use gives x1.5 +25%% on top = x1.875 (x%.2f)" % (w.linear_velocity.length() / before.length()))
+	_check(absf(w.linear_velocity.length() / before.length() - 3.75) < 0.3, "each use gives x3.0 +25%% on top = x3.75 (x%.2f)" % (w.linear_velocity.length() / before.length()))
 	_check(absf(ab.get_dealt_knockback_bonus(w, null) - 0.25) < 0.001, "and +25% knockback dealt")
 	await _until(func(): return not is_instance_valid(w) or w.is_resting(), 15.0)
 	_check(ab.get_dealt_knockback_bonus(w, null) == 0.0, "the bonus ends when it comes to rest")
@@ -138,7 +145,7 @@ func _all() -> void:
 	near = (nearest.global_position - w.global_position).normalized()
 	w.ability.use_reverse(w)
 	await physics_frame
-	_check(w.linear_velocity.normalized().dot(near) > 0.97 and absf(w.linear_velocity.length() / before.length() - 1.5) < 0.1, "Seek: redirects toward the nearest opponent at x1.5 speed")
+	_check(w.linear_velocity.normalized().dot(near) > 0.97 and absf(w.linear_velocity.length() / before.length() - 2.0) < 0.15, "Seek tier 1: redirects toward the nearest opponent at x2.0 speed")
 	await _until(func(): return _main._state == 0, 25.0)
 
 	print("Seek refresh and kill stacks")
@@ -147,14 +154,38 @@ func _all() -> void:
 	w.linear_velocity = Vector2(0, -400)
 	w.ability.on_hit(w, _main._enemies[0] if not _main._enemies.is_empty() else null)
 	_check(w.ability._used == 0 or _main._enemies.is_empty(), "hitting an opponent refreshes the reverse")
-	var tier3 = _main._players[0]
-	await _start([_entry(ww, 0, Vector2(540, 1500), Vector2(1, 3)), _entry(grunt, 1, Vector2(900, 700))])
+	print("Scratch stacks and the opponent-turn reverse")
+	await _start([_entry(ww, 0, Vector2(540, 1000), Vector2(0, 1)), _entry(grunt, 1, Vector2(900, 400))])
 	w = _main._players[0]
 	var m0: float = w.mass
-	_main._flicker = w
-	for i in 7:
-		w.ability.on_opponent_knocked_off(w, null)
-	_check(absf(w.mass - m0 * pow(1.2, 5)) < 0.01 and absf(w.ability.get_flick_power_multiplier(w) - pow(1.2, 5)) < 0.01, "Bloodscent stacks +20%% mass and flick power per kill, capped at 5 (mass %.2f)" % w.mass)
+	w.linear_velocity = Vector2(0, -500)
+	_main.turret_side = 0
+	_check(w.ability.use_reverse(w), "a reverse")
+	_check(absf(w.mass - m0 * 1.1) < 0.001 and absf(w.ability.get_flick_power_multiplier(w) - 1.2) < 0.001, "mass x1.1 and flick power x1.2 after one reversal (mass %.2f)" % w.mass)
+	for i in 6:
+		w.ability._used = 0
+		w.linear_velocity = Vector2(0, -500)
+		w.ability.use_reverse(w)
+	_check(absf(w.mass - m0 * pow(1.1, 5)) < 0.01 and absf(w.ability.get_flick_power_multiplier(w) - pow(1.2, 5)) < 0.01, "the stacks cap at 5 (mass %.2f)" % w.mass)
+	await _start([_entry(ww, 0, Vector2(540, 1000), Vector2(0, 3)), _entry(grunt, 1, Vector2(900, 400))])
+	w = _main._players[0]
+	ab = w.ability
+	w.linear_velocity = Vector2(0, -500)
+	_main.turret_side = 1  # the enemy's turn
+	_check(ab.can_reverse(w), "Counter Wikka: it can reverse during the opponent's turn while moving")
+	_check(ab.use_reverse(w) and not ab.can_reverse(w), "once per opponent turn")
+	_check(ab._used == 0, "the opponent-turn reverse does not use up its own-turn reverses")
+	ab.on_turn_ended(w)
+	w.linear_velocity = Vector2(0, -500)
+	_check(ab.can_reverse(w), "refilled at the turn change")
+	_main.turret_side = 0
+	w.linear_velocity = Vector2(0, -500)
+	_check(ab.can_reverse(w) and ab._used == 0, "own-turn reverses are still there")
+	await _start([_entry(ww, 0, Vector2(540, 1000)), _entry(grunt, 1, Vector2(900, 400))])
+	w = _main._players[0]
+	w.linear_velocity = Vector2(0, -500)
+	_main.turret_side = 1
+	_check(not w.ability.can_reverse(w), "without Counter Wikka there is no reverse on the opponent's turn")
 
 	print("Enemy Wikka Wat")
 	await _start([_entry(grunt, 0, Vector2(540, 1000)), _entry(grunt, 0, Vector2(300, 1500)), _entry(grunt, 0, Vector2(500, 1500)), _entry(grunt, 0, Vector2(700, 1500)), _entry(ww, 1, Vector2(900, 700))], false)

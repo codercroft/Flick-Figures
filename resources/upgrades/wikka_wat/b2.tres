@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Hit and Run"
-description = "Hitting an opponent refreshes the reverse for this turn."
-ability_overrides = {"refresh_on_hit": true}
+description = "Hitting an opponent refreshes the reverse for this turn. Reverse speed x2.5."
+ability_overrides = {"refresh_on_hit": true, "reverse_speed_multiplier": 2.5}

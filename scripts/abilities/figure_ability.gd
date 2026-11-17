@@ -307,6 +307,12 @@ func get_bloodlust_cap(_figure: Figure) -> int:
 	return 0
 
 
+## Shieldon (Decoy path), for the AI: {target_first_turn, hidden}: the enemy AI prefers shots at this figure on its first turn,
+## and ignores its wall (that turn, or always when `hidden`) in its predictions. {} = none.
+func get_ai_decoy(_figure: Figure) -> Dictionary:
+	return {}
+
+
 ## Shieldon, for the AI: this figure currently has a wall standing (moving it makes the wall vanish).
 func has_active_wall(_figure: Figure) -> bool:
 	return false

@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Shrapnel Shell"
-description = "The shell bursting explodes outward."
-ability_overrides = {"burst_explosion_force": 1100.0}
+display_name = "Shell Smash"
+description = "+30% knockback dealt while the shell holds."
+ability_overrides = {"shell_knockback": 0.3}

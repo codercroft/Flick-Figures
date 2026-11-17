@@ -2,8 +2,8 @@ class_name BumperAbility
 extends FigureAbility
 ## Anything that bounces off it is launched away from it, hard.
 
-## Extra push as a multiple of the other figure's speed after the bounce (1.3 = launches it 30% harder than the bounce).
-@export var bump_ratio := 1.3
+## Extra push as a multiple of the other figure's speed after the bounce (1.18 = launches it 18% harder than the bounce).
+@export var bump_ratio := 1.18
 ## Ignore bounces slower than this (px/s).
 @export var min_bump_speed := 100.0
 @export var max_bump_speed := 2400.0

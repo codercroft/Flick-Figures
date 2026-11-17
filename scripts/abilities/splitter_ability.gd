@@ -17,8 +17,11 @@ extends FigureAbility
 ## Brood path: minis are this much bigger and heavier (x), and a mini splits once more (into 2 smaller ones).
 @export var piece_size := 1.0
 @export var minis_split_again := false
-## Shrapnel path: minis hit with full knockback; the split makes a small explosion (force 0 = none).
+## Lil Warrior path: minis keep a copy of Splitter's equipment (tier 1), hit with full knockback (tier 2) and keep its finish (tier 3).
+@export var minis_keep_equipment := false
 @export var minis_full_knockback := false
+@export var minis_keep_finish := false
+## Old Shrapnel path (no upgrade uses it any more): the split makes a small explosion (force 0 = none).
 @export var split_explosion_force := 0.0
 @export var split_explosion_radius := 150.0
 
@@ -62,6 +65,14 @@ func on_impact(figure: Figure, _other: Figure, speed: float, point: Vector2) -> 
 			"velocity": away.rotated(deg_to_rad(burst_spread_degrees) * side) * burst_speed + figure.linear_velocity * inherit_velocity,
 			"on_spawn": on_spawn,
 		})
+		# Lil Warrior: every mini gets its OWN copy (so a one-use item is used once per mini). The original stays Splitter's
+		# (it returns to the player's bag after combat as usual); a Coin Purse copy pays nothing, so the bonus is not multiplied.
+		if minis_keep_equipment and figure.equipment != null:
+			var item := figure.equipment.duplicate(true) as EquipmentData
+			item.income_bonus = 0
+			pieces[-1]["equipment"] = item
+		if minis_keep_finish and figure.finish != null:
+			pieces[-1]["finish"] = figure.finish.duplicate(true)
 	if split_explosion_force > 0.0:
 		figure.explode(split_explosion_radius, split_explosion_force)
 	figure.split_into(pieces)

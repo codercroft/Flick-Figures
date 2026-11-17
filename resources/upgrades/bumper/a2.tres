@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1")
 display_name = "Springiest"
-description = "Launch x1.8 and increased flick power."
+description = "Launch x1.48 and increased flick power."
 data_multipliers = {"flick_power_multiplier": 1.25}
-ability_overrides = {"bump_ratio": 1.8}
+ability_overrides = {"bump_ratio": 1.48}

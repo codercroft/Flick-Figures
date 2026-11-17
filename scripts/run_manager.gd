@@ -1173,7 +1173,7 @@ func _roll_enemy_upgrade(figure: FigureData, tougher: bool) -> Vector2i:
 	var paths: Array[int] = []
 	for path in 2:
 		var tiers := tree.tiers(path)
-		if not tiers.is_empty() and tiers[0].run_modifiers.is_empty():
+		if not tiers.is_empty() and tiers[0].run_modifiers.is_empty() and not tree.enemy_excluded_paths.has(path):
 			paths.append(path)
 	if paths.is_empty():
 		return NO_UPGRADE
@@ -1259,7 +1259,11 @@ func _add_mirror_enemies(encounter: EncounterData) -> void:
 		var item := deck_equipment[slot]
 		enemy_forced_equipment.append(item if item != null and not economy and not item.economy and not item.player_only else null)
 		enemy_forced_finish.append(null if economy else deck_finish[slot])
-		enemy_forced_upgrade.append(NO_UPGRADE if economy else deck_upgrade[slot])
+		var mirrored := deck_upgrade[slot]
+		var mirror_tree := tree_for(figure)
+		if economy or (mirror_tree != null and mirror_tree.enemy_excluded_paths.has(mirrored.x)):
+			mirrored = NO_UPGRADE  # (a path that only means something against the AI, like Shieldon's Decoy, is not copied)
+		enemy_forced_upgrade.append(mirrored)
 
 
 ## Tops the lineup up to the act's enemy count with Grunts in free spots: the spot farthest from

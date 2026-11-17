@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Heavy Ram"
-description = "Flick power x1.75 (from x1.5)."
-data_overrides = {"flick_power_multiplier": 1.75}
+display_name = "Shrapnel Shell"
+description = "The shell bursting explodes outward."
+ability_overrides = {"burst_explosion_force": 1100.0}

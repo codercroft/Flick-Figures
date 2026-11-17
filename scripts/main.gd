@@ -41,7 +41,7 @@ const MAP_SCENE := "res://scenes/map.tscn"
 @export var no_repeat_enemy := true
 ## Slime and Skull-o-tron fights: the enemy side flicks once per turn for each of its units on the table
 ## (every slime piece; the core and each Skull Ball), but never more than this many.
-@export var max_enemy_flicks := 4
+@export var max_enemy_flicks := 5
 
 @export_group("Turn")
 ## Old rule: once every figure has been flicked, the player taps one on the board to reload it
@@ -216,8 +216,8 @@ func try_reverse_tap() -> bool:
 
 ## Enemy Wikka Wats look every few physics frames whether a reverse or redirect would set up a better hit.
 func _enemy_wikka_step() -> void:
-	if _state != State.ENEMY_TURN or Engine.get_physics_frames() % 3 != 0:
-		return
+	if (_state != State.ENEMY_TURN and _state != State.SETTLING) or Engine.get_physics_frames() % 3 != 0:
+		return  # (the player's own turn too: an enemy Wikka Wat may reverse once while the player's flick plays out)
 	for enemy in _enemies:
 		if _is_alive(enemy) and not enemy.ability.get_reverse_stats(enemy).is_empty() and enemy.ability.can_reverse(enemy):
 			var direction := ai.choose_wikka_reverse(enemy, _players, board.get_table_rect())
@@ -260,7 +260,7 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	# Wikka Wat: while things move after the player's flick, a tap anywhere reverses a moving Wikka Wat.
-	if _state == State.SETTLING and event is InputEventScreenTouch and event.pressed and not RunInfo.is_open \
+	if (_state == State.SETTLING or _state == State.ENEMY_TURN) and event is InputEventScreenTouch and event.pressed and not RunInfo.is_open \
 			and not (ui.is_over_power_bar(event.position) or _top_bar.is_over(event.position)) \
 			and not (SandboxSetup.active and sandbox != null and sandbox.is_over_ui(event.position)):
 		try_reverse_tap()
@@ -1546,7 +1546,7 @@ func _on_split_requested(parent: Figure, pieces: Array, grants_flicks: bool) -> 
 	if not _is_alive(parent):
 		return
 	for piece in pieces:
-		var spawned := _spawn_figure(parent.team, piece.data, piece.position, null, null, RunManager.NO_UPGRADE, parent.scale_factors)
+		var spawned := _spawn_figure(parent.team, piece.data, piece.position, piece.get("equipment", null), piece.get("finish", null), RunManager.NO_UPGRADE, parent.scale_factors)
 		spawned.apply_central_impulse(piece.velocity * spawned.mass)
 		if parent.team == Figure.Team.ENEMY:
 			_enemies.append(spawned)

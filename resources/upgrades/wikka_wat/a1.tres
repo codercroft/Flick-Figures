@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Double Wikka"
-description = "Can reverse twice per turn."
-ability_overrides = {"reverses_per_turn": 2}
+display_name = "Scratch Fever"
+description = "Each reversal adds +20% flick power and +10% mass for the rest of the combat (stacks up to 5)."
+ability_overrides = {"scratch_power_per_reverse": 0.2, "scratch_mass_per_reverse": 0.1}
