@@ -279,6 +279,14 @@ func _ready() -> void:
 	ability.setup_body(self)
 
 
+## Glue Guy's chain: a figure that is sticky (part of a chain-glue cluster) shows a green ring that pulses.
+func _draw_sticky() -> void:
+	if glue_joints.is_empty() or glue_sticky_source() == null:
+		return
+	var pulse := 0.5 + 0.5 * sin(_fx_time * 5.0)
+	draw_arc(Vector2.ZERO, radius + 7.0, 0.0, TAU, 40, Color(0.55, 0.9, 0.3, 0.45 + 0.35 * pulse), 5.0, true)
+
+
 ## The Doused status: a purple tint with three drips under the figure, fading as the rounds run out.
 func _draw_doused() -> void:
 	if doused_rounds <= 0:
@@ -378,6 +386,7 @@ func _draw() -> void:
 		draw_circle(Vector2(-radius, -radius) * 0.3, radius * 0.22, fill.lightened(0.4))
 	_draw_finish()
 	_draw_doused()
+	_draw_sticky()
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	if not ability.draws_own_label(self):
 		var label := data.label if data.label != "" else data.display_name.left(1)
@@ -482,6 +491,8 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if not knocked_off:
 		ability.on_physics_process(self, delta)
+		if has_meta("glue_locked") and not is_glued():
+			_release_glue_lock()
 
 
 ## Upgrades and temporary buffs that make this figure's hits push harder.
@@ -498,6 +509,7 @@ func _on_body_entered(body: Node) -> void:
 	if body is Figure:
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
+		_chain_glue.call_deferred(body)
 		var other: Figure = body
 		# Velocities change in the same step as the collision, so look at the step before too.
 		var speed := maxf((_last_velocity - other._last_velocity).length(),
@@ -755,10 +767,44 @@ func glue_to(other: Figure) -> void:
 	joint.node_a = joint.get_path_to(self)
 	joint.node_b = joint.get_path_to(other)
 	joint.softness = 0.0
+	for body in [self, other]:  # both bodies keep their orientation, so a glued pair / chain is one stable rigid shape
+		if not body.has_meta("glue_locked"):
+			body.set_meta("glue_locked", body.lock_rotation)
+			body.lock_rotation = true
 	_prune_glue()
 	other._prune_glue()
 	glue_joints.append(joint)
 	other.glue_joints.append(joint)
+
+
+## The Glue Guy (chain-sticky) whose glue cluster this figure belongs to, or null: such a figure is sticky itself.
+func glue_sticky_source() -> Figure:
+	for member in glue_cluster():
+		if member != self and not member.knocked_off and member.ability.get_glue_chain_cap(member) > 0:
+			return member
+	return null
+
+
+## Sticky chain: a sticky member of a Glue Guy's cluster (not Glue Guy, who glues through its own ability) that touches a free
+## figure glues to it, while the whole cluster (not counting Glue Guy) stays within Glue Guy's `max_stuck`. Once its bond to the
+## cluster breaks (glue_sticky_source is null) it is no longer sticky.
+func _chain_glue(other: Node) -> void:
+	var target := other as Figure
+	if target == null or knocked_off or target.knocked_off or not is_instance_valid(target) or not is_glued() or target.is_glued():
+		return
+	if ability.get_glue_chain_cap(self) > 0:
+		return
+	var source := glue_sticky_source()
+	if source == null:
+		return
+	if source.glue_cluster().size() - 1 >= source.ability.get_glue_chain_cap(source) - 1:
+		return  # the cap is reached: nothing else sticks
+	glue_to(target)
+
+
+func _release_glue_lock() -> void:
+	lock_rotation = bool(get_meta("glue_locked"))
+	remove_meta("glue_locked")
 
 
 func is_glued() -> bool:

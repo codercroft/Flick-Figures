@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Sticky Mess"
-description = "Can stick to up to 5 figures at once."
-ability_overrides = {"max_stuck": 5}
+description = "Chain holds up to 5 figures."
+ability_overrides = {"max_stuck": 5, "chain_sticky": true}

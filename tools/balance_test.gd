@@ -97,16 +97,41 @@ func _all() -> void:
 	for e in _main._enemies:
 		gg.ability.on_hit(gg, e)
 	_check(gg.glue_partners().size() == 5, "holds 5 figures at once, not more (%d)" % gg.glue_partners().size())
-	var chained := 0
-	for e in _main._enemies:
-		if e.is_glued() and e.glue_partners().size() > 1:
-			chained += 1
-	_check(chained == 0, "stuck figures are joined only to Glue Guy (no chains)")
 	await _start([_entry(glue, 0, Vector2(540, 1000), Vector2i(0, 1)), _entry(grunt, 1, Vector2(300, 800)), _entry(grunt, 1, Vector2(420, 800)), _entry(grunt, 1, Vector2(540, 800)), _entry(grunt, 1, Vector2(660, 800))])
 	gg = _main._players[0]
 	for e in _main._enemies:
 		gg.ability.on_hit(gg, e)
 	_check(gg.ability.max_stuck == 3 and gg.glue_partners().size() == 3, "Sticky tier 1: up to 3")
+	_check(gg.ability.chain_sticky and run.tree_for(glue).path_a[1].description.contains("Chain"), "Sticky tier 1 and 2 are chain-sticky")
+	print("Glue Guy chain")
+	await _start([_entry(glue, 0, Vector2(540, 1000), Vector2i(0, 1)), _entry(grunt, 1, Vector2(300, 700)), _entry(grunt, 1, Vector2(450, 700)), _entry(grunt, 1, Vector2(600, 700)), _entry(grunt, 1, Vector2(750, 700)), _entry(grunt, 1, Vector2(850, 500))])
+	gg = _main._players[0]
+	var en: Array = _main._enemies.duplicate()
+	gg.ability.on_hit(gg, en[0])
+	_check(en[0].glue_sticky_source() == gg and gg.glue_sticky_source() == null, "a figure stuck to Glue Guy is sticky (Glue Guy itself is the source)")
+	en[0]._chain_glue(en[1])
+	_check(en[1].glue_partners() == [en[0]] and en[1].glue_sticky_source() == gg, "a sticky figure glues the next one it hits, which becomes sticky")
+	en[1]._chain_glue(en[2])
+	_check(gg.glue_cluster().size() == 4, "chain of 3 behind Glue Guy")
+	en[2]._chain_glue(en[3])
+	_check(gg.glue_cluster().size() == 4 and not en[3].is_glued(), "cap 3 reached: nothing else sticks (Glue Guy not counted)")
+	gg.ability.on_hit(gg, en[3])
+	_check(not en[3].is_glued(), "Glue Guy's own hit is refused at the cap too")
+	var gap_before: float = en[0].global_position.distance_to(en[2].global_position)
+	gg.launch(Vector2(0, -900) * gg.mass)  # a moderate flick: the whole chain is dragged along
+	await _until(func(): return _main._all_figures_resting(), 15.0)
+	var gap_after: float = en[0].global_position.distance_to(en[2].global_position)
+	_check(absf(gap_after - gap_before) < 20.0 and is_finite(gap_after) and gg.global_position.y < 900.0, "the chain moves as one stable body (%.0f -> %.0f)" % [gap_before, gap_after])
+	var link: Figure = en[1]
+	link.unglue()
+	_check(not en[2].glue_sticky_source() == gg or en[2].glue_cluster().has(gg), "a figure cut off from the cluster stops being sticky")
+	_check(en[2].glue_sticky_source() == null, "cut-off figure is not sticky any more")
+	await _start([_entry(glue, 0, Vector2(540, 1100), Vector2i(0, 1)), _entry(grunt, 1, Vector2(540, 900)), _entry(grunt, 1, Vector2(540, 700))])
+	gg = _main._players[0]
+	gg.launch(Vector2(0, -1100) * gg.mass)
+	await _until(func(): return _main._all_figures_resting(), 15.0)
+	var stuck: Array = _main._enemies.filter(func(e): return e.is_glued())
+	_check(stuck.size() == 2 and gg.glue_cluster().size() == 3, "real collisions: Glue Guy sticks to the first figure, which sticks to the next (%d stuck)" % stuck.size())
 	var gtree = run.tree_for(glue)
 	_check(gtree.path_a[2].display_name == "Sticky Flicks" and gtree.path_b[1].display_name == "Locked Down", "Sticky Flicks is tier 3, Thin Prey gone")
 	await _start([_entry(glue, 0, Vector2(540, 1000), Vector2i(1, 2))])

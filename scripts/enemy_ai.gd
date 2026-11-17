@@ -620,11 +620,11 @@ func _score_attack(enemy: Figure, shape: CircleShape2D, direction: Vector2, spee
 		else:
 			score -= eater_ally_penalty
 	# Goo Chain Glue Guy: a hit glues it to the target, and the chain can reach player figures close to the target.
-	if other.team == _foe and enemy.ability.get_glue_chain_cap(enemy) > 2:
-		var room: int = enemy.ability.get_glue_chain_cap(enemy) - 2
+	if other.team == _foe and enemy.ability.get_glue_chain_cap(enemy) > 2 and not other.is_glued():
+		var room: int = enemy.ability.get_glue_chain_cap(enemy) - 2 - (enemy.glue_cluster().size() - 1)  # free slots after the target
 		var joined := 0
 		for player in players:
-			if player != other and is_instance_valid(player) and player.global_position.distance_to(other.global_position) <= glue_chain_reach + player.radius:
+			if player != other and is_instance_valid(player) and not player.is_glued() and player.global_position.distance_to(other.global_position) <= glue_chain_reach + player.radius:
 				joined += 1
 		score += glue_chain_bonus * mini(joined, room) * weight
 

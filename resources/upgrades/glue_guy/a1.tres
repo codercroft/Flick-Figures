@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Sticky Grip"
-description = "Can stick to up to 3 figures at once."
-ability_overrides = {"max_stuck": 3}
+description = "Sticks to up to 3 figures; stuck figures are sticky too (a chain)."
+ability_overrides = {"max_stuck": 3, "chain_sticky": true}

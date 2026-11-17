@@ -4,10 +4,12 @@ extends FigureAbility
 ## between them). While stuck it ignores other figures. When the figure it is stuck to is knocked off (or an
 ## explosion breaks the glue) Glue Guy is free again and sticks to the next figure it collides with.
 ##
-## Sticky path: it can stick to up to `max_stuck` figures at once (1 at base, 3, then 5); figures stuck to it do NOT become sticky
-## themselves (no chains: every glued figure is joined straight to Glue Guy, which keeps the physics stable). Sticky Flicks
-## (`flick_per_stuck`): +1 flick per figure stuck to it.
+## Sticky path: tiers 1 and 2 (`chain_sticky`) make every figure stuck to its cluster sticky too: it glues to the next free figure
+## it hits, which becomes sticky in turn, so the glue spreads as a chain. The whole cluster, not counting Glue Guy, holds at most
+## `max_stuck` figures (1 at base, 3 with Sticky Grip, 5 with Sticky Mess); once full nothing else sticks. A figure is sticky only
+## while it is part of Glue Guy's cluster. Sticky Flicks (`flick_per_stuck`): +1 flick per figure in the cluster.
 @export var max_stuck := 1
+@export var chain_sticky := false
 @export var flick_per_stuck := false
 ## Tar path: x flick power of an enemy stuck to it (0 = can't flick; Locked Down: 0.5), and Glue Guy's own mass and flick power
 ## (x) while it is stuck to something.
@@ -23,7 +25,12 @@ func setup_body(figure: Figure) -> void:
 
 
 func get_flicks_per_turn(figure: Figure) -> int:
-	return 1 + (figure.glue_partners().size() if flick_per_stuck else 0)
+	return 1 + (stuck_count(figure) if flick_per_stuck else 0)
+
+
+## Figures in Glue Guy's whole cluster, not counting Glue Guy.
+func stuck_count(figure: Figure) -> int:
+	return figure.glue_cluster().size() - 1
 
 
 func get_stuck_enemy_flick_multiplier(_figure: Figure) -> float:
@@ -43,13 +50,13 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 func on_hit(figure: Figure, other: Figure) -> void:
 	if figure.knocked_off or other.knocked_off:
 		return
-	if figure.glue_partners().has(other) or other.is_glued():
-		return  # already stuck, or stuck to something else (no chains)
-	if figure.glue_partners().size() >= max_stuck:
+	if figure.glue_cluster().has(other) or other.is_glued():
+		return  # already stuck, or stuck to something else
+	if stuck_count(figure) >= max_stuck:
 		return
 	figure.glue_to(other)
 
 
-## Enemy AI: how many figures it can hold (+1, so the AI's "more than 2" check means "can hold several").
+## Chain-sticky glue: max_stuck + 1 (so figures stuck to the cluster count as sticky and the AI can read the cap), 0 = no chains.
 func get_glue_chain_cap(_figure: Figure) -> int:
-	return max_stuck + 1 if max_stuck > 1 else 0
+	return max_stuck + 1 if chain_sticky else 0
