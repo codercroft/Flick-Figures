@@ -126,6 +126,7 @@ var _power_targets: Array = []
 var _snapshot := {}  # every figure as it was before the player's last flick (for Rewind)
 
 var _creator_box: CreatorBox  # the Mad Creator's box (only in that boss fight)
+var _fat_man: FatMan  # Fat Man's stomach and hands (only in that boss fight)
 
 @onready var board := $Board
 @onready var arena: Arena = $Arena
@@ -166,6 +167,8 @@ func _ready() -> void:
 			relic_names.append("%s: %s" % [relic.display_name, relic.description])
 		banner.append("Enemy relic - " + ", ".join(relic_names))
 		ui.show_enemy_relics("Enemy relic: " + ", ".join(RunManager.enemy_relics.map(func(r): return r.display_name)), TopBar.height() + 8.0)
+	if RunManager.boss != null and RunManager.boss.fat_man and RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS:
+		banner.append("Hit his stomach %d times (one hit per flick)" % RunManager.fat_man_hits_needed)
 	if not banner.is_empty():
 		ui.show_banner(banner, Color(1.0, 0.82, 0.25) if RunManager.encounter_name != "" else Color.WHITE)
 	_fit_world(TopBar.height(), BOTTOM_UI_HEIGHT + insets.bottom + (SandboxPanel.STRIP_RESERVE if SandboxSetup.active else 0.0))
@@ -178,6 +181,10 @@ func _ready() -> void:
 		_creator_box = CreatorBox.new()
 		arena.add_child(_creator_box)
 		_creator_box.build(board.board_rect, RunManager.boss, _enemies[0])
+	if RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS and RunManager.boss != null and RunManager.boss.fat_man:
+		_fat_man = FatMan.new()
+		arena.add_child(_fat_man)
+		_fat_man.build(board.board_rect, RunManager.fat_man_hits_needed)
 	_enemy_flicks = maxi(RunManager.enemy_flicks_per_turn, 1)
 	board.show_deck_line = _has_creeper()
 	_start_player_turn()
@@ -370,6 +377,8 @@ func _start_player_turn(new_round := true) -> void:
 		ui.show_your_turn("Your turn: tap a figure to reload")
 	else:
 		ui.show_your_turn()
+	if _fat_man != null and not _players.is_empty() and _fat_man.held_figures().size() >= _players.size():
+		_skip_held_turn()
 
 
 ## Everyone has gone: the whole squad can be flicked again from where they stand.
@@ -837,6 +846,12 @@ func _flick_pool() -> Array[Figure]:
 		return _all_figures()
 	if _manual_enemy:
 		return _enemies
+	if _fat_man != null:  # figures in Fat Man's hands cannot be picked
+		var free: Array[Figure] = []
+		for figure in _players:
+			if not figure.held:
+				free.append(figure)
+		return free
 	return _players
 
 
@@ -986,6 +1001,10 @@ func _run_enemy_turn() -> void:
 		if total > 1:
 			ui.show_enemy_turn("Enemy flicks: %d/%d" % [flicks_taken, total])
 		_refresh_enemy_cycle()
+		if _fat_man != null:
+			if await _fat_man_turn(serial):  # Fat Man's whole action: grab or throw
+				return
+			continue
 		if _creator_box != null and flicks_taken == 1 and _creator_box.creator_inside():
 			if await _creator_turn(serial):  # the Mad Creator's summon flick is the first flick of the turn
 				return
@@ -1089,6 +1108,34 @@ func _run_enemy_turn() -> void:
 		if _check_game_over():
 			return
 	_start_player_turn()
+
+
+## Fat Man's action for this turn: a hand grabs a figure or throws the one it holds, then the board settles.
+## Returns true if the turn (or the fight) is over and the caller should stop.
+func _fat_man_turn(serial: int) -> bool:
+	await get_tree().create_timer(enemy_think_time).timeout
+	if serial != _turn_serial:
+		return true
+	var message: String = await _fat_man.take_turn(_players, board.get_table_rect(), ai)
+	if serial != _turn_serial:
+		return true
+	ui.show_enemy_turn(message)
+	await _wait_until_settled()
+	if serial != _turn_serial:
+		return true
+	_fat_man.finish_throw()
+	return _check_game_over()
+
+
+## Every living player figure is in Fat Man's hands: there is nothing to flick, so the turn passes after a moment.
+func _skip_held_turn() -> void:
+	var serial := _turn_serial
+	ui.show_your_turn("Your figure is held! Fat Man's turn...")
+	await get_tree().create_timer(1.0).timeout
+	if serial != _turn_serial or _state != State.PLAYER_TURN or _fat_man == null:
+		return
+	if _fat_man.held_figures().size() >= _players.size():
+		_to_enemy_turn()
 
 
 ## The Mad Creator's flick: it flicks itself around inside its box (random direction and distance), and the floor
@@ -1357,13 +1404,17 @@ func _all_figures_resting() -> bool:
 func _check_game_over() -> bool:
 	if SandboxSetup.active:
 		return false  # the sandbox never ends: no rewards, no run end
-	if _creator_box != null and not _is_alive(_creator_box.creator):
+	if _fat_man != null:
+		if _fat_man.defeated():
+			_end_game(true)
+			return true
+	elif _creator_box != null and not _is_alive(_creator_box.creator):
 		# The Mad Creator is off the table: everything it summoned vanishes.
 		for enemy in _enemies:
 			if _is_alive(enemy):
 				enemy.knock_off(knock_off_fade_time, true)
 		_enemies.clear()
-	if _enemies.is_empty():
+	if _enemies.is_empty() and _fat_man == null:
 		_end_game(true)
 		return true
 	if _players.is_empty() or _deck_line_breached():
@@ -1487,6 +1538,8 @@ func sandbox_remove(figure: Figure) -> void:
 
 
 func _spawn_enemies() -> void:
+	if RunManager.enemies.is_empty():
+		return  # (Fat Man has no bodies)
 	var rect: Rect2 = board.board_rect
 	var slot_width := rect.size.x / RunManager.enemies.size()
 	for i in RunManager.enemies.size():
@@ -1575,7 +1628,7 @@ func _knock_off_fallen_figures() -> void:
 	var fallen_enemies: Array[Figure] = []
 	var fallen_players: Array[Figure] = []
 	for figure in _all_figures():
-		if not table.has_point(figure.global_position):
+		if not table.has_point(figure.global_position) and not figure.held:
 			if figure.bubble_rounds > 0:
 				_stop_at_edge(figure, table)  # Bubble Shield
 				continue

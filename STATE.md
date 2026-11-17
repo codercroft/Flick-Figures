@@ -34,7 +34,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 - A figure is "slow" under 15 px/s; after 5 slow frames in a row it "rests" (velocity zeroed). Continuous-push abilities skip slow figures. The turn waits until everything rests and no projectile is flying (0.3 s settle delay). After 6 s everything is force-stopped; after 5 s an orange debug readout shows what is still moving. A 90 s watchdog hands control back if a turn ever hangs.
 
 ### Win / loss
-- Win: every enemy is off the table. Mad Creator: the Creator off the table wins (summons vanish). Slime/Skull-o-tron: all pieces/balls off.
+- Win: every enemy is off the table. Mad Creator: the Creator off the table wins (summons vanish). Slime/Skull-o-tron: all pieces/balls off. Bomb Duo: both bodies off. Fat Man: the stomach hit 4 times (5 at Boss Upgrades).
 - Loss: all player figures off, or (The Wall) any wall piece's front edge reaches the deck line.
 - On a combat win: money = $1 per own figure still on the table that "pays income" (Splitter minis do not) + each figure's `income_bonus` (Cha-ching 2, 3 upgraded) + Coin Purse +$1 + Lucky Coin +$2 + Rich Boys +$1 per figure + node bonus (elite +$2, boss +$5).
 
@@ -162,10 +162,13 @@ Explosion rule: explosions set off by the player's side never push player figure
 | Figure | Mass | Radius | Flick power | Damping x | Bounce | KB taken x | Accuracy | Tags |
 |---|---|---|---|---|---|---|---|---|
 | Grunt | 1 | 60 | 1 | 1 | 0.7 | 1 | 0.8 | - |
+| Bomb Duo (display only) | - | - | - | - | - | - | - | its bodies are the stock Aggro-bom and Land Miner, resized by the boss data |
+| Fat Man (display only) | - | - | - | - | - | - | - | no figure bodies (stomach + hands) |
 | Mad Creator | 3 | 60 | 1 | 1 | 0.9 | 1 | 0.8 | uneatable, boss body |
 | Medium Slime | 2.4 | 70 | 1.3 | 1 | 0.6 | 1.1 | 0.75 | uneatable |
 | Mini | 0.78 | 45 | 0.7 | 1 | 0.7 | 1 | 0.8 | no income |
 | Skull Ball | 0.7 | 38 | 1 | 1 | 0.7 | 1 | 0.8 | uneatable |
+| Slippery Jim | 1.8 | 75 | 1.3 | 1 | 0.6 | 1 | 0.9 | uneatable, boss body |
 | Skull-o-tron | 14 | 95 | 4 | 1.2 | 0.5 | 1 | 0.7 | uneatable, boss body |
 | Slime | 5 | 100 | 2 | 1 | 0.6 | 1 | 0.7 | uneatable, boss body |
 | Small Slime | 0.9 | 45 | 1 | 1 | 0.6 | 1.25 | 0.8 | uneatable |
@@ -517,7 +520,10 @@ Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a
 | 2 | Slime | Large (r100, m5, flick x2) | 1 per slime piece on the table (cap 5) | yes | Splits (impact >=350 px/s) into 2 medium (r70, m2.4; split >=300), each into 2 small (r45, m0.9, never split). New pieces ignore hits 0.5 s and take half knockback until the next round. |
 | 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 5) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s, or ANY contact between an arm/ball and a pin (arena or Pinhead pin, no speed threshold, no waiting), breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
 | 3 | Mad Creator | Creator (r60, m3, bounce 0.9) in a 480 px box of 4 breakable walls (8000 health each) | 2 (first flick is always the Creator's) | no | While in the box it flicks itself 150-520 px; where it stops, the floor space under it (Grunt, Speedo, Bumper, Powerhouse) summons that figure in front of the box (max 5 summons). Player hits and explosions break walls. |
-Each act picks one of its two bosses at random at run start (no repeats). Boss accuracy is 0.7-0.98 (data), scaled by act only from Ascension 3. "Boss body" tag (Wall pieces, Trangle, Skull-o-tron core, Slime large, Mad Creator): when a Bummer takes one over, its shot must never go off the table.
+| 1 | Slippery Jim | 1 body: r75, m1.8, flick x1.3, accuracy 0.9 (a strong Grunt) | 1 | no | Starts with 2 Slippery stacks (pips). While he has stacks every hit and explosion on him is nullified (no knockback; the hitter bounces off like off a wall, rebound 0.6). Only hits on the PLAYER's turn (>= 120 px/s) use a stack up, one per hit with a 0.3 s grace; hits on his own side's turn are nullified for free. Stacks never come back; at 0 he is a normal figure. A "Slip!" popup and a ring flash show each stack lost. Aggressive normal AI. |
+| 2 | Bomb Duo | An Aggro-bom (r85, m2.5) and a Land Miner (r70, m2.5), flick power x2.2 each; they are the stock figures resized by `BossData.body_*` (Aggro-bom Fuse tier 1 = Hair Trigger, Land Miner Multi-Mine tier 1 = More Mines) | 1 per body alive (2 while both live) | no | Their explosions push each other (enemy explosions push everyone); mines only trigger on player figures. While the Aggro-bom lives the miner (`support_partner`) never attacks: it flicks to lay mines across the player's lanes and around the bomb; alone it plays normally. Win when both are off. |
+| 3 | Fat Man | No figures: a fixed stomach (static body, radius 290) at the top and two solid hands resting beside it (they block shots) | 1 action per turn (grab / throw alternate) | no | Hit the stomach 4 times (a player figure at >= 700 px/s along the surface, or a player-side explosion with >= 500 push; at most one counted hit per player flick; only on the player's turn). GRAB turn: a hand takes the most valuable / most exposed player figure (rarity, closeness to the edge) within 1500 px and carries it home; the held figure cannot be flicked, hit or pushed but still counts as alive. THROW turn: the hand throws it at 2200 px/s along the line that knocks off the most figures (the thrown one counts; a lone figure goes toward the nearest edge); it stays the player's. A player figure hitting the holding hand at >= 800 px/s makes it drop the figure there. If every living figure is held the player's turn passes by itself. |
+Each act picks one of its three bosses at random at run start (no repeats). Boss accuracy is 0.7-0.98 (data), scaled by act only from Ascension 3. "Boss body" tag (Wall pieces, Trangle, Skull-o-tron core, Slime large, Mad Creator): when a Bummer takes one over, its shot must never go off the table.
 
 ---
 
@@ -550,7 +556,7 @@ The level list is `AscensionConfig.level_names` / `level_descriptions` (`max_lev
 | 6 | Hardened Elites | Elite enemies get the EliteConfig stat boost (x1.05 mass/power/accuracy in act 1, 1.0 later) and, in acts 2-3, one guaranteed role-fitting item each (50% equipment / 50% finish). Act 1 elites get no gear. |
 | 7 | Fewer Offers | Figure choices capped at 2 (including the boss pick); chance drops halved. |
 | 8 | Elite Relics | Elites carry one enemy relic in every act (random from the 7-relic enemy pool); shown in the banner and a red line under the top bar. |
-| 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo. |
+| 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo; Slippery Jim starts with 3 stacks; Bomb Duo's bodies carry tier 3 upgrades (Fuse: 2-hit fuse; Multi-Mine: Minefield); Fat Man needs 5 hits. |
 | 10 | Bigger Squads | +1 enemy in every regular combat (on top of Level 3's 4/5/6). |
 | 11 | Double Boss | After the act 3 boss you fight the other act 3 boss immediately (no rewards between). Winning both wins the run. |
 
@@ -581,7 +587,7 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 - **Reward screen**: steps one at a time (figures draft -> which figure to replace on a deck strip, relics, power, equipment, finish, upgrade), each skippable; lucky drops get a flourish.
 - **Shop**, **Trader/minigame event screens** as above; "which figure?" picker uses the deck strip (tap a slot then confirm).
 - **Run History**: overall stats, per-Ascension wins, figure stats (most picked / win rate), runs newest first (tap to expand deck, relics, picks).
-- **Compendium**: Grunt + every draftable figure by rarity; unseen figures are silhouettes; figure page with a "3D model viewer (coming soon)" placeholder.
+- **Compendium**: Grunt + every draftable figure by rarity, then a Bosses section (all nine; a boss unlocks when fought, older saves count a boss whose first body was met; tap for its page: picture, description, bodies' text); unseen entries are silhouettes; figure page with a "3D model viewer (coming soon)" placeholder.
 - Run saving: autosave on map open; Quit-in-node restarts that node identically (seeded). Combat state and rewards are not saved.
 
 ---
@@ -618,7 +624,8 @@ The opponent in the versus games flicks with aim and power error (accuracy 0.6 /
 - AI does not know Splitter minis hit softer, Trangle's spin, or Skull-o-tron arm sweeps (it treats bosses as circles).
 - Drag-and-drop equipping in the Inventory uses Godot's built-in GUI drag (mouse events, also emulated from touch). Tested headless and in screenshots only; not verified with a real finger on a phone.
 - Placeholder art/audio: coloured discs with letters and procedural icons, synthesized .wav files, 3D viewer slot empty, no volume sliders in-game besides the Settings menu.
-- Compendium does not list non-draftable enemies (Swarmling, Sniper, boss pieces).
+- Compendium does not list non-draftable enemies (Swarmling, Sniper, boss pieces); bosses are listed in their own section.
+- Fat Man: a Bomb Drop / power explosion counts like any player explosion but only once per flick number (it shares the flick counter); Rewind during Fat Man's fight puts fresh copies of figures back, so a held figure is replaced by an unheld copy. In the sandbox other enemies placed next to Fat Man never flick (his action is the whole enemy turn). The balance sims' PlayerBot shoots at the stomach for him (`_fat_man_shot`).
 
 ### Not implemented (asked for earlier, not present)
 - Nothing outstanding that a prompt asked for is known to be missing. Open design questions: whether Open Corners should be the Pinball Wizard arena; whether Ascension 5 act 1 elites should get gear; whether trimmed 5-figure encounters should be redesigned for 4.

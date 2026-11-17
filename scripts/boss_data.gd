@@ -30,3 +30,27 @@ extends Resource
 @export var summons: Array[FigureData] = []
 @export var box_wall_health := 8000.0
 @export var max_summons := 5
+
+## Optional per-body tuning, parallel to `enemies` (0 = keep the figure's own value): radius, mass and flick power. Lets a boss
+## use a stock figure (so its upgrade tree still applies) at another size (Bomb Duo's big Aggro-bom and Land Miner).
+@export var body_radius: Array[float] = []
+@export var body_mass: Array[float] = []
+@export var body_power: Array[float] = []
+## Exact ability values per body, parallel to `enemies` (a dictionary of property name -> value; {} = none).
+@export var body_ability_values: Array[Dictionary] = []
+## Upgrade-tree state each body carries, parallel to `enemies`: x = path (0 = A, 1 = B, -1 none), y = tier. `base_upgrades`
+## always; `ascended_upgrades` instead from the Boss Upgrades Ascension level (empty = same as base).
+@export var base_upgrades: Array[Vector2i] = []
+@export var ascended_upgrades: Array[Vector2i] = []
+## Fat Man: no figure bodies, a fixed stomach with two hands (see FatMan). `fat_man_hits` = player hits on the stomach to win.
+@export var fat_man := false
+@export var fat_man_hits := 4
+## The figure shown for this boss in the Compendium (and the sandbox) when `enemies` is empty (Fat Man).
+@export var display_figure: FigureData
+
+
+## The figure drawn for this boss on the Compendium page: `display_figure`, else the first body.
+func badge_figure() -> FigureData:
+	if display_figure != null:
+		return display_figure
+	return enemies[0] if not enemies.is_empty() else null

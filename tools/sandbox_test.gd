@@ -103,15 +103,18 @@ func _all() -> void:
 	await _load()
 	_check(_main._players.size() == 1 and _main._players[0].equipment != null, "player with gear back after reload")
 
-	print("Every boss at Ascension 0 and 8")
+	print("Every boss at Ascension 0 and 9 (Boss Upgrades)")
 	for boss in run.config.registry.bosses:
-		for asc in [0, 8]:
+		for asc in [0, 9]:
 			Setup.lineup_kind = "boss"
 			Setup.boss = boss
 			Setup.ascension = asc
 			Setup.act = 2
 			await _load()
-			_check(not _main._enemies.is_empty(), "%s (A%d): %d enemies" % [boss.display_name, asc, _main._enemies.size()])
+			if boss.fat_man:  # no bodies: a stomach and two hands instead
+				_check(_main._fat_man != null and _main._fat_man.stomach.hits_needed == (5 if asc >= 9 else 4), "%s (A%d): stomach needs %d hits" % [boss.display_name, asc, _main._fat_man.stomach.hits_needed])
+			else:
+				_check(not _main._enemies.is_empty(), "%s (A%d): %d enemies" % [boss.display_name, asc, _main._enemies.size()])
 
 	print("Every encounter")
 	Setup.ascension = 0

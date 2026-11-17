@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BossData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/fat_man.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Fat Man"
+description = "A huge stomach fixed at the top. Hit it hard 4 times to win (one hit per flick). One turn a hand grabs a figure, the next it throws it at your others. Hit a hand holding a figure to make it drop it."
+map_label = "FM"
+map_color = Color(0.95, 0.7, 0.55, 1)
+map_icon = 39
+enemy_flicks_per_turn = 1
+fat_man = true
+fat_man_hits = 4
+display_figure = ExtResource("3")

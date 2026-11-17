@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="FigureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Fat Man"
+description = "A huge fixed stomach with two hands. Hit the stomach to win; his hands grab your figures and throw them."
+label = "FM"
+icon = 39
+color = Color(0.95, 0.75, 0.62, 1)
+radius = 120.0
+mass = 50.0
+bounce = 0.6
+uneatable = true
+boss_body = true

@@ -25,6 +25,10 @@ extends FigureAbility
 @export var homing_range := 0.0
 @export var homing_speed := 220.0
 
+## Bomb Duo's miner: while an allied Aggro-bom is alive the enemy AI does not attack with this figure; it lays mines
+## across the player's lanes and around that ally instead (EnemyAI._best_support_lay). Plays normally once the ally is gone.
+@export var support_partner := false
+
 var _since_drop := 0.0
 var _last_position := Vector2.INF
 var _mines: Array = []  # (untyped: a mine that went off is freed, and a freed object can't pass through a typed filter)

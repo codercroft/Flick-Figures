@@ -69,6 +69,8 @@ var flickable := true:
 		flickable = value
 		queue_redraw()
 var knocked_off := false
+## Fat Man's hand holds this figure: it cannot be flicked, hit or pushed, but still counts as alive.
+var held := false
 ## Flicks this figure has taken this turn (main.gd resets it each turn; Speedo can take 2).
 var turn_flicks := 0
 ## True once this figure has touched anything (a figure or a wall) since it was last flicked.
@@ -516,8 +518,13 @@ func _on_body_entered(body: Node) -> void:
 		if body is ShieldWall:
 			(body as ShieldWall).on_figure_hit.call_deferred(self)
 		AudioManager.play_wall(_last_velocity.length())
+		var wall_velocity := _last_velocity if _last_velocity.length() >= _prev_velocity.length() else _prev_velocity
 		if body is BreakableWall and team == Team.PLAYER:  # the Mad Creator's box: only the player's hits damage it
-			body.hit_by(self, _last_velocity if _last_velocity.length() >= _prev_velocity.length() else _prev_velocity)
+			body.hit_by(self, wall_velocity)
+		elif body is FatStomach and team == Team.PLAYER:  # Fat Man's stomach (counts a hit) and hands (drop what they hold)
+			(body as FatStomach).hit_by(self, wall_velocity)
+		elif body is FatHand and team == Team.PLAYER:
+			(body as FatHand).hit_by.call_deferred(self, wall_velocity)
 
 
 ## Flick power multiplier from teammates' auras (Crazy Man) that this figure stands inside.
@@ -840,9 +847,11 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 	AudioManager.play_boom(blast_radius)
 	for wall in tree.get_nodes_in_group("breakable_walls"):
 		wall.take_explosion(center, blast_radius, force)
+	for stomach in tree.get_nodes_in_group("fat_stomach"):
+		stomach.take_explosion(center, blast_radius, force, source_team)
 	for node in tree.get_nodes_in_group("figures"):
 		var other := node as Figure
-		if other == source or other == spared or other.knocked_off:
+		if other == source or other == spared or other.knocked_off or other.held:
 			continue
 		var offset := other.global_position - center
 		var distance := offset.length()

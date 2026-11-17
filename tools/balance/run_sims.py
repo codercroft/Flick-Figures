@@ -111,6 +111,8 @@ def run_fight_sim(args, sim, tmp, meta, dest_name, extra=None):
     extra += ["--fights=%d" % args.fights, "--acts=%s" % args.acts]
     if args.filter:
         extra.append("--filter=%s" % args.filter)
+    if args.target:
+        extra.append("--target=%s" % args.target)
     if args.decks and sim == "3":
         extra.append("--decks=%s" % args.decks)
     tag = "sim%s" % sim
@@ -189,6 +191,7 @@ def main():
     ap.add_argument("--runs-a5", type=int, default=100, help="full runs at Ascension 5 (sim 4)")
     ap.add_argument("--jobs", type=int, default=max(os.cpu_count() or 1, 1), help="parallel godot workers")
     ap.add_argument("--filter", default="", help="only subjects / targets whose name contains this text")
+    ap.add_argument("--target", default="", help="sim 3 only: just the encounters / bosses whose name contains this text (all decks)")
     ap.add_argument("--acts", default="1,2,3", help="acts to cover in sims 1-3")
     ap.add_argument("--seed", type=int, default=1, help="base seed: the same seed and settings give the same fights")
     ap.add_argument("--accuracy", type=float, default=0.85, help="the bot's aim accuracy")

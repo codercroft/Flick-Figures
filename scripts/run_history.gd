@@ -30,6 +30,25 @@ static func mark_seen_all(figures: Array) -> void:
 		mark_seen(figure)
 
 
+## A boss counts as met once it was fought (stored by the boss's resource path in the same list).
+static func mark_boss_seen(boss: BossData) -> void:
+	if boss == null or boss.resource_path == "":
+		return
+	_load()
+	var seen: Array = _data.seen
+	if not seen.has(boss.resource_path):
+		seen.append(boss.resource_path)
+		_save()
+
+
+## Fought before: recorded directly, or (older saves) its first body was met and the boss has no display figure of its own.
+static func is_boss_seen(boss: BossData) -> bool:
+	_load()
+	if _data.seen.has(boss.resource_path):
+		return true
+	return boss.display_figure == null and not boss.enemies.is_empty() and _data.seen.has(boss.enemies[0].resource_path)
+
+
 static func is_seen(figure: FigureData) -> bool:
 	_load()
 	return figure != null and _data.seen.has(figure.resource_path)

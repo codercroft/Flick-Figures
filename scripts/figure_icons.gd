@@ -5,7 +5,7 @@ extends RefCounted
 
 enum Icon { NONE, ARROW, SHIELD, POWER, BOMB, SPRING, BONK, BURST, MAGNET, BUMPER, MINE, SLIME, COIN,
 		DOUBLE, GHOST, GLUE, SPLIT, RALLY, PIGGY, PINATA, PIN, DROPLET, SKULL, TURRET, FROWN, WALL, FLASK, ROCKET, BOLT, JAWS, FANG,
-		TRIANGLE, BOX, CLUSTER, SPRAYER, MAW, REVERSE }
+		TRIANGLE, BOX, CLUSTER, SPRAYER, MAW, REVERSE, SLICK, TWINS, BELLY }
 
 
 ## Draws `icon` centered at `center`, roughly `size` px from the middle to the edge.
@@ -169,6 +169,18 @@ static func draw(canvas: CanvasItem, icon: Icon, center: Vector2, size: float, c
 			canvas.draw_line(center + Vector2(-s, 0), center + Vector2(-s * 0.3, 0), color, w * 1.6)
 			for a in [-0.5, 0.0, 0.5]:
 				canvas.draw_line(center + Vector2(-s * 0.1, 0), center + Vector2(s, 0).rotated(a), color, w * 0.7)
+		Icon.SLICK:  # a glossy drop with a shine (Slippery Jim)
+			canvas.draw_polyline(PackedVector2Array([center + Vector2(0, -s), center + Vector2(s * 0.7, s * 0.3), center + Vector2(s * 0.45, s * 0.8),
+					center + Vector2(-s * 0.45, s * 0.8), center + Vector2(-s * 0.7, s * 0.3), center + Vector2(0, -s)]), color, w)
+			canvas.draw_arc(center + Vector2(0, s * 0.2), s * 0.4, deg_to_rad(110.0), deg_to_rad(190.0), 8, color, w * 0.7)
+		Icon.TWINS:  # two round bombs side by side with fuses (Bomb Duo)
+			canvas.draw_arc(center + Vector2(-s * 0.5, s * 0.3), s * 0.5, 0.0, TAU, 14, color, w)
+			canvas.draw_arc(center + Vector2(s * 0.5, s * 0.3), s * 0.5, 0.0, TAU, 14, color, w)
+			canvas.draw_line(center + Vector2(-s * 0.5, -s * 0.2), center + Vector2(-s * 0.3, -s * 0.8), color, w * 0.7)
+			canvas.draw_line(center + Vector2(s * 0.5, -s * 0.2), center + Vector2(s * 0.7, -s * 0.8), color, w * 0.7)
+		Icon.BELLY:  # a big round belly with a belly button (Fat Man)
+			canvas.draw_arc(center, s * 0.9, 0.0, TAU, 20, color, w)
+			canvas.draw_arc(center + Vector2(0, s * 0.1), s * 0.2, 0.0, TAU, 10, color, w * 0.8)
 		Icon.MAW:  # a big open mouth ring with a dot inside
 			canvas.draw_arc(center, s * 0.9, 0.0, TAU, 20, color, w)
 			canvas.draw_circle(center, s * 0.28, color)

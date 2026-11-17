@@ -1,0 +1,113 @@
+class_name SlipperyAbility
+extends FigureAbility
+## Slippery Jim's coat. While it has stacks, every hit and every explosion on it is nullified: no knockback, and the figure
+## that hit it bounces off as if it had hit a wall. Only hits on the PLAYER's turn use a stack up (one per hit, and at most
+## one per `hit_grace` seconds so a single bounce cannot strip two); hits on its own side's turn are nullified for free.
+## Stacks never come back. At 0 it is a normal figure. Pips show the stacks left.
+
+## Stacks at the start of a fight (Boss Upgrades adds one, see AscensionConfig).
+@export var stacks := 2
+## Another stack cannot be lost within this many seconds of the last one.
+@export var hit_grace := 0.3
+## A hit slower than this (px/s, relative) is too gentle to count (it is still nullified).
+@export var min_hit_speed := 120.0
+## How lively the bounce-off is (1 = a perfect rebound; 0.6 is about a wall).
+@export var rebound := 0.6
+@export var pip_color := Color(0.45, 0.9, 1.0)
+
+var _left := -1
+var _max := 0
+var _last_loss_ms := -100000
+var _flash_ms := -100000
+
+
+func _ensure() -> void:
+	if _left < 0:
+		_left = stacks
+		_max = stacks
+
+
+func stacks_left() -> int:
+	_ensure()
+	return _left
+
+
+func is_slippery() -> bool:
+	return stacks_left() > 0
+
+
+## The hitter is the faster of the two (so a Jim that rams something is not nullified).
+func _is_hit_by(figure: Figure, source: Figure) -> bool:
+	return source != null and source.team != figure.team \
+			and source._last_velocity.length() >= figure._last_velocity.length()
+
+
+func get_knockback_multiplier(figure: Figure, source: Figure) -> float:
+	return 0.0 if is_slippery() and _is_hit_by(figure, source) else 1.0
+
+
+func get_explosion_multiplier(_figure: Figure, _source: Figure) -> float:
+	return 0.0 if is_slippery() else 1.0
+
+
+func _player_turn() -> bool:
+	var combat = RunManager.combat
+	return combat != null and combat.turret_side == Figure.Team.PLAYER
+
+
+func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> void:
+	if figure.knocked_off or other.knocked_off or not is_slippery() or not _is_hit_by(figure, other):
+		return
+	# Bounce the hitter off like a wall (it was already pushed by the engine as if Jim were light).
+	var normal := (other.global_position - figure.global_position).normalized()
+	var before := other._last_velocity if other._last_velocity.length() >= other._prev_velocity.length() else other._prev_velocity
+	var into := before.dot(normal)
+	if into < 0.0:
+		other.linear_velocity = before - (1.0 + rebound) * into * normal
+	if speed >= min_hit_speed and other.team == Figure.Team.PLAYER and _player_turn():
+		_lose_stack(figure)
+
+
+func on_exploded(figure: Figure, source: Figure) -> void:
+	if figure.knocked_off or not is_slippery():
+		return
+	if (source == null or source.team == Figure.Team.PLAYER) and _player_turn():
+		_lose_stack(figure)
+
+
+func _lose_stack(figure: Figure) -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_loss_ms < int(hit_grace * 1000.0):
+		return
+	_last_loss_ms = now
+	_flash_ms = now
+	_left -= 1
+	if _left <= 0:
+		figure.show_popup("Slip! Open!", Color(1.0, 0.85, 0.3))
+	else:
+		figure.show_popup("Slip! %d left" % _left, Color(0.55, 0.92, 1.0))
+	figure.queue_redraw()
+
+
+## A glossy ring while slippery, a flash when a stack goes, and the pips above.
+func draw_overlay(figure: Figure) -> void:
+	_ensure()
+	var age := (Time.get_ticks_msec() - _flash_ms) / 1000.0
+	if age < 0.45:
+		var t := age / 0.45
+		figure.draw_arc(Vector2.ZERO, figure.radius * (1.0 + 0.7 * t), 0.0, TAU, 40, Color(pip_color, 1.0 - t), 8.0 * (1.0 - t) + 2.0, true)
+	if _left <= 0:
+		return
+	figure.draw_arc(Vector2.ZERO, figure.radius + 5.0, 0.0, TAU, 40, Color(pip_color, 0.55), 6.0, true)
+	figure.draw_arc(Vector2.ZERO, figure.radius * 0.6, deg_to_rad(200.0), deg_to_rad(260.0), 10, Color(1, 1, 1, 0.7), 5.0, true)
+	var spacing := 26.0
+	var start_x := -spacing * (_max - 1) / 2.0
+	var y := -figure.radius - 22.0
+	for i in _max:
+		var center := Vector2(start_x + spacing * i, y)
+		if i < _left:
+			figure.draw_circle(center, 10.0, pip_color)
+			figure.draw_arc(center, 10.0, 0.0, TAU, 16, Color.WHITE, 2.0, true)
+		else:
+			figure.draw_arc(center, 8.0, 0.0, TAU, 16, Color(pip_color, 0.4), 2.0, true)
+

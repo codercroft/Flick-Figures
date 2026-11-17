@@ -126,6 +126,9 @@ const TOUCH_MARGIN := 4.0
 @export var mine_lane_bonus := 30.0
 @export var mine_lane_reach := 45.0
 @export var mine_count_cap := 3
+## Bomb Duo's Land Miner (while its Aggro-bom lives): a mine within `support_reach` px of the bomb is worth `support_mine_bonus`.
+@export var support_reach := 320.0
+@export var support_mine_bonus := 60.0
 ## Wikka Wat: reverses (or Seek's redirect) when the new path is worth this much more than the current one; Ultimate Shieldon:
 ## ending a move with a player figure on its open side costs `shield_exposed_penalty` each, and its open side pointing along
 ## a long way to the table edge earns up to `shield_far_edge_bonus`.
@@ -433,6 +436,15 @@ func _best_shot_for(enemy: Figure, players: Array[Figure], table: Rect2, max_for
 	var offsets := _angle_offsets(depth)
 	var levels := _power_levels(depth)
 
+	# Bomb Duo's Land Miner: while its Aggro-bom lives it only lays mines (across the player's lanes and around the bomb).
+	var partner := _support_partner(enemy)
+	if partner != null:
+		var lay := _best_mine_lay(enemy, shape, players, table, enemy.ability.get_mine_stats(enemy), partner)
+		if not lay.is_empty():
+			return lay
+		var wait := _choose_reposition(enemy, shape, players, table)
+		return wait if not wait.is_empty() else {"kind": "pass", "score": 0.0}
+
 	var best := {}
 	for target in players:
 		var to_target := target.global_position - enemy.global_position
@@ -723,7 +735,8 @@ func _mine_lane_value(enemy: Figure, from: Vector2, direction: Vector2, length: 
 
 ## Land Miner: a longer flick that lays mines across the player's lanes (a candidate in the reposition choice). Free
 ## flights only; the path must be clear and the end safely on the table.
-func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2, stats: Dictionary) -> Dictionary:
+func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure], table: Rect2, stats: Dictionary,
+		partner: Figure = null) -> Dictionary:
 	var best := {}
 	var best_score := -INF
 	var safe_area := table.grow(-reposition_edge_margin)
@@ -740,10 +753,37 @@ func _best_mine_lay(enemy: Figure, shape: CircleShape2D, players: Array[Figure],
 			var score := -_nearest_distance(end, players) + _mine_lane_value(enemy, enemy.global_position, direction, distance) \
 					- mine_path_penalty * mini(_mines_near_path(_other_team(enemy.team), enemy.global_position, end), mine_count_cap) \
 					- zone_path_penalty * _zone_crossings(enemy, enemy.global_position, end)
+			if partner != null:
+				score += _partner_mine_value(enemy.global_position, direction, stats.spacing, distance, partner)
 			if score > best_score:
 				best_score = score
 				best = {"kind": "reposition", "score": score, "direction": direction, "speed": speed, "distance": distance}
 	return best
+
+
+## Bomb Duo's Land Miner (`support_partner`): the living allied Aggro-bom it lays mines for, or null (no partner left: it
+## attacks like any enemy).
+func _support_partner(enemy: Figure) -> Figure:
+	if enemy.data.ability == null or not "support_partner" in enemy.ability or not enemy.ability.support_partner:
+		return null
+	if enemy.ability.get_mine_stats(enemy).is_empty():
+		return null
+	for node in get_tree().get_nodes_in_group("figures"):
+		var ally := node as Figure
+		if ally != null and ally != enemy and ally.team == enemy.team and not ally.knocked_off and ally.data.ability is AggroBomAbility:
+			return ally
+	return null
+
+
+## Mines a lay flick would drop within `support_reach` of the partner (they guard it and the shots that come at it).
+func _partner_mine_value(from: Vector2, direction: Vector2, spacing: float, length: float, partner: Figure) -> float:
+	var total := 0.0
+	var k := 1
+	while spacing * k <= length:
+		if (from + direction * spacing * k).distance_to(partner.global_position) <= support_reach:
+			total += support_mine_bonus
+		k += 1
+	return total
 
 
 ## Wikka Wat: what the straight path from the figure's position along `direction` is worth over `distance` px: the first

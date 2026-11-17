@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BossData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/figure_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/figures/slippery_jim.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Slippery Jim"
+description = "A strong, aggressive Grunt in a slippery coat. Each of your hits only strips one Slippery stack (2 stacks); until they are gone nothing moves him."
+map_label = "SJ"
+map_color = Color(0.3, 0.8, 0.9, 1)
+map_icon = 37
+enemies = Array[ExtResource("2")]([ExtResource("3")])
+enemy_flicks_per_turn = 1

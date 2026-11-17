@@ -120,7 +120,8 @@ func _jobs(sim: String) -> Array:
 				for boss in _bosses_of(act):
 					jobs.append({"subject": deck_def.name, "figure": "", "target": boss.display_name, "act": act, "group": "boss",
 							"spec": {"kind": "boss", "boss": boss, "act": act, "deck": deck_def.deck, "relics": deck_def.relics}})
-	return jobs.filter(func(j): return _match(j.subject) or _match(j.target))
+	var wanted: String = str(opts.get("target", "")).to_lower()
+	return jobs.filter(func(j): return (_match(j.subject) or _match(j.target)) and (wanted == "" or j.target.to_lower().contains(wanted)))
 
 
 ## decks.json -> [{name, deck: [slot...], relics: [RelicData...]}], looked up by display name (an unknown name stops the sim).

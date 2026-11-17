@@ -54,6 +54,10 @@ func _turn() -> void:
 	await _use_powers()
 	if not _can_act():
 		return
+	if main._fat_man != null:  # Fat Man has no figures to flick at: the bot shoots at his stomach
+		where = "Fat Man"
+		_fat_man_shot()
+		return
 	where = "tap abilities"
 	_tap_abilities()
 	await tree.physics_frame
@@ -219,6 +223,31 @@ func _fallback_flick() -> void:
 	# Last resort: tap the first figure that can act so the game does not wait forever.
 	if main._bonus_figure != null:
 		main._skip_bonus_flick()
+
+
+## Fat Man: a hard flick at the stomach from the figure whose lane passes the hands most clearly (with the bot's aim error).
+func _fat_man_shot() -> void:
+	var fat = main._fat_man
+	var goal: Vector2 = fat.stomach.global_position
+	var best = null
+	var best_clearance := -INF
+	for figure in main._flick_pool():
+		if not main._is_alive(figure) or not figure.flickable or figure.is_frozen() or figure.stunned_rounds != 0:
+			continue
+		var clearance := INF
+		for hand in fat.hands:
+			var closest: Vector2 = Geometry2D.get_closest_point_to_segment(hand.global_position, figure.global_position, goal)
+			clearance = minf(clearance, closest.distance_to(hand.global_position) - hand.radius - figure.radius)
+		if clearance > best_clearance:
+			best_clearance = clearance
+			best = figure
+	if best == null:
+		_fallback_flick()
+		return
+	var error := deg_to_rad((1.0 - accuracy) * 25.0)
+	var dir: Vector2 = (goal - best.global_position).normalized().rotated(randf_range(-error, error))
+	if not _flick(best, dir * 1.0e6):
+		_fallback_flick()
 
 
 func _nearest_enemy(from: Vector2):

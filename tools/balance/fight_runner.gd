@@ -164,7 +164,8 @@ func play_prepared(bot_factory: Callable, max_sim_seconds := 300.0) -> Dictionar
 		_note("timeout: state %d, bonus figure %s, power slot %d, bot busy %s (%s), %d player / %d enemy figures" % [main._state, str(main._bonus_figure != null), main._power_slot, str(bot.busy), bot.where, main._players.size(), main._enemies.size()])
 	var result := {}
 	if is_instance_valid(main):
-		var won: bool = main._state == GAME_OVER and main._enemies.is_empty() and not timed_out
+		var won: bool = main._state == GAME_OVER and not timed_out and \
+				(main._fat_man.defeated() if main._fat_man != null else main._enemies.is_empty())
 		if _dead_frames > 180:
 			won = false
 		var alive := 0

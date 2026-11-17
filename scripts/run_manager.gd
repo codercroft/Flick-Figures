@@ -78,6 +78,8 @@ var in_second_boss := false
 var newly_unlocked_level := -1
 ## The Mad Creator's floor-space summons for this fight (Ascension 8 swaps the Grunt for a Bombo).
 var boss_summons: Array[FigureData] = []
+## Fat Man's fight: player hits needed on the stomach (BossData.fat_man_hits, +1 from Boss Upgrades).
+var fat_man_hits_needed := 4
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.
@@ -467,6 +469,8 @@ func enter_node(id: int) -> bool:
 		MapNode.Type.COMBAT, MapNode.Type.ELITE, MapNode.Type.BOSS:
 			_build_lineup()
 			RunHistory.mark_seen_all(enemies)  # (faced as an enemy: unlocks it in the Compendium)
+			if node.type == MapNode.Type.BOSS:
+				RunHistory.mark_boss_seen(boss)
 		MapNode.Type.SHOP:
 			shop_offers = ShopConfig.make_offers_for(config.shop, config.registry)
 			var discount := clampf(run_modifier("shop_discount"), 0.0, 0.8)  # upgrades like Cha-ching's Discount Card
@@ -963,7 +967,9 @@ func _build_lineup() -> void:
 		enemy_flicks_per_turn = boss.enemy_flicks_per_turn
 		enemy_flick_per_unit = boss.flick_per_unit
 		enemies_in_row = boss.straight_row
+		_apply_boss_bodies()
 		_apply_boss_ascension()
+		fat_man_hits_needed = boss.fat_man_hits + (config.ascension.fat_man_extra_hits if asc(config.ascension.level_bosses) else 0)
 	else:
 		var count := _enemy_count()
 		var progress := float(node.column) / maxf(map.columns - 1, 1)
@@ -998,6 +1004,8 @@ func _build_lineup() -> void:
 		enemy_forced_finish.append(null)
 	while enemy_forced_upgrade.size() < enemies.size():
 		enemy_forced_upgrade.append(NO_UPGRADE)
+	if node.type == MapNode.Type.BOSS:
+		_apply_boss_upgrades()
 	# Ascension 5 (Hardened Elites): every enemy of an elite carries a fitting item.
 	var guaranteed: bool = asc(config.ascension.level_elites) and elite_encounter and config.elite_config != null and config.elite_config.gear_guaranteed(act)
 	for i in enemies.size():
@@ -1054,6 +1062,8 @@ func _apply_boss_ascension() -> void:
 	while enemy_boosts.size() < enemies.size():
 		enemy_boosts.append({})
 	var template := {"mass": 1.0, "power": 1.0, "accuracy": 1.0, "bounce": 0.0, "ability": 1.0, "ability_values": {}, "creep": 1.0}
+	if enemies.is_empty():
+		return  # Fat Man has no bodies: his stomach needs one more hit (fat_man_hits_needed)
 	var first: FigureData = enemies[0]
 	if boss.display_name == cfg.sniper_boss_name:
 		while enemies.size() < cfg.sniper_count:
@@ -1077,6 +1087,43 @@ func _apply_boss_ascension() -> void:
 		var boost := template.duplicate(true)
 		boost.ability_values = {"arm_count": cfg.skull_arms}
 		enemy_boosts[0] = boost
+	elif first.ability is SlipperyAbility:
+		var boost: Dictionary = enemy_boosts[0].duplicate(true) if not enemy_boosts[0].is_empty() else template.duplicate(true)
+		boost.ability_values = {"stacks": first.ability.stacks + cfg.jim_extra_stacks}
+		enemy_boosts[0] = boost
+
+
+## A boss with its own body sizes (BossData.body_radius / body_mass / body_power, parallel to `enemies`) gets them as
+## enemy boosts, so the stock figure (and its upgrade tree) is used at another size (Bomb Duo).
+func _apply_boss_bodies() -> void:
+	while enemy_boosts.size() < enemies.size():
+		enemy_boosts.append({})
+	for i in enemies.size():
+		var radius: float = boss.body_radius[i] if i < boss.body_radius.size() else 0.0
+		var mass: float = boss.body_mass[i] if i < boss.body_mass.size() else 0.0
+		var power: float = boss.body_power[i] if i < boss.body_power.size() else 0.0
+		var values: Dictionary = boss.body_ability_values[i] if i < boss.body_ability_values.size() else {}
+		if radius <= 0.0 and mass <= 0.0 and power <= 0.0 and values.is_empty():
+			continue
+		var boost := {"mass": 1.0, "power": 1.0, "accuracy": 1.0, "bounce": 0.0, "ability": 1.0, "ability_values": {}, "creep": 1.0}
+		if radius > 0.0:
+			boost["size"] = radius / enemies[i].radius
+		if mass > 0.0:
+			boost.mass = mass / enemies[i].mass
+		if power > 0.0:
+			boost.power = power
+		boost.ability_values = values.duplicate()
+		enemy_boosts[i] = boost
+
+
+## Upgrade tiers a boss's bodies always carry (BossData.base_upgrades; ascended_upgrades from Boss Upgrades), forced like an
+## encounter's.
+func _apply_boss_upgrades() -> void:
+	var list: Array[Vector2i] = boss.base_upgrades
+	if asc(config.ascension.level_bosses) and not boss.ascended_upgrades.is_empty():
+		list = boss.ascended_upgrades
+	for i in mini(list.size(), enemies.size()):
+		enemy_forced_upgrade[i] = list[i]
 
 
 ## The Mad Creator's floor-space summons (Ascension 8: the Grunt space summons a Bombo).
@@ -1105,6 +1152,7 @@ func _start_second_boss() -> bool:
 	boss = other.pick_random()
 	_build_lineup()
 	RunHistory.mark_seen_all(enemies)
+	RunHistory.mark_boss_seen(boss)
 	return true
 
 
@@ -1318,6 +1366,8 @@ func _apply_minigame_penalty() -> void:
 		# (_add_grunt appends to the gear list too, which the caller filled for the original enemies only)
 		_add_penalty_grunt()
 		return
+	if enemies.is_empty():
+		return  # (Fat Man has no bodies to upgrade)
 	var index := randi_range(0, enemies.size() - 1)
 	var figure := enemies[index]
 	var choices: Array[String] = []
