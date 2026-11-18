@@ -28,6 +28,8 @@ extends Resource
 ## A main boss body (Trangle, Skull-o-tron's core, a large Slime, Mad Creator, The Wall's pieces): when a Bummer takes
 ## it over, its forced shot never sends itself off the table; it tries to move away from the Bummer instead.
 @export var boss_body := false
+## Boss pieces (medium / small slimes, Skull Balls) that the Swap power refuses, like boss bodies.
+@export var swap_immune := false
 @export var can_flick := true
 ## After every enemy turn this figure slides this far (px) toward the player's deck. 0 = it never does.
 ## If it reaches the deck line, the player loses.

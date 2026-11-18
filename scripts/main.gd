@@ -201,6 +201,14 @@ func _place_opening_turrets() -> void:
 	if not is_inside_tree() or _state == State.GAME_OVER:
 		return
 	_place_enemy_turrets()
+	_raise_opening_shields()
+
+
+## Ultimate Shieldon starts the combat with its shield already up, facing the nearest player figure.
+func _raise_opening_shields() -> void:
+	for enemy in _enemies:
+		if _is_alive(enemy) and enemy.data.ability is UltimateShieldonAbility and enemy.ability is UltimateShieldonAbility:
+			enemy.ability.raise_shield(enemy)
 
 
 func _exit_tree() -> void:
@@ -1553,8 +1561,12 @@ func _spawn_enemies() -> void:
 		if i < RunManager.enemy_positions.size() and RunManager.enemy_positions[i] != Vector2.INF:
 			pos = rect.position + RunManager.enemy_positions[i]  # a hand-made encounter's spot
 		var gear: Dictionary = RunManager.enemy_gear[i]
-		_enemies.append(_spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, gear.equipment, gear.finish,
-				gear.upgrade, RunManager.enemy_scale(i), RunManager.enemy_elite[i]))
+		var enemy := _spawn_figure(Figure.Team.ENEMY, RunManager.enemies[i], pos, gear.equipment, gear.finish,
+				gear.upgrade, RunManager.enemy_scale(i), RunManager.enemy_elite[i])
+		# A boss fight's own bodies (not Sniper Squad's snipers) cannot be swapped.
+		enemy.boss_unit = RunManager.node != null and RunManager.node.type == MapNode.Type.BOSS and RunManager.boss != null \
+				and (RunManager.enemies[i].boss_body or not RunManager.boss.body_radius.is_empty())
+		_enemies.append(enemy)
 
 
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,

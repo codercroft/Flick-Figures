@@ -26,7 +26,7 @@ extends Node2D
 @export var rarity_weight := 40.0
 @export var exposure_weight := 120.0
 @export var exposure_range := 250.0
-@export var board_bonus := 20.0
+@export var board_bonus := 0.0
 ## Throw choice: how much one figure knocked off is worth (the thrown one included).
 @export var knock_off_value := 100.0
 
@@ -177,11 +177,14 @@ func _throw(hand: FatHand, players: Array[Figure], table: Rect2, ai: EnemyAI) ->
 		await _return_home(hand)
 		return "Fat Man fumbles"
 	hand.held = null
-	figure.global_position = hand.global_position
+	figure.teleport_to(hand.global_position)
 	_release(figure)
 	figure.on_deck = false
 	figure.launch(direction * throw_speed * figure.mass)
-	figure.collision_mask |= Figure.LAYER_ON_DECK  # the throw also hits figures still on the deck (after launch: it resets the mask)
+	# The throw also hits and shoves figures still on the deck. Godot collisions are one-way unless both masks match, so for the
+	# flight the thrown figure sits on the enemy layer with an enemy's mask (deck figures see it, and it sees them).
+	figure.collision_layer = Figure.LAYER_ENEMY
+	figure.collision_mask = Figure.LAYER_ENEMY | Figure.LAYER_FLICKED | Figure.LAYER_ON_DECK | Figure.LAYER_ARENA
 	figure.show_popup("Thrown!", Color(1.0, 0.6, 0.5))
 	_thrown = figure
 	_return_home(hand)  # (not awaited: the hand goes home while the figure flies)
@@ -269,7 +272,7 @@ func _on_dropped(hand: FatHand) -> void:
 	var figure: Figure = hand.held
 	hand.held = null
 	var side := signf(hand.home.x - stomach.global_position.x)
-	figure.global_position = hand.global_position + Vector2(side * (hand.radius + figure.radius + 8.0), 0.0)
+	figure.teleport_to(hand.global_position + Vector2(side * (hand.radius + figure.radius + 8.0), 0.0))
 	figure.on_deck = false
 	_release(figure)
 	figure.flickable = bool(figure.get_meta("fat_flickable", true))

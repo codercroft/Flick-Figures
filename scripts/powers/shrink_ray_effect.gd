@@ -1,9 +1,9 @@
 class_name ShrinkRayEffect
 extends PowerEffect
-## Tap an enemy: it shrinks (smaller and lighter) for the rest of the combat.
+## Tap an enemy: it shrinks 25% (radius x0.75, mass x0.75) for the rest of the combat.
 
-@export var size_factor := 0.5
-@export var mass_factor := 0.5
+@export var size_factor := 0.75
+@export var mass_factor := 0.75
 
 
 func _init() -> void:

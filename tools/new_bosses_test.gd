@@ -88,7 +88,7 @@ func _all() -> void:
 	_check(is_equal_approx(jim.radius, 75.0) and is_equal_approx(jim.mass, 1.8) and is_equal_approx(jim.flick_power_multiplier, 1.3), "Jim: radius 75, mass 1.8, power x1.3")
 	_check(jim.ability.stacks == 5, "Jim starts with 5 stacks")
 	_check(jim_boss.enemy_flicks_per_turn == 1 and not jim_boss.back_wall, "Jim: 1 flick per turn, no back wall")
-	_check(fat_boss.fat_man and fat_boss.enemies.is_empty() and fat_boss.fat_man_hits == 4, "Fat Man: no bodies, 4 hits")
+	_check(fat_boss.fat_man and fat_boss.enemies.is_empty() and fat_boss.fat_man_hits == 5, "Fat Man: no bodies, 5 hits")
 	_check(duo_boss.flick_per_unit and duo_boss.enemies.size() == 2, "Bomb Duo: two bodies, a flick for each")
 
 	print("Lineups and Boss Upgrades")
@@ -120,15 +120,16 @@ func _all() -> void:
 	run.ascension = 0
 	run.boss = fat_boss
 	run._build_lineup()
-	_check(run.enemies.is_empty() and run.fat_man_hits_needed == 4, "Fat Man lineup: no bodies, 4 hits")
+	_check(run.enemies.is_empty() and run.fat_man_hits_needed == 5, "Fat Man lineup: no bodies, 5 hits")
 	run.ascension = 9
 	run._build_lineup()
-	_check(run.fat_man_hits_needed == 5, "Fat Man at Boss Upgrades: 5 hits")
+	_check(run.fat_man_hits_needed == 6, "Fat Man at Boss Upgrades: 6 hits")
 	run.ascension = 0
 
 	await _slippery(grunt, jim, jim_boss)
 	await _bomb_duo(grunt, duo_boss)
 	await _fat_man(grunt, fat_boss)
+	await _later_changes(grunt, jim_boss, fat_boss)
 
 	if is_instance_valid(_main):
 		_main.queue_free()
@@ -240,7 +241,7 @@ func _fat_man(grunt, fat_boss) -> void:
 	print("Fat Man")
 	await _start([_entry(grunt, 0, Vector2(540, 1500)), _entry(grunt, 0, Vector2(300, 1500)), _entry(grunt, 0, Vector2(780, 1500))], fat_boss, false)
 	var fat = _main._fat_man
-	_check(fat != null and fat.stomach.remaining() == 4 and fat.hands.size() == 2, "stomach (4 hits) and two hands are built")
+	_check(fat != null and fat.stomach.remaining() == 5 and fat.hands.size() == 2, "stomach (5 hits) and two hands are built")
 	_check(_main._enemies.is_empty(), "no enemy figures")
 	var stomach = fat.stomach
 	var p0 = _main._players[0]
@@ -299,3 +300,51 @@ func _fat_man(grunt, fat_boss) -> void:
 	var gone := await _until(func(): return lone.knocked_off or (not lone.held and _main._state == 0 and lone.global_position.distance_to(fat.hands[0].home) > 100.0), 60.0)
 	_check(gone and (lone.knocked_off or not lone.held), "a lone figure is thrown (toward the nearest edge)")
 	_check(not _main._players.has(lone) or not lone.knocked_off, "the player's figure list stays consistent")
+
+
+func _later_changes(grunt, jim_boss, fat_boss) -> void:
+	print("Swap refuses boss figures, Shrink Ray 25%, opening shield, Fat Man on the deck")
+	var SW = load("res://scripts/powers/swap_effect.gd").new()
+	await _start([_entry(grunt, 0, Vector2(540, 1500))], jim_boss)
+	var jimf = _main._enemies[0]
+	_check(SW.target_problem(_main, jimf, null) != "", "Slippery Jim can't be swapped")
+	_check(SW.target_problem(_main, _main._players[0], null) == "", "a player figure can")
+	for path in ["slime_medium", "slime_small", "skull_ball", "slime_large", "wall_piece", "trangle", "skull_o_tron", "mad_creator"]:
+		var d = load("res://resources/figures/%s.tres" % path)
+		_check(d.swap_immune or d.boss_body, "%s is swap-immune" % path)
+	_check(not grunt.swap_immune and not grunt.boss_body, "a Grunt (Mad Creator summon) can be swapped")
+	var duo = load("res://resources/figures/boss_bomb_duo.tres")
+	await _start([_entry(grunt, 0, Vector2(540, 1500))], duo)
+	_check(_main._enemies.all(func(e): return SW.target_problem(_main, e, null) != ""), "both Bomb Duo bodies are refused")
+	var shrink = load("res://scripts/powers/shrink_ray_effect.gd").new()
+	_check(is_equal_approx(shrink.size_factor, 0.75) and is_equal_approx(shrink.mass_factor, 0.75), "Shrink Ray factors 0.75")
+	var e = _main._enemies[0]
+	var r: float = e.radius
+	var m: float = e.mass
+	shrink.apply(_main, [e])
+	_check(is_equal_approx(e.radius, r * 0.75) and is_equal_approx(e.mass, m * 0.75), "Shrink Ray: radius and mass x0.75")
+	var us = load("res://resources/figures/ultimate_shieldon.tres")
+	await _start([_entry(grunt, 0, Vector2(540, 1000)), _entry(us, 1, Vector2(540, 500))])
+	await _frames(5)
+	var usf = _main._enemies[0]
+	_check(usf.ability._up and usf.ability.intact_count() == usf.ability.segment_count, "Ultimate Shieldon starts with its shield up (all segments)")
+	# Fat Man: grab a figure still on the deck, throw it into another deck figure
+	await _start([_entry(grunt, 0, Vector2(540, 1500)), _entry(grunt, 0, Vector2(300, 1500))], fat_boss)
+	var fat = _main._fat_man
+	var a = _main._players[0]
+	var b = _main._players[1]
+	_check(a.on_deck and b.on_deck, "both figures start on the deck")
+	var hand = fat.hands[0]
+	fat._hold(a, hand)
+	_check(a.held and a.on_deck, "a figure still on the deck can be held")
+	var start: Vector2 = b.global_position
+	# the throw's own release code, aimed straight at the deck figure
+	hand.held = null
+	a.teleport_to(Vector2(540, 1000))
+	fat._release(a)
+	a.on_deck = false
+	a.launch((b.global_position - a.global_position).normalized() * fat.throw_speed * a.mass)
+	a.collision_layer = Figure.LAYER_ENEMY
+	a.collision_mask = Figure.LAYER_ENEMY | Figure.LAYER_FLICKED | Figure.LAYER_ON_DECK | Figure.LAYER_ARENA
+	await _until(func(): return _main._all_figures_resting(), 20.0)
+	_check(not is_instance_valid(b) or b.knocked_off or b.global_position.distance_to(start) > 40.0, "the thrown figure knocked back a figure on the deck")

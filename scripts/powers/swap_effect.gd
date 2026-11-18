@@ -1,6 +1,6 @@
 class_name SwapEffect
 extends PowerEffect
-## Tap two figures: they swap positions (both stop). Tap the first again to unselect it, tap empty space to cancel.
+## Tap two figures: they swap positions (both stop). Boss bodies and boss pieces are refused. Tap the first again to unselect it, tap empty space to cancel.
 
 
 func _init() -> void:
@@ -10,6 +10,8 @@ func _init() -> void:
 
 
 func target_problem(_main, figure, _first) -> String:
+	if figure.swap_immune():
+		return "Boss figures can't be swapped"
 	if figure.is_glued():
 		return "Glued figures can't be swapped"
 	if figure.is_frozen():

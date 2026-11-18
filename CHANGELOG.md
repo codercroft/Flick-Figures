@@ -4,6 +4,13 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-18: Opening shield, Swap and Shrink Ray changes, Fat Man deck throws and 5 / 6 hits
+- Ultimate Shieldon: `Main._raise_opening_shields()` (after the opening turret placement, one physics frame in) raises its shield at combat start, all segments intact, facing the nearest player figure.
+- Swap: boss bodies and boss pieces are refused (`Figure.swap_immune()`: `FigureData.boss_body`, the new `FigureData.swap_immune` on medium / small slimes and Skull Balls, and `Figure.boss_unit`, set by main for a boss fight's own bodies so Bomb Duo's stock figures count; Sniper Squad's snipers and Mad Creator summons can still be swapped). It uses the existing invalid-target path: a message, the power is kept.
+- Shrink Ray: radius and mass x0.75 (`size_factor` / `mass_factor` 0.75); description updated.
+- Fat Man: grabbing deck figures already worked (`board_bonus` is now 0 so deck figures are no longer less tempting). The throw did NOT push deck figures, a real bug: Godot collisions are one-way when only one body's mask lists the other's layer, so the thrown figure just bounced off them. During the flight it now sits on the enemy layer with an enemy's mask (restored by `finish_throw`). Held / dropped / thrown figures are placed with `teleport_to` so a released figure does not snap back to its pre-grab physics position. Hits needed: 5 at base, 6 at Boss Upgrades (`fat_man_hits` 5, `fat_man_extra_hits` 1).
+- Tests: `tools/new_bosses_test.gd` (swap refusals, Shrink Ray, opening shield, deck throw, 5 / 6 hits), `sandbox_test.gd` (6 hits at level 9).
+
 ## 2026-11-18: Slippery Jim stacks, Pinball Wizard and Swarm moved
 - Slippery Jim: 5 stacks at base, 7 at Boss Upgrades (`stacks` 5, `AscensionConfig.jim_extra_stacks` 2). The 0.3 s grace is gone (`hit_grace` removed): every separate hit (>= 120 px/s, player's turn) or explosion strips a stack; only a continuous contact is debounced (`_touching`: a figure that counted cannot count again until its body is `separate_gap` 6 px clear of him, checked in `on_physics_process`). Hits on his own side's turn are still nullified for free.
 - Encounters: Pinball Wizard moves from the act 1 elite pool to the act 1 regular pool (elite boosts / gear / relics key off the node being an elite, so they no longer apply; it is topped up with a Grunt to the act's 4). Swarm moves from the act 2 elites to the act 1 elites (`acts` [1]). Regular pool 14, elite pool 12.

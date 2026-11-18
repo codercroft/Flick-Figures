@@ -79,7 +79,7 @@ var newly_unlocked_level := -1
 ## The Mad Creator's floor-space summons for this fight (Ascension 8 swaps the Grunt for a Bombo).
 var boss_summons: Array[FigureData] = []
 ## Fat Man's fight: player hits needed on the stomach (BossData.fat_man_hits, +1 from Boss Upgrades).
-var fat_man_hits_needed := 4
+var fat_man_hits_needed := 5
 ## What the player is being offered after a win: a list of steps like {"kind": "figures"}.
 var reward_steps: Array[Dictionary] = []
 ## How many flicks the enemy side takes each turn in the current combat.

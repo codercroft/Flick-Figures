@@ -112,7 +112,7 @@ func _all() -> void:
 			Setup.act = 2
 			await _load()
 			if boss.fat_man:  # no bodies: a stomach and two hands instead
-				_check(_main._fat_man != null and _main._fat_man.stomach.hits_needed == (5 if asc >= 9 else 4), "%s (A%d): stomach needs %d hits" % [boss.display_name, asc, _main._fat_man.stomach.hits_needed])
+				_check(_main._fat_man != null and _main._fat_man.stomach.hits_needed == (6 if asc >= 9 else 5), "%s (A%d): stomach needs %d hits" % [boss.display_name, asc, _main._fat_man.stomach.hits_needed])
 			else:
 				_check(not _main._enemies.is_empty(), "%s (A%d): %d enemies" % [boss.display_name, asc, _main._enemies.size()])
 

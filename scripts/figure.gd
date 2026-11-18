@@ -71,6 +71,8 @@ var flickable := true:
 var knocked_off := false
 ## Fat Man's hand holds this figure: it cannot be flicked, hit or pushed, but still counts as alive.
 var held := false
+## Set by main for a boss fight's own bodies (Bomb Duo's stock figures, Jim...): the Swap power refuses them.
+var boss_unit := false
 ## Flicks this figure has taken this turn (main.gd resets it each turn; Speedo can take 2).
 var turn_flicks := 0
 ## True once this figure has touched anything (a figure or a wall) since it was last flicked.
@@ -805,6 +807,11 @@ func _chain_glue(other: Node) -> void:
 func _release_glue_lock() -> void:
 	lock_rotation = bool(get_meta("glue_locked"))
 	remove_meta("glue_locked")
+
+
+## Boss bodies and boss pieces cannot be swapped.
+func swap_immune() -> bool:
+	return boss_unit or data.boss_body or data.swap_immune
 
 
 func is_glued() -> bool:

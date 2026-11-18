@@ -9,6 +9,6 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Shrink Ray"
-description = "Tap an enemy: half size and half mass for the combat."
+description = "Tap an enemy: 25% smaller and lighter for the combat."
 color = Color(0.9, 0.45, 0.7, 1)
 effect = SubResource("Resource_1")

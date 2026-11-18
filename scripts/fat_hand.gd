@@ -60,7 +60,7 @@ func hit_by(figure: Figure, velocity: Vector2) -> void:
 
 func _physics_process(_delta: float) -> void:
 	if is_holding():
-		held.global_position = global_position  # (the held figure rides in the palm)
+		held.teleport_to(global_position)  # (the held figure rides in the palm)
 	queue_redraw()
 
 

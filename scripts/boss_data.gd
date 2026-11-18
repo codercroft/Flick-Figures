@@ -44,7 +44,7 @@ extends Resource
 @export var ascended_upgrades: Array[Vector2i] = []
 ## Fat Man: no figure bodies, a fixed stomach with two hands (see FatMan). `fat_man_hits` = player hits on the stomach to win.
 @export var fat_man := false
-@export var fat_man_hits := 4
+@export var fat_man_hits := 5
 ## The figure shown for this boss in the Compendium (and the sandbox) when `enemies` is empty (Fat Man).
 @export var display_figure: FigureData
 
