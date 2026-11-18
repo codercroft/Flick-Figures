@@ -472,7 +472,7 @@ Random pool (`RunConfig.arenas`): all but Fortress Walls, never the same twice i
 ## 6. Encounters
 Regular combats pick an unplayed encounter available in the act (all used = reset). "+ Grunts" = filled with Grunts in free spots to the combat's enemy count (4 at Ascension 0-2). All have 1 enemy flick per turn.
 
-### Regular (13; the pool starts from the second combat of a run)
+### Regular (14; the pool starts from the second combat of a run)
 | Act | Encounter | Lineup | Arena |
 |---|---|---|---|
 | 1 | Bodyguards | 2 Duwall, 2 Grunt | Side Rails |
@@ -487,17 +487,17 @@ Regular combats pick an unplayed encounter available in the act (all used = rese
 | 2 | Fireworks | 2 Land Miner, 2 Speedo, Magnet (5, trimmed to 4 below Ascension 3) | random |
 | 3 | Fortress | 2 Duwall, Magnet, 2 Powerhouse (5, trimmed to 4 below Ascension 3) | Fortress Walls |
 | 3 | Speed Trap | Juicer, 2 Speedo, Pinhead | Speedway |
+| 1 | Pinball Wizard | Crazy Man + 2 Speedo inside his aura (topped up with a Grunt), no elite boosts or gear | Corner Posts | 1 |
 | 3 | Demolition Crew | Crazy Man, 2 Pusher, Bombo, Sneaky Bomber (5, trimmed to 4 below Ascension 3) | Pinball |
 Every encounter has fixed start positions inside its arena (checked headless: nothing overlaps a wall).
 
-### Elites (13; picked at random among those available in the act)
+### Elites (12; picked at random among those available in the act)
 | Act | Elite | Lineup | Arena | Flicks/turn |
 |---|---|---|---|---|
 | 1 | Bumper Duo | 2 Bumper (mass x1.5, bounce +0.1, bump ratio x1.4) | random | 1 |
 | 1 | Big Brother | Duwall (radius x1.5, mass x1.5, shell 8000) + 2 Grunt | random | 1 |
 | 1 | Shield Wall | 3 Shieldon Ooper + Grunt | random | 1 |
-| 1 | Pinball Wizard | Crazy Man + 2 Speedo inside his aura | Corner Posts | 1 |
-| 2 | Swarm | 8 Swarmling | random | 3 |
+| 1 | Swarm | 8 Swarmling | random | 3 |
 | 2 | Banshee | 5 Ghost | Open Field | 1 |
 | 2 | Powder Keg | Land Miner, Aggro-bom, 2 Bombo (clustered) (+ Grunts when the count is higher) | random | 1 |
 | 2 | Glue Gang | Glue Guy with Sticky Grip (3 at once) + 2 Splitter | random | 1 |
@@ -520,7 +520,7 @@ Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a
 | 2 | Slime | Large (r100, m5, flick x2) | 1 per slime piece on the table (cap 5) | yes | Splits (impact >=350 px/s) into 2 medium (r70, m2.4; split >=300), each into 2 small (r45, m0.9, never split). New pieces ignore hits 0.5 s and take half knockback until the next round. |
 | 3 | Skull-o-tron | Core r95, mass 14, flick x4, damping x1.2 | 1 per unit (core + each Skull Ball, cap 5) | yes | 3 arms (75 px, ball r38). Spins while moving. A hit on an arm/ball >=650 px/s, or ANY contact between an arm/ball and a pin (arena or Pinhead pin, no speed threshold, no waiting), breaks it off as a Skull Ball (mass 0.7). With no arms its mass x0.3. |
 | 3 | Mad Creator | Creator (r60, m3, bounce 0.9) in a 480 px box of 4 breakable walls (8000 health each) | 2 (first flick is always the Creator's) | no | While in the box it flicks itself 150-520 px; where it stops, the floor space under it (Grunt, Speedo, Bumper, Powerhouse) summons that figure in front of the box (max 5 summons). Player hits and explosions break walls. |
-| 1 | Slippery Jim | 1 body: r75, m1.8, flick x1.3, accuracy 0.9 (a strong Grunt) | 1 | no | Starts with 2 Slippery stacks (pips). While he has stacks every hit and explosion on him is nullified (no knockback; the hitter bounces off like off a wall, rebound 0.6). Only hits on the PLAYER's turn (>= 120 px/s) use a stack up, one per hit with a 0.3 s grace; hits on his own side's turn are nullified for free. Stacks never come back; at 0 he is a normal figure. A "Slip!" popup and a ring flash show each stack lost. Aggressive normal AI. |
+| 1 | Slippery Jim | 1 body: r75, m1.8, flick x1.3, accuracy 0.9 (a strong Grunt) | 1 | no | Starts with 5 Slippery stacks (7 at Boss Upgrades; pips). While he has stacks every hit and explosion on him is nullified (no knockback; the hitter bounces off like off a wall, rebound 0.6). Every separate hit (>= 120 px/s) or explosion on the PLAYER's turn uses a stack up; one figure grinding against him counts once until it separates; hits on his own side's turn are nullified for free. Stacks never come back; at 0 he is a normal figure. A "Slip!" popup and a ring flash show each stack lost. Aggressive normal AI. |
 | 2 | Bomb Duo | An Aggro-bom (r85, m2.5) and a Land Miner (r70, m2.5), flick power x2.2 each; they are the stock figures resized by `BossData.body_*` (Aggro-bom Fuse tier 1 = Hair Trigger, Land Miner Multi-Mine tier 1 = More Mines) | 1 per body alive (2 while both live) | no | Their explosions push each other (enemy explosions push everyone); mines only trigger on player figures. While the Aggro-bom lives the miner (`support_partner`) never attacks: it flicks to lay mines across the player's lanes and around the bomb; alone it plays normally. Win when both are off. |
 | 3 | Fat Man | No figures: a fixed stomach (static body, radius 290) at the top and two solid hands resting beside it (they block shots) | 1 action per turn (grab / throw alternate) | no | Hit the stomach 4 times (a player figure at >= 700 px/s along the surface, or a player-side explosion with >= 500 push; at most one counted hit per player flick; only on the player's turn). GRAB turn: a hand takes the most valuable / most exposed player figure (rarity, closeness to the edge) within 1500 px and carries it home; the held figure cannot be flicked, hit or pushed but still counts as alive. THROW turn: the hand throws it at 2200 px/s along the line that knocks off the most figures (the thrown one counts; a lone figure goes toward the nearest edge); it stays the player's. A player figure hitting the holding hand at >= 800 px/s makes it drop the figure there. If every living figure is held the player's turn passes by itself. |
 Each act picks one of its three bosses at random at run start (no repeats). Boss accuracy is 0.7-0.98 (data), scaled by act only from Ascension 3. "Boss body" tag (Wall pieces, Trangle, Skull-o-tron core, Slime large, Mad Creator): when a Bummer takes one over, its shot must never go off the table.
@@ -556,7 +556,7 @@ The level list is `AscensionConfig.level_names` / `level_descriptions` (`max_lev
 | 6 | Hardened Elites | Elite enemies get the EliteConfig stat boost (x1.05 mass/power/accuracy in act 1, 1.0 later) and, in acts 2-3, one guaranteed role-fitting item each (50% equipment / 50% finish). Act 1 elites get no gear. |
 | 7 | Fewer Offers | Figure choices capped at 2 (including the boss pick); chance drops halved. |
 | 8 | Elite Relics | Elites carry one enemy relic in every act (random from the 7-relic enemy pool); shown in the banner and a red line under the top bar. |
-| 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo; Slippery Jim starts with 3 stacks; Bomb Duo's bodies carry tier 3 upgrades (Fuse: 2-hit fuse; Multi-Mine: Minefield); Fat Man needs 5 hits. |
+| 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo; Slippery Jim starts with 7 stacks; Bomb Duo's bodies carry tier 3 upgrades (Fuse: 2-hit fuse; Multi-Mine: Minefield); Fat Man needs 5 hits. |
 | 10 | Bigger Squads | +1 enemy in every regular combat (on top of Level 3's 4/5/6). |
 | 11 | Double Boss | After the act 3 boss you fight the other act 3 boss immediately (no rewards between). Winning both wins the run. |
 

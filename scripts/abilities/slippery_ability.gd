@@ -2,13 +2,14 @@ class_name SlipperyAbility
 extends FigureAbility
 ## Slippery Jim's coat. While it has stacks, every hit and every explosion on it is nullified: no knockback, and the figure
 ## that hit it bounces off as if it had hit a wall. Only hits on the PLAYER's turn use a stack up (one per hit, and at most
-## one per `hit_grace` seconds so a single bounce cannot strip two); hits on its own side's turn are nullified for free.
+## every separate hit or explosion strips one; the same continuous contact (a figure grinding against it) counts once until that figure
+## separates); hits on its own side's turn are nullified for free.
 ## Stacks never come back. At 0 it is a normal figure. Pips show the stacks left.
 
-## Stacks at the start of a fight (Boss Upgrades adds one, see AscensionConfig).
-@export var stacks := 2
-## Another stack cannot be lost within this many seconds of the last one.
-@export var hit_grace := 0.3
+## Stacks at the start of a fight (Boss Upgrades adds 2, see AscensionConfig).
+@export var stacks := 5
+## A figure that counted counts again only after its body is this many px clear of Jim.
+@export var separate_gap := 6.0
 ## A hit slower than this (px/s, relative) is too gentle to count (it is still nullified).
 @export var min_hit_speed := 120.0
 ## How lively the bounce-off is (1 = a perfect rebound; 0.6 is about a wall).
@@ -17,7 +18,7 @@ extends FigureAbility
 
 var _left := -1
 var _max := 0
-var _last_loss_ms := -100000
+var _touching := {}  # figure instance id -> figure whose hit already counted and that is still in contact
 var _flash_ms := -100000
 
 
@@ -65,22 +66,34 @@ func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> 
 	if into < 0.0:
 		other.linear_velocity = before - (1.0 + rebound) * into * normal
 	if speed >= min_hit_speed and other.team == Figure.Team.PLAYER and _player_turn():
-		_lose_stack(figure)
+		_lose_stack(figure, other)
 
 
 func on_exploded(figure: Figure, source: Figure) -> void:
 	if figure.knocked_off or not is_slippery():
 		return
 	if (source == null or source.team == Figure.Team.PLAYER) and _player_turn():
-		_lose_stack(figure)
+		_lose_stack(figure, null)
 
 
-func _lose_stack(figure: Figure) -> void:
-	var now := Time.get_ticks_msec()
-	if now - _last_loss_ms < int(hit_grace * 1000.0):
+## Frees the debounce for figures that have separated from him.
+func on_physics_process(figure: Figure, _delta: float) -> void:
+	for id in _touching.keys():
+		var other = _touching[id]
+		if not is_instance_valid(other) or other.knocked_off \
+				or other.global_position.distance_to(figure.global_position) > figure.radius + other.radius + separate_gap:
+			_touching.erase(id)
+
+
+func _lose_stack(figure: Figure, hitter: Figure) -> void:
+	_ensure()
+	if _left <= 0:
 		return
-	_last_loss_ms = now
-	_flash_ms = now
+	if hitter != null:
+		if _touching.has(hitter.get_instance_id()):
+			return  # the same contact, still grinding
+		_touching[hitter.get_instance_id()] = hitter
+	_flash_ms = Time.get_ticks_msec()
 	_left -= 1
 	if _left <= 0:
 		figure.show_popup("Slip! Open!", Color(1.0, 0.85, 0.3))

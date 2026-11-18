@@ -26,7 +26,7 @@ var max_level: int:
 	"Elites get a stat boost and a fitting item on every enemy.",
 	"Figure rewards offer 2 choices instead of 3, and chance drops are halved.",
 	"Elites carry an enemy relic in every act.",
-	"Bosses are tougher: The Wall creeps faster, 7 snipers, Trangle spins faster and flicks 3 times, Slimes split into 3, Skull-o-tron has 4 arms, Mad Creator summons a Bombo instead of a Grunt, Slippery Jim starts with 3 stacks, Bomb Duo's Aggro-bom and Land Miner carry tier 3 upgrades, Fat Man needs 5 hits.",
+	"Bosses are tougher: The Wall creeps faster, 7 snipers, Trangle spins faster and flicks 3 times, Slimes split into 3, Skull-o-tron has 4 arms, Mad Creator summons a Bombo instead of a Grunt, Slippery Jim starts with 7 stacks, Bomb Duo's Aggro-bom and Land Miner carry tier 3 upgrades, Fat Man needs 5 hits.",
 	"+1 enemy in every regular combat (on top of Rising Threat).",
 	"After the act 3 boss you fight the other act 3 boss straight away. Beat both to win."]
 
@@ -92,7 +92,7 @@ var max_level: int:
 @export var creator_from: FigureData
 @export var creator_to: FigureData
 ## Slippery Jim: extra Slippery stacks at the start of the fight.
-@export var jim_extra_stacks := 1
+@export var jim_extra_stacks := 2
 ## Fat Man: extra hits needed on the stomach.
 @export var fat_man_extra_hits := 1
 

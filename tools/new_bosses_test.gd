@@ -86,7 +86,7 @@ func _all() -> void:
 	_check(reg.bosses.size() == 9, "all nine bosses are in the registry list (sandbox and Compendium read it)")
 	var jim = load("res://resources/figures/slippery_jim.tres")
 	_check(is_equal_approx(jim.radius, 75.0) and is_equal_approx(jim.mass, 1.8) and is_equal_approx(jim.flick_power_multiplier, 1.3), "Jim: radius 75, mass 1.8, power x1.3")
-	_check(jim.ability.stacks == 2, "Jim starts with 2 stacks")
+	_check(jim.ability.stacks == 5, "Jim starts with 5 stacks")
 	_check(jim_boss.enemy_flicks_per_turn == 1 and not jim_boss.back_wall, "Jim: 1 flick per turn, no back wall")
 	_check(fat_boss.fat_man and fat_boss.enemies.is_empty() and fat_boss.fat_man_hits == 4, "Fat Man: no bodies, 4 hits")
 	_check(duo_boss.flick_per_unit and duo_boss.enemies.size() == 2, "Bomb Duo: two bodies, a flick for each")
@@ -103,7 +103,7 @@ func _all() -> void:
 	_check(run.enemies.size() == 1 and run.enemy_boosts[0].get("ability_values", {}).is_empty(), "Jim at level 0: no stack boost")
 	run.ascension = 9
 	run._build_lineup()
-	_check(run.enemy_boosts[0].ability_values.get("stacks", 0) == 3, "Jim at Boss Upgrades: 3 stacks")
+	_check(run.enemy_boosts[0].ability_values.get("stacks", 0) == 7, "Jim at Boss Upgrades: 7 stacks")
 	run.ascension = 0
 	run.boss = duo_boss
 	run._build_lineup()
@@ -145,36 +145,40 @@ func _slippery(grunt, jim, jim_boss) -> void:
 	_flick(shooter, Vector2(0, 600))
 	await _until(func(): return _settled(), 20.0)
 	print("    shooter y %.0f (Jim %.0f), players %d" % [shooter.global_position.y, start.y, _main._players.size()])
-	_check(jimf.ability.stacks_left() == 1, "a player hit takes exactly one stack (left %d)" % jimf.ability.stacks_left())
+	_check(jimf.ability.stacks_left() == 4, "a player hit takes exactly one stack (left %d)" % jimf.ability.stacks_left())
 	_check(jimf.global_position.distance_to(start) < 40.0, "the hit does not move him (%.0f px)" % jimf.global_position.distance_to(start))
 	_check(shooter.global_position.y > start.y + 100.0, "the hitter bounced back like off a wall")
 	var ability = jimf.ability
-	ability._last_loss_ms = -100000
-	ability._lose_stack(jimf)
+	var hitter = _main._players[0]
+	var other_hitter = _main._players[0]
+	ability._left = 5
+	ability._max = 5
+	ability._touching.clear()
+	ability._lose_stack(jimf, hitter)
+	ability._lose_stack(jimf, hitter)
+	_check(ability.stacks_left() == 4, "the same continuous contact counts once (left %d)" % ability.stacks_left())
+	ability._lose_stack(jimf, null)
+	ability._lose_stack(jimf, null)
+	_check(ability.stacks_left() == 2, "separate hits / explosions in the same instant each take a stack (left %d)" % ability.stacks_left())
+	hitter.global_position = jimf.global_position + Vector2(0, 500)
+	ability.on_physics_process(jimf, 0.016)
+	ability._lose_stack(jimf, hitter)
+	_check(ability.stacks_left() == 1, "after separating, the same figure can hit again")
+	ability._touching.clear()
+	ability._lose_stack(jimf, hitter)
 	_check(ability.stacks_left() == 0, "the last stack goes")
-	var again = ability.stacks_left()
-	ability._lose_stack(jimf)
-	_check(ability.stacks_left() == again, "stacks never regenerate or go negative")
-	# the grace period: two losses less than 0.3 s apart count once
-	var fresh = jim.ability.duplicate()
-	fresh._left = 2
-	fresh._max = 2
-	fresh._lose_stack(jimf)
-	fresh._lose_stack(jimf)
-	_check(fresh.stacks_left() == 1, "grace period: two hits in a row strip only one stack")
+	ability._lose_stack(jimf, null)
+	_check(ability.stacks_left() == 0, "stacks never regenerate")
 	# own side's turn: nullified but free
 	var own = jim.ability.duplicate()
-	own._left = 2
-	own._max = 2
+	own._left = 5
+	own._max = 5
 	_main.turret_side = 1
-	var cheater = _main._players[0]
-	own.on_impact(jimf, cheater, 900.0, Vector2.ZERO)
-	_check(own.stacks_left() == 2, "a hit on his own side's turn costs no stack")
+	own.on_impact(jimf, other_hitter, 900.0, Vector2.ZERO)
+	_check(own.stacks_left() == 5, "a hit on his own side's turn costs no stack")
 	_main.turret_side = 0
-	# a hard explosion on the player's turn is nullified and costs one stack
-	own._last_loss_ms = -100000
 	own.on_exploded(jimf, null)
-	_check(own.stacks_left() == 1, "an explosion on the player's turn costs one stack")
+	_check(own.stacks_left() == 4, "an explosion on the player's turn costs one stack")
 	_check(own.get_explosion_multiplier(jimf, null) == 0.0, "explosions do not push him while slippery")
 	# a real enemy turn: he attacks like a strong Grunt
 	await _start([_entry(grunt, 0, Vector2(540, 1000)), _entry(jim, 1, Vector2(540, 600))], null, false)

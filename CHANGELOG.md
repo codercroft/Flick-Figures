@@ -4,6 +4,11 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-18: Slippery Jim stacks, Pinball Wizard and Swarm moved
+- Slippery Jim: 5 stacks at base, 7 at Boss Upgrades (`stacks` 5, `AscensionConfig.jim_extra_stacks` 2). The 0.3 s grace is gone (`hit_grace` removed): every separate hit (>= 120 px/s, player's turn) or explosion strips a stack; only a continuous contact is debounced (`_touching`: a figure that counted cannot count again until its body is `separate_gap` 6 px clear of him, checked in `on_physics_process`). Hits on his own side's turn are still nullified for free.
+- Encounters: Pinball Wizard moves from the act 1 elite pool to the act 1 regular pool (elite boosts / gear / relics key off the node being an elite, so they no longer apply; it is topped up with a Grunt to the act's 4). Swarm moves from the act 2 elites to the act 1 elites (`acts` [1]). Regular pool 14, elite pool 12.
+- Tests: `new_bosses_test.gd` updated (5 / 7 stacks, debounce, separation). The enemy-AI baseline was regenerated only because the encounter pools changed (`enemy_ai.gd` untouched).
+
 ## 2026-11-17: Glue Guy Sticky path chains again
 - Sticky Grip (tier 1, cap 3) and Sticky Mess (tier 2, cap 5) set `chain_sticky`: figures stuck to Glue Guy's cluster are sticky too, so a sticky figure glues to the next free figure it hits and that one becomes sticky. The cap counts the whole cluster without Glue Guy; at the cap nothing sticks (Glue Guy's own hits included). A figure is sticky only while it is in Glue Guy's cluster (`Figure.glue_sticky_source`); a broken link (partner knocked off, explosion) ends it. Base and Tar do not chain. Sticky Flicks counts the whole cluster. Descriptions updated.
 - Joints: `glue_to` locks rotation on both bodies (restored once unglued) so chains are rigid and stable; sticky figures show a pulsing green ring beside the goo links. Enemy AI chain bonus now only counts free slots and unglued player figures, and applies only to chain-sticky Glue Guys (it used to count at any cap above 1).
