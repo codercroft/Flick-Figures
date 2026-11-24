@@ -215,7 +215,7 @@ func _all() -> void:
 	await _start([_entry(grunt, 0, Vector2(540, 1500)), _entry(grunt, 0, Vector2(800, 1500)), _entry(us, 1, Vector2(450, 600))], false)
 	var boss = _main._enemies[0]
 	var sab = boss.ability
-	_check(not sab.has_shield(), "no shield before its first turn ends")
+	_check(sab.has_shield(), "the shield is already up at the start of the combat")
 	Engine.time_scale = 3.0
 	var tb2: int = _main._enemy_turns_taken
 	_flick(_main._players[0], Vector2(0, 40))

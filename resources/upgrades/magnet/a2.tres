@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Repel Pulse"
-description = "Once per combat, after flicking, tap it to briefly reverse the pull and push opponents away."
+description = "After flicking it, tap anywhere while it moves to shove nearby opponents away. Once per combat."
 ability_overrides = {"push_enabled": true}

@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Overcharge"
-description = "Recharged allies get +25% power on their next flick."
-ability_overrides = {"ally_power_bonus": 0.25}
+description = "Recharged allies get +25% power on their next flick and take 30% less knockback until then."
+ability_overrides = {"ally_power_bonus": 0.25, "ally_knockback_reduction": 0.3}

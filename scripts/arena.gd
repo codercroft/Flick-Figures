@@ -799,8 +799,8 @@ func tick_round() -> void:
 func _apply_zone(zone: Dictionary, figures: Array) -> void:
 	for node in figures:
 		var figure := node as Figure
-		if figure.knocked_off:
-			continue
+		if figure.knocked_off or figure.field_immune():
+			continue  # (Slippery Jim ignores Magnet Throw and Glue Puddle)
 		var offset: Vector2 = zone.center - figure.global_position
 		var distance := offset.length()
 		if zone.kind == ZoneVisual.Kind.MAGNET:

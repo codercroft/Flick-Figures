@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Repel Pulses"
-description = "The push can be used once per turn."
+description = "The repel pulse can be used once per turn."
 ability_overrides = {"push_once_per_turn": true}

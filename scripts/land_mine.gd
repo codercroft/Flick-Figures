@@ -36,7 +36,7 @@ func _physics_process(delta: float) -> void:
 		if distance <= trigger_radius:
 			_explode()
 			return
-		if homing_range > 0.0 and distance <= homing_range and not figure.is_slow() and distance < pull_distance:
+		if homing_range > 0.0 and distance <= homing_range and not figure.is_slow() and distance < pull_distance and not figure.field_immune():
 			pull_target = figure
 			pull_distance = distance
 	if pull_target != null:

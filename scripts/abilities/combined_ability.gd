@@ -284,6 +284,10 @@ func on_turn_ended(figure: Figure) -> void:
 	second.on_turn_ended(figure)
 
 
+func get_field_immunity(figure: Figure) -> bool:
+	return first.get_field_immunity(figure) or second.get_field_immunity(figure)
+
+
 func get_ai_aggro(figure: Figure) -> Dictionary:
 	var info := first.get_ai_aggro(figure)
 	return info if not info.is_empty() else second.get_ai_aggro(figure)

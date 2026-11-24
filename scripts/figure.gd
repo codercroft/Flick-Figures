@@ -109,6 +109,7 @@ var temp_dealt := 0.0  # extra knockback dealt until the end of the next turn (R
 var temp_taken := 1.0  # knockback taken multiplier until the end of the next turn (Rally's Padded Ranks)
 var temp_taken_team := -1  # whose turn start clears the two above (-1 = none)
 var charge_power := 1.0  # x flick power on the next flick (Energizer's Overcharge)
+var charge_taken := 1.0  # x knockback taken until the next flick (Energizer's Overcharge)
 var shock_flick := 1.0  # x flick power until this figure's next flick (Energizer's Shock)
 var doused_flick := 1.0  # x flick power while Doused by a weakening zone (Alchemist's Weakening Brew)
 var stunned_rounds := 0  # can't flick for this many rounds (Energizer's Stun)
@@ -577,7 +578,7 @@ func aura_knockback_multiplier() -> float:
 	var multiplier := 1.0
 	for source in _aura_sources():
 		multiplier *= source.ability.get_aura_knockback_multiplier(source)
-	return multiplier
+	return multiplier * charge_taken
 
 
 ## True if this figure standing at `point` would be inside a teammate's aura (Crazy Man).
@@ -704,6 +705,7 @@ func launch(impulse: Vector2) -> void:
 	turn_flicks += 1
 	touched_since_flick = false
 	charge_power = 1.0  # (a recharge's bonus and a shock last until this flick)
+	charge_taken = 1.0
 	shock_flick = 1.0
 	_skip_knockback_frames = 2
 	_slow_frames = 0
@@ -757,8 +759,13 @@ func nudge(velocity_change: Vector2) -> void:
 
 
 ## Glues this figure to `other`: they move as one heavier body until an explosion hits either.
+## Magnet pulls, implosions, homing mines and glue skip this figure (Slippery Jim while he has stacks).
+func field_immune() -> bool:
+	return ability != null and ability.get_field_immunity(self)
+
+
 func glue_to(other: Figure) -> void:
-	if knocked_off or other.knocked_off or get_parent() == null:
+	if knocked_off or other.knocked_off or get_parent() == null or field_immune() or other.field_immune():
 		return
 	var joint := GlueLink.new()
 	joint.figure_a = self

@@ -22,11 +22,14 @@ extends FigureAbility
 @export var fused_implosion_radius := 440.0
 @export var fused_implosion_strength := 2700.0
 @export_group("Upgrades")
-## Field path: tap the Magnet after it flicked to push opposing figures away (a strong shove at the middle of its pull
-## range). Once per combat, or once per turn with `push_once_per_turn`.
+## Field path (Repel Pulse): after the Magnet is flicked, while it is still moving, a tap ANYWHERE on the screen pushes
+## the opposing figures near it away (the shove is strongest close to the Magnet). Once per combat, or once per turn
+## with `push_once_per_turn`. The Magnet shows a ring while the pulse is available (bright while it is moving).
 @export var push_enabled := false
 @export var push_once_per_turn := false
 @export var push_speed := 650.0
+## The Magnet must be moving faster than this (px/s) for the pulse to work.
+@export var pulse_min_speed := 80.0
 ## Collapse path: tap the Magnet (uses its action; it stays) to implode on command, once per combat. Black Hole: after
 ## it is knocked off it leaves a pull for this long that never moves its own team.
 @export var implode_on_command := false
@@ -34,6 +37,7 @@ extends FigureAbility
 
 var _push_used := false
 var _implode_used := false
+var _pulse_ms := -100000
 
 
 func on_physics_process(figure: Figure, _delta: float) -> void:
@@ -42,7 +46,7 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
 		# `other == figure`: a magnet is never moved by its own pull.
-		if other == figure or other.knocked_off or other.is_slow() or other.team == figure.team:
+		if other == figure or other.knocked_off or other.is_slow() or other.team == figure.team or other.field_immune():
 			continue
 		if other.linear_velocity.length() < min_pull_speed:
 			continue
@@ -65,9 +69,24 @@ func get_tap_ability(figure: Figure) -> Dictionary:
 		return {}
 	if implode_on_command:
 		return {"kind": "self", "ready": figure.can_act_now() and not _implode_used, "uses_action": true, "hint": "Implode!"}
-	if push_enabled:
-		return {"kind": "self", "ready": not _push_used and not figure.can_act_now(), "uses_action": false, "hint": "Push! Pick another figure"}
+	if push_enabled:  # a tap anywhere while it moves (Main.try_reverse_tap; the enemy AI uses it in _enemy_wikka_step)
+		return {"kind": "moving", "ready": pulse_ready(figure), "uses_action": false, "hint": "Repel!"}
 	return {}
+
+
+## The pulse can fire now: charge left, the Magnet is on the board, moving, and it is its own side's turn.
+func pulse_ready(figure: Figure) -> bool:
+	if not push_enabled or _push_used or figure.knocked_off or figure.on_deck:
+		return false
+	var combat = RunManager.combat
+	if combat == null or combat.turret_side != figure.team:
+		return false
+	return figure.linear_velocity.length() >= pulse_min_speed
+
+
+func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if push_enabled and not _push_used:
+		figure.show_popup("Tap to repel!", Color(0.6, 0.85, 1.0))
 
 
 func use_tap_ability(figure: Figure, _point: Vector2) -> bool:
@@ -76,11 +95,12 @@ func use_tap_ability(figure: Figure, _point: Vector2) -> bool:
 		_spawn_implosion(figure, implosion_seconds, false)
 		figure.show_popup("Implode!", Color(0.75, 0.45, 1.0))
 		return true
-	if push_enabled and not _push_used and not figure.can_act_now():
+	if push_enabled and pulse_ready(figure):
 		_push_used = true
+		_pulse_ms = Time.get_ticks_msec()
 		for node in figure.get_tree().get_nodes_in_group("figures"):
 			var other := node as Figure
-			if other == null or other == figure or other.knocked_off or other.team == figure.team or other.on_deck:
+			if other == null or other == figure or other.knocked_off or other.team == figure.team or other.on_deck or other.field_immune():
 				continue
 			var offset := other.global_position - figure.global_position
 			var distance := offset.length()
@@ -90,6 +110,26 @@ func use_tap_ability(figure: Figure, _point: Vector2) -> bool:
 		figure.show_popup("Push!", Color(0.6, 0.85, 1.0))
 		return true
 	return false
+
+
+## The pulse indicator: a ring around the Magnet while a pulse is left (bright and pulsing while it can fire), and an
+## expanding ring when it fires.
+func draw_overlay(figure: Figure) -> void:
+	if not push_enabled or figure.on_deck:
+		return
+	var age := (Time.get_ticks_msec() - _pulse_ms) / 1000.0
+	if age < 0.5:
+		var t := age / 0.5
+		figure.draw_arc(Vector2.ZERO, lerpf(figure.radius, pull_radius, t), 0.0, TAU, 64, Color(0.6, 0.85, 1.0, 1.0 - t), 8.0, true)
+	if _push_used:
+		return
+	var ready := pulse_ready(figure)
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 120.0) if ready else 0.0
+	var color := Color(0.6, 0.9, 1.0, 0.95 if ready else 0.35)
+	figure.draw_arc(Vector2.ZERO, figure.radius + 10.0 + 6.0 * pulse, 0.0, TAU, 40, color, 5.0, true)
+	if ready:
+		var font := ThemeDB.fallback_font
+		figure.draw_string(font, Vector2(-30.0, -figure.radius - 24.0), "TAP", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(0.6, 0.9, 1.0))
 
 
 func _spawn_implosion(figure: Figure, seconds: float, friendly_safe: bool) -> void:

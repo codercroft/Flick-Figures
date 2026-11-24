@@ -5,11 +5,11 @@ extends FigureAbility
 ## leaving the table knocks it off as usual. (Damping always slows it, so a wrapping Ghost still comes to
 ## rest and the turn still ends; `max_settle_time` is the safety net.)
 
-## Upgrade switch (Full Haunt): it can also wrap during the opponent's turn, but only `opponent_wraps_per_turn`
-## times per turn; after that it falls off the table normally (so it can still be killed).
+## Upgrade switch (Full Haunt): it can also wrap during the opponent's turn, but only `opponent_wraps_per_combat`
+## times in the whole combat; after that it falls off the table normally (so it can still be killed).
 @export var wraps_on_opponent_turn := false
-@export var opponent_wraps_per_turn := 1
-## Haunt path: +x knockback dealt and +x flick power for the combat for every wrap so far.
+@export var opponent_wraps_per_combat := 1
+## Haunt path: +x knockback dealt and +x flick power for the combat for every wrap so far (Spooky Gains / Spirit Power: 0.2 each).
 @export var wrap_knockback := 0.0
 @export var wrap_power := 0.0
 ## Phase path: it passes through allies (Ghost Walk), can teleport to another spot once per turn (Teleport; it can
@@ -35,12 +35,11 @@ func _own_turn(figure: Figure) -> bool:
 func _wraps_now(figure: Figure) -> bool:
 	if _own_turn(figure):
 		return true
-	return wraps_on_opponent_turn and _opponent_wraps_used < opponent_wraps_per_turn
+	return wraps_on_opponent_turn and _opponent_wraps_used < opponent_wraps_per_combat
 
 
 func on_turn_ended(_figure: Figure) -> void:
-	_opponent_wraps_used = 0
-	_teleported = false
+	_teleported = false  # (the opponent-turn wrap is NOT reset: once per combat)
 
 
 func get_dealt_knockback_bonus(_figure: Figure, _other: Figure) -> float:
@@ -121,7 +120,7 @@ func on_left_table(figure: Figure, table: Rect2) -> bool:
 func get_wrap_count(figure: Figure) -> int:
 	if _own_turn(figure):
 		return 99
-	return maxi(opponent_wraps_per_turn - _opponent_wraps_used, 0) if wraps_on_opponent_turn else 0
+	return maxi(opponent_wraps_per_combat - _opponent_wraps_used, 0) if wraps_on_opponent_turn else 0
 
 
 ## Enemy AI: teleport next to the nearest player figure (about 340 px away) when it is far from all of them.

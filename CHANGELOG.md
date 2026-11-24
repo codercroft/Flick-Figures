@@ -4,6 +4,13 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-24: Jim's field immunity, Magnet Repel Pulse fix, Ghost and Energizer upgrades
+- Slippery Jim: while he has stacks he ignores Magnet pulls and Repel Pulse (and Magnet Charm), Magnet Throw, every implosion (Short Fuse, Magnet's, Collapse Now, Black Hole), Land Miner homing, and glue (Glue Guy, chains, Glue Puddle). New hook `get_field_immunity` / `Figure.field_immune()`. Descriptions say so. Open: the enemy AI still predicts a player Magnet's curve for Jim's shots.
+- Magnet Repel Pulse (Field 2/3) never worked in play: it needed a tap on the Magnet, which is impossible while it moves (the turn is settling). Now a tap anywhere while the flicked Magnet is moving fires it (`get_tap_ability` kind `"moving"`, handled first in `Main._input` with Wikka Wat's tap, so aiming, selection and skip buttons cannot eat it). Once per combat / once per turn. A ring marks it available (bright, pulsing "TAP" while it can fire), "Tap to repel!" pops up on the flick, an expanding ring shows the shove. Enemy Magnets fire it from `_enemy_wikka_step`.
+- Ghost Haunt: Spooky Gains +20% knockback per wrap, Spirit Power +20% power per wrap, Full Haunt's extra wrap on an opponent's turn is once per combat (`opponent_wraps_per_combat`, was per turn).
+- Energizer: Overcharge adds 30% less knockback taken for recharged allies until their next flick (`ally_knockback_reduction`, `Figure.charge_taken`). Stun no longer costs a turn: the hit enemy's next flick is -60% (`stun_flick` 0.4), stronger than Static Hit's 0.8.
+- Tests: `tools/field_changes_test.gd` (new); `wikka_test.gd` updated for the opening Ultimate Shieldon shield (it was stale since the last change).
+
 ## 2026-11-18: Opening shield, Swap and Shrink Ray changes, Fat Man deck throws and 5 / 6 hits
 - Ultimate Shieldon: `Main._raise_opening_shields()` (after the opening turret placement, one physics frame in) raises its shield at combat start, all segments intact, facing the nearest player figure.
 - Swap: boss bodies and boss pieces are refused (`Figure.swap_immune()`: `FigureData.boss_body`, the new `FigureData.swap_immune` on medium / small slimes and Skull Balls, and `Figure.boss_unit`, set by main for a boss fight's own bodies so Bomb Duo's stock figures count; Sniper Squad's snipers and Mad Creator summons can still be swapped). It uses the existing invalid-target path: a message, the power is kept.

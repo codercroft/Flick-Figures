@@ -226,7 +226,15 @@ func try_reverse_tap() -> bool:
 		if _is_alive(figure) and figure.ability.can_reverse(figure) and figure.linear_velocity.length() > best_speed:
 			best = figure
 			best_speed = figure.linear_velocity.length()
-	return best != null and best.ability.use_reverse(best)
+	var reversed: bool = best != null and best.ability.use_reverse(best)
+	# Magnet's Repel Pulse: the same tap anywhere repels with every moving player Magnet that has a pulse ready.
+	var pulsed := false
+	for figure in _players:
+		if _is_alive(figure):
+			var tap: Dictionary = figure.ability.get_tap_ability(figure)
+			if not tap.is_empty() and tap.kind == "moving" and tap.ready and figure.ability.use_tap_ability(figure, figure.global_position):
+				pulsed = true
+	return reversed or pulsed
 
 
 ## Enemy Wikka Wats look every few physics frames whether a reverse or redirect would set up a better hit.
@@ -238,6 +246,10 @@ func _enemy_wikka_step() -> void:
 			var direction := ai.choose_wikka_reverse(enemy, _players, board.get_table_rect())
 			if direction != Vector2.ZERO:
 				enemy.ability.use_reverse(enemy, direction)
+		if _is_alive(enemy):  # an enemy Magnet's Repel Pulse
+			var tap: Dictionary = enemy.ability.get_tap_ability(enemy)
+			if not tap.is_empty() and tap.kind == "moving" and tap.ready and enemy.ability.ai_wants_tap(enemy, _players):
+				enemy.ability.use_tap_ability(enemy, enemy.global_position)
 
 
 func _physics_process(_delta: float) -> void:

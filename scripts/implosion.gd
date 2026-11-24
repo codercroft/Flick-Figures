@@ -26,7 +26,7 @@ func _physics_process(delta: float) -> void:
 	var source_team := _source_team
 	for node in get_tree().get_nodes_in_group("figures"):
 		var figure := node as Figure
-		if figure == source or figure.knocked_off or figure.is_frozen() or Figure.blast_immune(figure, source_team):
+		if figure == source or figure.knocked_off or figure.is_frozen() or figure.field_immune() or Figure.blast_immune(figure, source_team):
 			continue
 		if friendly_safe and figure.team == source_team:
 			continue

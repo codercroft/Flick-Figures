@@ -4,16 +4,21 @@ extends FigureAbility
 ## (a small spark effect shows it).
 ## Charge path: it recharges EVERY ally it hits (`recharge_all`), recharged allies flick with +x power next time
 ## (`ally_power_bonus`) and can flick right now (`instant_recharge`: they get a flick as soon as this one settles).
+## Overcharge also gives them `ally_knockback_reduction` less knockback taken until their next flick.
 ## Shock path: enemies it hits flick with this share of power (`shock_flick`) until they next flick, the shock chains to
-## enemies within `chain_radius` of the one hit, and `stun` stops them flicking for a round.
+## enemies within `chain_radius` of the one hit, and `stun` makes the hit enemies' next flick even weaker (`stun_flick`).
 
 @export var recharge_all := false
 @export var ally_power_bonus := 0.0
+## Overcharge: recharged allies take this much less knockback until their next flick (0.3 = 30% less).
+@export var ally_knockback_reduction := 0.0
 @export var instant_recharge := false
 @export var shock_flick := 1.0
 @export var shock_chain := false
 @export var chain_radius := 260.0
 @export var stun := false
+## Stun: the shocked enemy's next flick power multiplier (0.4 = -60%), stronger than Static Hit's `shock_flick`.
+@export var stun_flick := 0.4
 
 var _flicking := false
 var _used := false
@@ -43,6 +48,8 @@ func on_hit(figure: Figure, other: Figure) -> void:
 	combat.recharge_figure(other)
 	if ally_power_bonus > 0.0:
 		other.charge_power = 1.0 + ally_power_bonus
+	if ally_knockback_reduction > 0.0:
+		other.charge_taken = 1.0 - ally_knockback_reduction
 	if instant_recharge:
 		combat.grant_bonus_flick(other)
 	SparkEffect.spawn(other.get_parent(), other.position)
@@ -60,14 +67,11 @@ func _shock(figure: Figure, victim: Figure) -> void:
 					and other.global_position.distance_to(victim.global_position) <= chain_radius:
 				victims.append(other)
 	for target in victims:
-		if shock_flick < 1.0:
-			target.shock_flick = shock_flick
+		var weakest := shock_flick
 		if stun:
-			target.stunned_rounds = 1
-			if target.team == Figure.Team.PLAYER:
-				target.flickable = false
-			elif RunManager.combat != null:
-				RunManager.combat._enemy_cycle[target.get_instance_id()] = true
+			weakest = minf(weakest, stun_flick)
+		if weakest < 1.0:
+			target.shock_flick = minf(target.shock_flick, weakest)
 		target.show_popup("Shocked!", Color(1.0, 0.95, 0.4))
 
 

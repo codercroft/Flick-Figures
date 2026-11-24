@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1")
 display_name = "Full Haunt"
-description = "Also wraps once per opponent turn."
+description = "Also wraps once on an opponent's turn (once per combat)."
 ability_overrides = {"wraps_on_opponent_turn": true}

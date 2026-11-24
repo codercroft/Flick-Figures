@@ -43,6 +43,11 @@ func _is_hit_by(figure: Figure, source: Figure) -> bool:
 			and source._last_velocity.length() >= figure._last_velocity.length()
 
 
+## Slippery: immune to magnets and glue (see Figure.field_immune) while any stack is left.
+func get_field_immunity(_figure: Figure) -> bool:
+	return is_slippery()
+
+
 func get_knockback_multiplier(figure: Figure, source: Figure) -> float:
 	return 0.0 if is_slippery() and _is_hit_by(figure, source) else 1.0
 

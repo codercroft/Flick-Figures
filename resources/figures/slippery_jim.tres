@@ -9,7 +9,7 @@ script = ExtResource("2")
 [resource]
 script = ExtResource("1")
 display_name = "Slippery Jim"
-description = "A strong Grunt in a slippery coat. While he has stacks, hits and explosions do nothing to him (each of your hits uses one up)."
+description = "A strong Grunt in a slippery coat. While he has stacks, hits and explosions do nothing to him (each of your hits uses one up). Also immune to magnets and glue while slippery."
 label = "SJ"
 icon = 37
 color = Color(0.35, 0.85, 0.95, 1)

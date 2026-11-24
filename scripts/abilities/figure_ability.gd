@@ -296,6 +296,11 @@ func on_turn_ended(_figure: Figure) -> void:
 	pass
 
 
+## True while the figure ignores magnet-type pulls (Magnet, Magnet Throw, implosions, homing mines) and glue (Slippery Jim).
+func get_field_immunity(_figure: Figure) -> bool:
+	return false
+
+
 ## Aggro-bom, for the enemy AI: {needed, met, radius, force} (collisions it needs, how many it has counted, the
 ## explosion), or {} for any other figure.
 func get_ai_aggro(_figure: Figure) -> Dictionary:
