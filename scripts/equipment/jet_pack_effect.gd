@@ -26,6 +26,8 @@ func get_flick_power_multiplier(figure: Figure) -> float:
 
 
 func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if figure.nudged_flick:
+		return  # a nudge never spends the Jet Pack
 	if figure.turn_flicks >= 2:
 		_charges_left = _left() - 1
 		figure.show_popup("Whoosh!", Color(1.0, 0.8, 0.5))

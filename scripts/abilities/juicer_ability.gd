@@ -40,7 +40,7 @@ func on_flicked(figure: Figure, _impulse: Vector2) -> void:
 
 func on_physics_process(figure: Figure, _delta: float) -> void:
 	var combat := RunManager.combat
-	if combat == null or figure.on_deck or figure.linear_velocity.length() < min_trail_speed:
+	if combat == null or not figure.flick_motion() or figure.linear_velocity.length() < min_trail_speed:
 		return
 	if _last_drop == Vector2.INF:
 		_last_drop = figure.global_position

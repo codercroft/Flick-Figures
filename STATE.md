@@ -99,7 +99,7 @@ Stats come from the .tres files: mass, radius (px), flick power (multiplier on 2
 | Common | Spitter | 1 | 55 | 1 | 1 | 0.7 | 1 | Firehose / Sprinkler | - |
 | Uncommon | Juicer | 1 | 60 | 1 | 1 | 0.7 | 1 | Slick / Squeeze | - |
 | Common | Magnet | 1.2 | 60 | 1 | 1 | 0.7 | 1 | Field / Collapse | - |
-| Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | Charge / Formation | - |
+| Common | Rally | 1 | 55 | 1 | 1 | 0.7 | 1 | Charge / Formation | - A Rally nudge counts as a flick for every flick-keyed ability (not for the flick cycle); Speedo counters, Jet Pack, Spitter's spray window, Trangle's spin and a nudged Rally ignore it. |
 | Common | Shieldon Ooper | 1.1 | 62 | 1 | 1 | 0.6 | 1 | Bulwark / Decoy | - |
 | Common | Splitter | 1.4 | 60 | 1 | 1 | 0.7 | 1 | Brood / Lil Warrior | - |
 | Uncommon | Alchemist | 0.9 | 58 | 1 | 1 | 0.7 | 1 | Potency / Brew | - |

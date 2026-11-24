@@ -71,6 +71,11 @@ var flickable := true:
 var knocked_off := false
 ## Fat Man's hand holds this figure: it cannot be flicked, hit or pushed, but still counts as alive.
 var held := false
+## True from a Rally nudge until the figure stops: abilities treat the nudge like a flick (on_flicked ran), but it is not a real
+## flick (no cycle, turn_flicks or Speedo / Jet Pack charge). See rally_nudge().
+var nudged_flick := false
+## The figure this one last collided with (Bloodluster credits a nudged figure's kills).
+var last_touched_by: Figure
 ## Set by main for a boss fight's own bodies (Bomb Duo's stock figures, Jim...): the Swap power refuses them.
 var boss_unit := false
 ## Flicks this figure has taken this turn (main.gd resets it each turn; Speedo can take 2).
@@ -473,6 +478,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			velocity = Vector2.ZERO
 			if _was_moving:
 				_was_moving = false
+				nudged_flick = false
 				ability.on_stopped.call_deferred(self)
 	else:
 		_slow_frames = 0
@@ -522,6 +528,8 @@ func _apply_dealt_bonus(other: Figure) -> void:
 func _on_body_entered(body: Node) -> void:
 	touched_since_flick = true
 	if body is Figure:
+		last_touched_by = body
+		(body as Figure).last_touched_by = self
 		# Deferred: physics callbacks can't change physics state directly.
 		ability.on_hit.call_deferred(self, body)
 		_chain_glue.call_deferred(body)
@@ -714,6 +722,7 @@ func describe_motion() -> String:
 
 
 func launch(impulse: Vector2) -> void:
+	nudged_flick = false
 	on_deck = false
 	flickable = false
 	turn_flicks += 1
@@ -770,6 +779,23 @@ func nudge(velocity_change: Vector2) -> void:
 	_skip_knockback_frames = 2
 	_slow_frames = 0
 	apply_central_impulse(velocity_change * mass)
+
+
+## Rally's nudge: the push of nudge() plus every flick trigger (`ability.on_flicked`, "first hit after a flick", "where it stops",
+## ...), on the board and on deck. It is NOT a real flick: no `flicked` signal (so no flick cycle, greying out or Bloodluster
+## chain), no `turn_flicks`, and abilities that count real flicks (Speedo, Jet Pack, Rally itself...) check `nudged_flick`.
+func rally_nudge(velocity_change: Vector2) -> void:
+	if is_frozen() or knocked_off:
+		return
+	nudge(velocity_change)
+	touched_since_flick = false
+	nudged_flick = true
+	ability.on_flicked(self, velocity_change * mass)
+
+
+## True while it is moving from its own flick or a Rally nudge (on deck, only the nudge counts): Juicer's trail, Magnet's pulse.
+func flick_motion() -> bool:
+	return not on_deck or nudged_flick
 
 
 ## Glues this figure to `other`: they move as one heavier body until an explosion hits either.

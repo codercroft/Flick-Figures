@@ -33,6 +33,8 @@ func setup_body(figure: Figure) -> void:
 
 
 func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if figure.nudged_flick:
+		return  # (no flick spin from a nudge)
 	figure.angular_velocity = flick_spin * (1.0 if randf() < 0.5 else -1.0)
 
 

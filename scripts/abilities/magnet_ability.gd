@@ -41,7 +41,7 @@ var _pulse_ms := -100000
 
 
 func on_physics_process(figure: Figure, _delta: float) -> void:
-	if figure.on_deck:
+	if not figure.flick_motion():
 		return
 	for node in figure.get_tree().get_nodes_in_group("figures"):
 		var other := node as Figure
@@ -76,7 +76,7 @@ func get_tap_ability(figure: Figure) -> Dictionary:
 
 ## The pulse can fire now: charge left, the Magnet is on the board, moving, and it is its own side's turn.
 func pulse_ready(figure: Figure) -> bool:
-	if not push_enabled or _push_used or figure.knocked_off or figure.on_deck:
+	if not push_enabled or _push_used or figure.knocked_off or not figure.flick_motion():
 		return false
 	var combat = RunManager.combat
 	if combat == null or combat.turret_side != figure.team:
@@ -115,7 +115,7 @@ func use_tap_ability(figure: Figure, _point: Vector2) -> bool:
 ## The pulse indicator: a ring around the Magnet while a pulse is left (bright and pulsing while it can fire), and an
 ## expanding ring when it fires.
 func draw_overlay(figure: Figure) -> void:
-	if not push_enabled or figure.on_deck:
+	if not push_enabled or not figure.flick_motion():
 		return
 	var age := (Time.get_ticks_msec() - _pulse_ms) / 1000.0
 	if age < 0.5:

@@ -27,7 +27,9 @@ func get_flick_power_multiplier(figure: Figure) -> float:
 	return 1.0 + power_per_flick * figure.turn_flicks
 
 
-func on_flicked(_figure: Figure, _impulse: Vector2) -> void:
+func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if figure.nudged_flick:
+		return  # a Rally nudge is not a flick (Building Speed / Flick Fury count real flicks)
 	_combat_flicks += 1
 
 

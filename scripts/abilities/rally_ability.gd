@@ -24,11 +24,13 @@ var _last_rally_ms := -10000
 
 
 func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if figure.nudged_flick:
+		return  # one Rally trigger per REAL flick: a nudged Rally never rallies (no ping-pong between Rallies)
 	_rally(figure)
 
 
 func on_hit(figure: Figure, other: Figure) -> void:
-	if rally_on_hit and other.team != figure.team and Time.get_ticks_msec() - _last_rally_ms > 400:
+	if rally_on_hit and not figure.nudged_flick and other.team != figure.team and Time.get_ticks_msec() - _last_rally_ms > 400:
 		_rally(figure)
 
 
@@ -45,7 +47,7 @@ func _rally(figure: Figure) -> void:
 		var direction := nudge_direction(other)
 		if edge_guard and table.size != Vector2.ZERO and not table.grow(-160.0).has_point(other.global_position):
 			direction = (table.get_center() - other.global_position).normalized()  # near an edge: inward
-		other.nudge(direction * nudge_speed)
+		other.rally_nudge(direction * nudge_speed)
 		if nudged_dealt_bonus > 0.0 or nudged_taken_reduction > 0.0:
 			other.temp_dealt = maxf(other.temp_dealt, nudged_dealt_bonus)
 			other.temp_taken = minf(other.temp_taken, 1.0 - nudged_taken_reduction)

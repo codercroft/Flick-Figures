@@ -90,6 +90,7 @@ var _touch_start := Vector2.ZERO
 var _needs_reload := false  # reload mode only: nothing flickable, tap a board figure to reload it
 var _can_restart := false
 var _flicker: Figure  # the figure whose flick is in progress (Bloodluster counts the kills it causes)
+var _nudge_kills := {}  # Rally-nudged figure -> opposing figures it knocked off (Bloodluster's bonus flick)
 var _flick_kills := 0  # opposing figures knocked off since that flick started
 ## Whose turn it is (a Figure.Team), or -1 when nobody's: turrets fire only on the OPPOSING side's turn, and a
 ## Ghost only wraps on its own side's.
@@ -905,6 +906,15 @@ func _finish_player_turn() -> void:
 	if _bonus_available(_last_player_flicker) and _last_player_flicker.team == Figure.Team.PLAYER:
 		_offer_bonus_flick(_last_player_flicker)
 		return
+	for nudged in _nudge_kills.keys():  # a Rally-nudged Bloodluster that knocked something off gets its bonus flick too
+		var kills: int = _nudge_kills[nudged]
+		_nudge_kills.erase(nudged)
+		if _is_alive(nudged) and nudged.team == Figure.Team.PLAYER:
+			_flicker = nudged
+			_flick_kills = kills
+			if _bloodlust_ready(nudged):
+				_offer_bonus_flick(nudged)
+				return
 	# After its action settles a Spitter may still spray, and a Cluster that tossed may toss again (never flick).
 	var last = _last_player_flicker
 	if _is_alive(last) and last.team == Figure.Team.PLAYER:
@@ -1693,10 +1703,14 @@ func _knock_off_fallen_figures() -> void:
 func _on_any_flick(figure: Figure, _impulse: Vector2) -> void:
 	_flicker = figure
 	_flick_kills = 0
+	_nudge_kills.clear()
 	_gate_window = false  # (Out the Gate: the second flick has been taken)
 
 
 func _count_kill(fallen: Figure) -> void:
+	var by: Figure = fallen.last_touched_by
+	if is_instance_valid(by) and by.nudged_flick and by.team == Figure.Team.PLAYER and fallen.team != by.team:
+		_nudge_kills[by] = int(_nudge_kills.get(by, 0)) + 1  # a Rally-nudged Bloodluster's kill
 	if is_instance_valid(_flicker) and fallen.team != _flicker.team:
 		_flick_kills += 1
 

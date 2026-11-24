@@ -103,7 +103,9 @@ func on_round_ticked(figure: Figure) -> void:
 		figure.queue_redraw()
 
 
-func on_flicked(_figure: Figure, _impulse: Vector2) -> void:
+func on_flicked(figure: Figure, _impulse: Vector2) -> void:
+	if figure.nudged_flick:
+		return  # (it would open the after-flick spray window)
 	_flicked_this_turn = true
 
 
