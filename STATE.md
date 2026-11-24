@@ -301,7 +301,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Ghost | Haunt | 3 | Full Haunt | Also wraps once on an opponent's turn (once per combat). |
 | Ghost | Phase | 1 | Ghost Walk | Passes through allies. |
 | Ghost | Phase | 2 | Teleport | Tap a free spot to teleport there (refused off the table or on top of another figure; the message and the once-per-turn use only count after a successful move); it can still flick that turn. |
-| Ghost | Phase | 3 | Wrap Gift | Allies it passes through can wrap around once on either turn. |
+| Ghost | Phase | 3 | Wrap Gift | Allies it passes through can wrap around once on either turn (a small ghost badge shows above a figure holding a wrap until it is used). |
 | Piggy Bank | Hoard | 1 | Strong Savings | Scales its flick power along with its mass. |
 | Piggy Bank | Hoard | 2 | Bigger Vault | Soft cap 5x (from 4x). |
 | Piggy Bank | Hoard | 3 | Interest | Gains +1% knockback for every $ you have. |

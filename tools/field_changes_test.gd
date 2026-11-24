@@ -151,6 +151,16 @@ func _all() -> void:
 	_check(is_equal_approx(victim.shock_flick, 0.4), "Stun: the hit enemy's next flick is -60 percent (x%.2f)" % victim.shock_flick)
 	_check(victim.stunned_rounds == 0, "it no longer loses its turn")
 
+	print("Wrap Gift badge")
+	await _start([_entry(grunt, 0, Vector2(540, 1000))])
+	var gifted = _main._players[0]
+	gifted.set_meta("ghost_wrap", true)
+	await _frames(3)  # (a few draws with the badge: no errors)
+	_check(gifted.has_meta("ghost_wrap"), "the charge (and so the badge) is up")
+	gifted.teleport_to(Vector2(-50, 1000))  # off the table: the charge is spent on a wrap
+	await _frames(3)
+	_check(not gifted.has_meta("ghost_wrap") and not gifted.knocked_off, "using the wrap removes the charge (badge gone) and saves the figure")
+
 	if is_instance_valid(_main):
 		_main.queue_free()
 	print("\n%s" % ("ALL OK" if _fails.is_empty() else "FAILED: %s" % ", ".join(_fails)))

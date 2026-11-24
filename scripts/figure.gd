@@ -282,6 +282,17 @@ func _ready() -> void:
 	ability.setup_body(self)
 
 
+## Ghost's Wrap Gift: a small ghost badge (same style as the other status marks) above a figure that holds a wrap charge (set
+## when a Ghost with Wrap Gift passes through it; gone when the wrap is used in `Main._knock_off_fallen_figures`).
+func _draw_wrap_gift() -> void:
+	if not has_meta("ghost_wrap"):
+		return
+	var center := Vector2(-radius * 0.7, -radius - 12.0)
+	draw_circle(center, 17.0, Color(0.1, 0.12, 0.2, 0.85))
+	draw_arc(center, 17.0, 0.0, TAU, 20, Color(0.85, 0.92, 1.0, 0.95), 3.0, true)
+	FigureIcons.draw(self, FigureIcons.Icon.GHOST, center, 9.0, Color(0.85, 0.92, 1.0))
+
+
 ## Glue Guy's chain: a figure that is sticky (part of a chain-glue cluster) shows a green ring that pulses.
 func _draw_sticky() -> void:
 	if glue_joints.is_empty() or glue_sticky_source() == null:
@@ -390,6 +401,7 @@ func _draw() -> void:
 	_draw_finish()
 	_draw_doused()
 	_draw_sticky()
+	_draw_wrap_gift()
 	# A short label so you can tell figures apart (the first letter of the name by default).
 	if not ability.draws_own_label(self):
 		var label := data.label if data.label != "" else data.display_name.left(1)
@@ -684,6 +696,8 @@ func is_slow() -> bool:
 
 ## Settled: has been slow for several frames in a row (and is still slow).
 func is_resting() -> bool:
+	if held:
+		return true  # in Fat Man's hand: not moving under physics (its slow-frame count is reset every frame by the carry)
 	return _slow_frames >= settle_frames and is_slow()
 
 
