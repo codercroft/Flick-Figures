@@ -44,6 +44,8 @@ extends Resource
 
 @export_group("Harder fight (after a lost minigame)")
 ## When a minigame loss made a fight harder, winning that fight also pays this much extra money...
+## A fight made harder by The Gamer also adds one extra Upgrade step.
+@export var harder_fight_extra_upgrade := true
 @export var harder_fight_bonus_money := 5
 ## ...and gives one extra guaranteed item of one of these kinds ("power", "equipment" or "finish"), picked at random.
 @export var harder_fight_item_kinds: Array[String] = ["power", "equipment", "finish"]

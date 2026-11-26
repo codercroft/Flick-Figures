@@ -271,6 +271,9 @@ func _on_item_dropped(slot: int, item: EquipmentData) -> void:
 	if not RunManager.equipment_change_allowed():
 		_flash_locked()
 		return
+	if RunManager.is_locked(slot):
+		_details.text = "%s is permanently attached to this figure." % RunManager.deck_equipment[slot].display_name
+		return
 	if RunManager.equip(item, slot):
 		_sync_combat(slot)
 		refresh()
@@ -281,6 +284,9 @@ func _on_item_dropped(slot: int, item: EquipmentData) -> void:
 
 
 func _on_item_tapped(slot: int) -> void:
+	if RunManager.is_locked(slot):
+		_details.text = "%s is permanently attached (a lock).\n\n%s" % [RunManager.deck_equipment[slot].display_name, _figure_text(slot)]
+		return
 	if not RunManager.equipment_change_allowed():
 		_flash_locked()
 		return
@@ -332,9 +338,9 @@ func _update_unequip_button() -> void:
 	var slot := _strip.selected
 	var show := slot >= 0 and slot < RunManager.deck.size() and RunManager.deck_equipment[slot] != null
 	_unequip_button.visible = show
-	_unequip_button.disabled = not RunManager.equipment_change_allowed()
+	_unequip_button.disabled = not RunManager.equipment_change_allowed() or (show and RunManager.is_locked(slot))
 	if show:
-		_unequip_button.text = "Unequip %s" % RunManager.deck_equipment[slot].display_name
+		_unequip_button.text = ("%s (locked on)" if RunManager.is_locked(slot) else "Unequip %s") % RunManager.deck_equipment[slot].display_name
 
 
 # --- Texts -----------------------------------------------------------------------------
@@ -348,7 +354,9 @@ func _figure_text(slot: int) -> String:
 	lines.append("Finish: %s" % ("%s - %s" % [finish.display_name, finish.description] if finish else "none"))
 	var summary := RunManager.upgrade_summary(slot)
 	lines.append("Upgrades: %s" % (summary if summary != "" else "none"))
-	lines.append("Equipment: %s" % ("%s - %s" % [item.display_name, item.description] if item else "none"))
+	lines.append("Equipment: %s" % (("%s - %s%s" % [item.display_name, item.description, " (permanently attached)" if RunManager.is_locked(slot) else ""]) if item else "none"))
+	if RunManager.is_bruised(slot):
+		lines.append("Bruised: -20% flick power in the next combat")
 	return "\n".join(lines)
 
 

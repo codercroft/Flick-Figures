@@ -51,6 +51,8 @@ var status_label := Label.new()
 var top_bar := TopBar.new()
 
 var _flick_figure: Figure  # the figure the player may flick right now (null = no input)
+var _selectable: Array[Figure] = []  # figures the player may pick between (tap one to select it)
+var _last_flicked: Figure
 var _touch_index := -1
 var _touch_start := Vector2.ZERO
 var _aiming := false
@@ -128,13 +130,16 @@ func _to_world(screen_pos: Vector2) -> Vector2:
 
 
 func _input(event: InputEvent) -> void:
-	if _flick_figure == null or RunInfo.is_open:
+	if (_flick_figure == null and _selectable.is_empty()) or RunInfo.is_open:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if _touch_index == -1 and not top_bar.is_over(event.position):
-				_touch_index = event.index
 				_touch_start = _to_world(event.position)
+				_select_at(_touch_start)
+				if _flick_figure == null:
+					return
+				_touch_index = event.index
 				_aiming = true
 				_update_aim(_touch_start)
 		elif event.index == _touch_index:
@@ -175,6 +180,20 @@ func _update_aim(pos: Vector2) -> void:
 	aim_line.show_aim(_flick_figure.global_position + direction * _flick_figure.radius, direction, distance)
 
 
+## With several selectable figures, a press on one selects it (a yellow ring); a press elsewhere aims the selected one.
+func _select_at(world: Vector2) -> void:
+	var best: Figure = null
+	for figure in _selectable:
+		if alive(figure) and figure.global_position.distance_to(world) <= figure.radius + 30.0:
+			best = figure
+	if best == null or best == _flick_figure:
+		return
+	if _flick_figure != null:
+		_flick_figure.selected = false
+	_flick_figure = best
+	best.selected = true
+
+
 func _release_aim(pos: Vector2) -> void:
 	var impulse := _flick_impulse(pos) if _aiming and _flick_figure != null else Vector2.ZERO
 	_cancel_aim()
@@ -182,7 +201,9 @@ func _release_aim(pos: Vector2) -> void:
 		return
 	var figure := _flick_figure
 	_flick_figure = null
+	_selectable.clear()
 	figure.selected = false
+	_last_flicked = figure
 	figure.launch(impulse)
 	player_flicked.emit()
 
@@ -201,6 +222,18 @@ func request_flick(figure: Figure, prompt: String) -> void:
 	await player_flicked
 
 
+## Lets the player choose which of `figures` to flick (tap one, then drag anywhere). Returns the flicked figure.
+func request_flick_from(figures: Array[Figure], prompt: String) -> Figure:
+	_selectable = figures.duplicate()
+	if _flick_figure != null:
+		_flick_figure.selected = false
+	_flick_figure = figures[0]
+	_flick_figure.selected = true
+	status_label.text = prompt
+	await player_flicked
+	return _last_flicked
+
+
 # --- Figures -------------------------------------------------------------------
 
 ## A new figure on the table. Player figures start "on deck" so they ignore each other until flicked.
@@ -211,6 +244,70 @@ func spawn_figure(data: FigureData, team: Figure.Team, pos: Vector2, item: Equip
 	figure.position = pos
 	figures_root.add_child(figure)
 	return figure
+
+
+## The player's deck figure in `slot`, with its upgrades, finish and equipment (and Bruised), on the given team.
+func spawn_deck_figure(slot: int, team: Figure.Team, pos: Vector2, plain := false) -> Figure:
+	var data: FigureData = RunManager.deck[slot]
+	var figure: Figure = FIGURE_SCENE.instantiate()
+	if plain:  # a rival copy: same figure, no gear
+		figure.setup(data, team, figure_damping, stop_speed, settle_frames)
+	else:
+		var state: Vector2i = RunManager.deck_upgrade[slot]
+		var bruised := RunManager.is_bruised(slot)
+		figure.setup(data, team, figure_damping, stop_speed, settle_frames, RunManager.deck_equipment[slot], RunManager.deck_finish[slot],
+				RunManager.owned_upgrades(data, state), {"power": config().bruised_power} if bruised else {}, false)
+		figure.upgrade_state = state
+		figure.bruised = bruised
+		figure.equipment_locked = RunManager.is_locked(slot)
+	figure.on_deck = team == Figure.Team.PLAYER
+	figure.position = pos
+	figures_root.add_child(figure)
+	return figure
+
+
+signal _slot_picked(slot: int)
+
+
+## Full-screen list of deck figures; returns the chosen deck slot. `slots` limits the choices (empty = the whole deck).
+func pick_slot(title: String, subtitle := "", slots: Array[int] = []) -> int:
+	var layer := CanvasLayer.new()
+	layer.layer = 24
+	add_child(layer)
+	var background := ColorRect.new()
+	background.color = Color(0.05, 0.06, 0.09, 0.97)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(background)
+	var frame := ScreenFrame.new()
+	layer.add_child(frame)
+	await get_tree().process_frame  # (the frame builds itself in _ready)
+	frame.top_bar.visible = false
+	frame.title.text = title
+	frame.subtitle.text = subtitle
+	var list := slots.duplicate()
+	if list.is_empty():
+		for i in RunManager.deck.size():
+			list.append(i)
+	for slot in list:
+		var figure: FigureData = RunManager.deck[slot]
+		var card := FigureCard.new()
+		card.setup(figure, 150.0, "%s (%s)\n%s" % [figure.display_name, figure.rarity_name(), _gear_line(slot)], 30)
+		card.pressed.connect(func(): _slot_picked.emit(slot))
+		frame.content.add_child(card)
+	var chosen: int = await _slot_picked
+	layer.queue_free()
+	return chosen
+
+
+func _gear_line(slot: int) -> String:
+	var parts: Array[String] = []
+	if RunManager.deck_finish[slot] != null:
+		parts.append(RunManager.deck_finish[slot].display_name)
+	if RunManager.upgrade_summary(slot) != "":
+		parts.append(RunManager.upgrade_summary(slot))
+	if RunManager.deck_equipment[slot] != null:
+		parts.append(RunManager.deck_equipment[slot].display_name)
+	return "Gear: " + (", ".join(parts) if not parts.is_empty() else "none")
 
 
 ## A copy of the Grunt in another color (so the two sides are easy to tell apart).
@@ -379,17 +476,20 @@ func make_data(display_name: String, short_label: String, color: Color, radius: 
 	return data
 
 
-## Ends a contest against the AI. `outcome`: 1 = you win (money + a random item), -1 = you lose (the next
+## Ends a contest against the AI. `outcome`: 1 = you win (money + an Upgrade + a finish), -1 = you lose (the next
 ## fight gets harder), 0 = draw (nothing). `lines` are the details shown under the heading.
 func conclude_contest(outcome: int, lines: Array[String]) -> void:
 	if outcome > 0:
-		var kinds := config().win_item_kinds
-		lines.append(give_reward(config().win_money, kinds.pick_random() if not kinds.is_empty() else ""))
-		show_result("You win!", Color(1.0, 0.82, 0.25), lines, not RunManager.reward_steps.is_empty())
+		# The Gamer: money, an Upgrade step and a finish (you pick the figures on the reward screen).
+		RunManager.money += config().win_money
+		RunManager.reward_steps = [{"kind": "upgrade"}, {"kind": "finish"}]
+		RunManager.event_reward_text = "Reward: $%d, an Upgrade and a toy finish" % config().win_money
+		lines.append(RunManager.event_reward_text)
+		show_result("You win!", Color(1.0, 0.82, 0.25), lines, true)
 	elif outcome < 0:
 		RunManager.minigame_penalty = true
 		RunManager.event_reward_text = ""
-		lines.append("The next fight will be harder.")
+		lines.append("The next fight will be harder (but pays an extra Upgrade).")
 		show_result("You lose", Color(1.0, 0.4, 0.35), lines)
 	else:
 		RunManager.event_reward_text = ""

@@ -19,6 +19,8 @@ extends Resource
 @export var easy_encounters: Array[EncounterData] = []
 ## The map events (see EventData). Each Event node picks one at random, avoiding repeats in a run.
 @export var event_pool: Array[EventData] = []
+## The four old games The Gamer picks from (they are not in the event pool themselves).
+@export var gamer_games: Array[EventData] = []
 ## Rewards and opponent strength for the minigame events.
 @export var minigames: MinigameConfig
 ## How elite encounters scale by act (stat boost, guaranteed gear, enemy relics, reward choices).

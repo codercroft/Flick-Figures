@@ -45,6 +45,8 @@ static func save(run, pending_node := -1) -> void:
 		"picked": _paths(run.picked_figures),
 		"deck_equipment": _paths(run.deck_equipment),
 		"deck_finish": _paths(run.deck_finish),
+		"deck_locked": run.deck_locked.duplicate(),
+		"deck_bruised": run.deck_bruised.duplicate(),
 		"deck_upgrade_state": _states(run.deck_upgrade),
 		"equipment_inventory": _paths(run.equipment_inventory),
 		"relics": _paths(run.relics),
@@ -106,6 +108,11 @@ static func load_into(run) -> int:
 		run.deck_finish.append(_item(data, "deck_finish", i, FinishData))
 		# (a removed figure's replacement starts with no upgrades: the old tiers belonged to its old tree)
 		run.deck_upgrade.append(RunManager.NO_UPGRADE if removed else _upgrade_state(data, i, run.deck[i]))
+	run.deck_locked.clear()
+	run.deck_bruised.clear()
+	for i in run.deck.size():
+		run.deck_locked.append(i < (data.get("deck_locked", []) as Array).size() and bool(data.deck_locked[i]) and run.deck_equipment[i] != null)
+		run.deck_bruised.append(i < (data.get("deck_bruised", []) as Array).size() and bool(data.deck_bruised[i]))
 	run.picked_figures.clear()
 	for path in data.get("picked", []):
 		var picked = _load(REMOVED_FIGURES.get(path, path))

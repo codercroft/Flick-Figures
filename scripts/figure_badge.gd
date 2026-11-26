@@ -16,6 +16,14 @@ var item_label := "":
 	set(value):
 		item_label = value
 		queue_redraw()
+var item_locked := false:  # the equipment is permanently attached (a small lock)
+	set(value):
+		item_locked = value
+		queue_redraw()
+var bruised := false:  # Bruised for the next combat (a bandage)
+	set(value):
+		bruised = value
+		queue_redraw()
 var locked := false:
 	set(value):
 		locked = value
@@ -48,6 +56,14 @@ func _draw() -> void:
 		draw_circle(badge_center, radius * 0.26, Color(0.1, 0.1, 0.14, 0.9))
 		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-radius * 0.26, radius * 0.1), item_label,
 				HORIZONTAL_ALIGNMENT_CENTER, radius * 0.52, int(radius * 0.3), Color.WHITE)
+	if item_locked and item_label != "":
+		var at := center + Vector2(radius, radius) * 0.7 + Vector2(radius * 0.2, radius * 0.22)
+		draw_arc(at + Vector2(0.0, -radius * 0.05), radius * 0.09, PI, TAU, 10, Color(0.85, 0.85, 0.9), 3.0, true)
+		draw_rect(Rect2(at + Vector2(-radius * 0.13, -radius * 0.05), Vector2(radius * 0.26, radius * 0.2)), Color(0.95, 0.8, 0.25))
+	if bruised:
+		var bc := center + Vector2(-radius, -radius) * 0.6
+		draw_rect(Rect2(bc + Vector2(-radius * 0.3, -radius * 0.09), Vector2(radius * 0.6, radius * 0.18)), Color(0.95, 0.8, 0.65))
+		draw_rect(Rect2(bc + Vector2(-radius * 0.3, -radius * 0.09), Vector2(radius * 0.6, radius * 0.18)), Color(0.45, 0.25, 0.15), false, 2.0)
 	draw_circle(center + Vector2(-radius, -radius) * 0.3, radius * 0.22, data.color.lightened(0.4))
 	var label := data.label if data.label != "" else data.display_name.left(1)
 	var ink := data.color.darkened(0.5)

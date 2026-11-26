@@ -55,6 +55,8 @@ func refresh() -> void:
 		var badge := FigureBadge.new()
 		badge.data = RunManager.deck[slot]
 		badge.upgraded = maxi(RunManager.deck_upgrade[slot].y, 0)
+		badge.item_locked = RunManager.is_locked(slot)
+		badge.bruised = RunManager.is_bruised(slot)
 		badge.item_label = RunManager.deck_equipment[slot].label if RunManager.deck_equipment[slot] != null else ""
 		add_child(badge)
 		_badges.append(badge)
@@ -193,7 +195,7 @@ static func describe_slot(slot: int, replacing := true) -> String:
 		if not extras.is_empty():
 			text += "\nLoses its " + " and ".join(extras)
 		if RunManager.deck_equipment[slot] != null:
-			text += "\n%s goes back to your inventory" % RunManager.deck_equipment[slot].display_name
+			text += ("\n%s is lost (permanently attached)" if RunManager.is_locked(slot) else "\n%s goes back to your inventory") % RunManager.deck_equipment[slot].display_name
 	else:
 		if RunManager.deck_equipment[slot] != null:
 			extras.append("item " + RunManager.deck_equipment[slot].display_name)

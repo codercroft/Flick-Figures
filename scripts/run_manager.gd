@@ -16,6 +16,10 @@ var equipment_inventory: Array[EquipmentData] = []
 ## The toy finish and the figure-specific upgrade on each deck figure (same slots as `deck`).
 ## They belong to the figure: replacing the figure removes them.
 var deck_finish: Array[FinishData] = []
+## Per slot: the equipment is permanently attached (Gear Man): it cannot be unequipped, swapped or replaced. Padded lazily (see _sync_flags).
+var deck_locked: Array[bool] = []
+## Per slot: Bruised (-flick power) for the next combat only (The Duelist's loss).
+var deck_bruised: Array[bool] = []
 var deck_upgrade: Array[Vector2i] = []  # per slot: (path, tier): path -1 = none yet, 0 / 1 = path A / B, tier 0-3
 ## (path, tier) of an unupgraded figure.
 const NO_UPGRADE := Vector2i(-1, 0)
@@ -137,6 +141,8 @@ func start_new_run(ascension_level := 0) -> void:
 	deck_equipment.clear()
 	deck_finish.clear()
 	deck_upgrade.clear()
+	deck_locked.clear()
+	deck_bruised.clear()
 	equipment_inventory.clear()
 	picked_figures.clear()
 	RunHistory.mark_seen(config.starting_figure)
@@ -202,6 +208,7 @@ func add_deck_slot() -> void:
 	deck_equipment.append(null)
 	deck_finish.append(null)
 	deck_upgrade.append(NO_UPGRADE)
+	_sync_flags()
 
 
 func random_power() -> PowerData:
@@ -502,6 +509,7 @@ func finish_node() -> void:
 ## Call when the player wins a combat. Builds the reward steps. Returns true if that was the
 ## last act's boss (the run is won); the caller then shows the end screen instead of rewards.
 func combat_won() -> bool:
+	clear_bruises()  # (Bruised only lasts for one combat)
 	if node.type == MapNode.Type.BOSS and is_last_act():
 		if asc(config.ascension.level_double) and not in_second_boss and _start_second_boss():
 			return false  # Double Boss: main reloads the fight instead of showing rewards (see second_boss_next)
@@ -558,7 +566,9 @@ func _add_harder_fight_bonus() -> void:
 	var kinds := rewards.harder_fight_item_kinds
 	if not kinds.is_empty():
 		reward_steps.append({"kind": kinds.pick_random()})
-	harder_note = "Harder fight bonus: +$%d and an extra item" % rewards.harder_fight_bonus_money
+	if rewards.harder_fight_extra_upgrade:
+		reward_steps.append({"kind": "upgrade"})
+	harder_note = "Harder fight bonus: +$%d, an extra item%s" % [rewards.harder_fight_bonus_money, " and an Upgrade" if rewards.harder_fight_extra_upgrade else ""]
 
 
 ## The act's bonus rewards after the figure draft: each a random power, equipment item or Upgrade (RewardConfig.bonus_item_kinds).
@@ -711,9 +721,12 @@ func draft_figures(count: int, weights := Vector3.ZERO) -> Array[FigureData]:
 
 ## Puts a new figure in a deck slot. Equipment the old figure held goes back to the inventory.
 func replace_figure(slot: int, new_figure: FigureData) -> void:
-	if deck_equipment[slot] != null:
+	_sync_flags()
+	if deck_equipment[slot] != null and not deck_locked[slot]:  # (a permanently attached item is lost with its figure)
 		equipment_inventory.append(deck_equipment[slot])
-		deck_equipment[slot] = null
+	deck_equipment[slot] = null
+	deck_locked[slot] = false
+	deck_bruised[slot] = false
 	deck_finish[slot] = null
 	deck_upgrade[slot] = NO_UPGRADE
 	deck[slot] = new_figure
@@ -839,7 +852,7 @@ func next_tier(slot: int, path: int) -> int:
 ## item goes back to the inventory. Returns false if the item is not in the inventory.
 func equip(item: EquipmentData, slot: int) -> bool:
 	var index := equipment_inventory.find(item)
-	if index == -1 or slot < 0 or slot >= deck.size():
+	if index == -1 or slot < 0 or slot >= deck.size() or is_locked(slot):
 		return false
 	equipment_inventory.remove_at(index)
 	if deck_equipment[slot] != null:
@@ -850,11 +863,56 @@ func equip(item: EquipmentData, slot: int) -> bool:
 
 ## Takes the item off a deck slot and puts it back in storage. Returns false if the slot has none.
 func unequip(slot: int) -> bool:
-	if slot < 0 or slot >= deck.size() or deck_equipment[slot] == null:
+	if slot < 0 or slot >= deck.size() or deck_equipment[slot] == null or is_locked(slot):
 		return false
 	equipment_inventory.append(deck_equipment[slot])
 	deck_equipment[slot] = null
 	return true
+
+
+## Keeps the per-slot flag lists the same length as the deck (the sandbox and sims build decks directly).
+func _sync_flags() -> void:
+	while deck_locked.size() < deck.size():
+		deck_locked.append(false)
+	while deck_bruised.size() < deck.size():
+		deck_bruised.append(false)
+	while deck_locked.size() > deck.size():
+		deck_locked.pop_back()
+	while deck_bruised.size() > deck.size():
+		deck_bruised.pop_back()
+
+
+func is_locked(slot: int) -> bool:
+	_sync_flags()
+	return slot >= 0 and slot < deck.size() and deck_locked[slot]
+
+
+func is_bruised(slot: int) -> bool:
+	_sync_flags()
+	return slot >= 0 and slot < deck.size() and deck_bruised[slot]
+
+
+## Gear Man: attaches `item` to the figure in `slot` for good (the old, unlocked item goes to storage). False if the slot's item is already permanent.
+func attach_permanent(item: EquipmentData, slot: int) -> bool:
+	if slot < 0 or slot >= deck.size() or is_locked(slot):
+		return false
+	if deck_equipment[slot] != null:
+		equipment_inventory.append(deck_equipment[slot])
+	deck_equipment[slot] = item
+	deck_locked[slot] = true
+	return true
+
+
+## The Duelist's loss: this figure is Bruised for the next combat.
+func bruise(slot: int) -> void:
+	_sync_flags()
+	if slot >= 0 and slot < deck.size():
+		deck_bruised[slot] = true
+
+
+func clear_bruises() -> void:
+	deck_bruised.clear()
+	_sync_flags()
 
 
 ## Adds an item to the inventory (rewards and shops can call this).
@@ -1436,7 +1494,8 @@ func _pick_event() -> EventData:
 func move_deck_slot(from: int, to: int) -> void:
 	if from == to or from < 0 or to < 0 or from >= deck.size() or to >= deck.size():
 		return
-	for list in [deck, deck_equipment, deck_finish, deck_upgrade]:
+	_sync_flags()
+	for list in [deck, deck_equipment, deck_finish, deck_upgrade, deck_locked, deck_bruised]:
 		var value = list.pop_at(from)
 		list.insert(to, value)
 	autosave()  # (does nothing while a node is being played)
@@ -1447,8 +1506,11 @@ func move_deck_slot(from: int, to: int) -> void:
 func remove_deck_slot(slot: int) -> bool:
 	if deck.size() <= 1 or slot < 0 or slot >= deck.size():
 		return false
-	if deck_equipment[slot] != null:
+	_sync_flags()
+	if deck_equipment[slot] != null and not deck_locked[slot]:
 		equipment_inventory.append(deck_equipment[slot])
+	deck_locked.remove_at(slot)
+	deck_bruised.remove_at(slot)
 	deck.remove_at(slot)
 	deck_equipment.remove_at(slot)
 	deck_finish.remove_at(slot)

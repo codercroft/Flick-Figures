@@ -1512,8 +1512,11 @@ func _spawn_players() -> void:
 	var slot_width := deck.size.x / RunManager.deck.size()
 	for i in RunManager.deck.size():
 		var pos := Vector2(deck.position.x + slot_width * (i + 0.5), deck.get_center().y)
+		var bruised := RunManager.is_bruised(i)
 		var figure := _spawn_figure(Figure.Team.PLAYER, RunManager.deck[i], pos, RunManager.deck_equipment[i],
-				RunManager.deck_finish[i], RunManager.deck_upgrade[i])
+				RunManager.deck_finish[i], RunManager.deck_upgrade[i], {"power": RunManager.config.minigames.bruised_power} if bruised else {})
+		figure.bruised = bruised
+		figure.equipment_locked = RunManager.is_locked(i)
 		figure.deck_position = pos
 		figure.deck_slot = i
 		_players.append(figure)

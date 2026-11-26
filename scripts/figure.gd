@@ -44,6 +44,10 @@ var elite := false
 var _fx_time := 0.0
 ## The equipment item attached to this figure (player figures only), or null.
 var equipment: EquipmentData
+## Bruised (The Duelist's loss): drawn with a bandage; the flick power cut itself comes through the stat scale.
+var bruised := false
+## The equipment is permanently attached (Gear Man): drawn with a small lock.
+var equipment_locked := false
 var deck_slot := -1  # the index in RunManager.deck for the player's starting figures (-1 for anything else)
 var _core_ability: FigureAbility  # the figure's own ability, without equipment / upgrade / finish effects
 var _equipment_effect: FigureAbility
@@ -240,6 +244,22 @@ var grip := 1.0
 
 
 ## Sets the Grippy Table damping factor, keeping everything else that scales linear_damp.
+## A small padlock centred at `at`, `size` px wide.
+func _draw_lock(at: Vector2, size: float) -> void:
+	draw_arc(at + Vector2(0.0, -size * 0.2), size * 0.32, PI, TAU, 12, Color(0.85, 0.85, 0.9), maxf(size * 0.14, 2.0), true)
+	draw_rect(Rect2(at + Vector2(-size * 0.42, -size * 0.2), Vector2(size * 0.84, size * 0.62)), Color(0.95, 0.8, 0.25))
+	draw_rect(Rect2(at + Vector2(-size * 0.42, -size * 0.2), Vector2(size * 0.84, size * 0.62)), Color(0.15, 0.12, 0.05), false, 2.0)
+
+
+## A little crossed bandage (Bruised).
+func _draw_bandage(at: Vector2, size: float) -> void:
+	draw_set_transform(at, deg_to_rad(-35.0))
+	draw_rect(Rect2(Vector2(-size, -size * 0.28), Vector2(size * 2.0, size * 0.56)), Color(0.95, 0.8, 0.65))
+	draw_rect(Rect2(Vector2(-size, -size * 0.28), Vector2(size * 2.0, size * 0.56)), Color(0.45, 0.25, 0.15), false, 2.0)
+	draw_rect(Rect2(Vector2(-size * 0.3, -size * 0.28), Vector2(size * 0.6, size * 0.56)), Color(0.8, 0.55, 0.45))
+	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
+
+
 func set_grip(multiplier: float) -> void:
 	if is_equal_approx(multiplier, grip):
 		return
@@ -452,6 +472,10 @@ func _draw() -> void:
 		var badge_size := int(badge_radius * (1.05 if equipment.label.length() <= 1 else 0.85))
 		draw_string(ThemeDB.fallback_font, badge_center + Vector2(-badge_radius, badge_size * 0.33), equipment.label,
 				HORIZONTAL_ALIGNMENT_CENTER, badge_radius * 2.0, badge_size, Color(0.1, 0.1, 0.12))
+		if equipment_locked:
+			_draw_lock(badge_center + Vector2(badge_radius * 0.75, badge_radius * 0.9), badge_radius * 0.8)
+	if bruised:
+		_draw_bandage(Vector2(-radius, -radius) * 0.55, radius * 0.5)
 	ability.draw_overlay(self)
 	if frozen_rounds > 0:
 		draw_circle(Vector2.ZERO, radius, Color(0.6, 0.9, 1.0, 0.55))

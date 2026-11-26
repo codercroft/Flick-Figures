@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/events/event_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/events/vending_machine.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Vending Machine"
+description = "Pay for a random power, equipment or finish. It might jam."
+scene = ExtResource("2")
