@@ -301,7 +301,7 @@ func _tab_arena() -> void:
 	var grid := _grid(2)
 	grid.add_child(_list_button("Auto (lineup's own)", _set_arena.bind(null), SandboxSetup.arena == null))
 	for arena in RunManager.config.arenas:
-		grid.add_child(_list_button(arena.display_name, _set_arena.bind(arena), SandboxSetup.arena == arena))
+		grid.add_child(_list_button("%s (%s)" % [arena.display_name, arena.difficulty_name()], _set_arena.bind(arena), SandboxSetup.arena == arena))
 	grid.add_child(_list_button("Boss field", _set_arena.bind(RunManager.config.boss_arena), SandboxSetup.arena == RunManager.config.boss_arena))
 
 

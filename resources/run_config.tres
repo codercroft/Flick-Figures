@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=112 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=122 format=3]
 
 [ext_resource type="Script" path="res://scripts/run_config.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/figure_registry.tres" id="2"]
@@ -147,13 +147,23 @@
 [ext_resource type="Resource" path="res://resources/upgrades/bumper/tree.tres" id="tree_bumper"]
 [ext_resource type="Resource" path="res://resources/upgrades/eater/tree.tres" id="tree_eater"]
 [ext_resource type="Resource" path="res://resources/upgrades/engineer/tree.tres" id="tree_engineer"]
+[ext_resource type="Resource" path="res://resources/arenas/sand_traps.tres" id="ar_sand_traps"]
+[ext_resource type="Resource" path="res://resources/arenas/playground.tres" id="ar_playground"]
+[ext_resource type="Resource" path="res://resources/arenas/diamond.tres" id="ar_diamond"]
+[ext_resource type="Resource" path="res://resources/arenas/bumper_cars.tres" id="ar_bumper_cars"]
+[ext_resource type="Resource" path="res://resources/arenas/conveyor.tres" id="ar_conveyor"]
+[ext_resource type="Resource" path="res://resources/arenas/gauntlet.tres" id="ar_gauntlet"]
+[ext_resource type="Resource" path="res://resources/arenas/pachinko.tres" id="ar_pachinko"]
+[ext_resource type="Resource" path="res://resources/arenas/ice_rink.tres" id="ar_ice_rink"]
+[ext_resource type="Resource" path="res://resources/arenas/fortress.tres" id="ar_fortress"]
+[ext_resource type="Resource" path="res://resources/encounters/regular/rookies.tres" id="enc_rookies"]
 
 [resource]
 script = ExtResource("1")
 registry = ExtResource("2")
 starting_figure = ExtResource("3")
 deck_size = 4
-arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20")])
+arenas = Array[ExtResource("4")]([ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("ar_fortress"), ExtResource("ar_sand_traps"), ExtResource("ar_playground"), ExtResource("ar_diamond"), ExtResource("ar_bumper_cars"), ExtResource("ar_conveyor"), ExtResource("ar_gauntlet"), ExtResource("ar_pachinko"), ExtResource("ar_ice_rink")])
 starting_money = 0
 income_per_figure = 1
 shop = ExtResource("30")
@@ -182,3 +192,4 @@ rewards = ExtResource("142")
 enemy_gear = ExtResource("143")
 ascension = ExtResource("asc_cfg")
 boss_arena = ExtResource("10")
+easy_encounters = Array[ExtResource("149")]([ExtResource("enc_bent_lane"), ExtResource("enc_glass_cannons"), ExtResource("enc_rookies")])

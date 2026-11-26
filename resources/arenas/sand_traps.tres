@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[sub_resource type="Resource" id="patch_0"]
+script = ExtResource("4")
+kind = 0
+position = Vector2(60, 500)
+size = Vector2(120, 1000)
+direction_degrees = -90.0
+turn = 1
+strength = 2.0
+alternate = false
+
+[sub_resource type="Resource" id="patch_1"]
+script = ExtResource("4")
+kind = 0
+position = Vector2(840, 500)
+size = Vector2(120, 1000)
+direction_degrees = -90.0
+turn = 1
+strength = 2.0
+alternate = false
+
+[resource]
+script = ExtResource("1")
+display_name = "Sand Traps"
+difficulty = 0
+creeper_safe = false
+walls = Array[ExtResource("2")]([])
+pins = Array[ExtResource("3")]([])
+patches = Array[ExtResource("4")]([SubResource("patch_0"), SubResource("patch_1")])

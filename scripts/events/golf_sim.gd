@@ -39,7 +39,7 @@ func roll(from: Vector2, velocity: Vector2) -> Dictionary:
 	var pos := from
 	var vel := velocity
 	for i in max_steps:
-		vel = arena.predict_floor_velocity(pos, vel, step) if arena != null else vel
+		vel = arena.predict_floor_velocity(pos, vel, step, -1, damping) if arena != null else vel
 		vel *= maxf(1.0 - damping * step, 0.0)
 		pos += vel * step
 		for wall in walls:

@@ -15,6 +15,8 @@ extends Node2D
 @export_group("Floor patches")
 ## Slow patch: extra damping per second while on it (the normal damping is the Main node's figure_damping).
 @export var slow_damping := 3.0
+## Ice patch: share of a figure's own damping that is cancelled while it is on the ice (0.6 = it slides 2.5x as far).
+@export_range(0.0, 0.95) var ice_damping_reduction := 0.6
 ## Boost patch: push in px/s per second. It adds no more speed once a figure goes this fast.
 @export var boost_acceleration := 470.0
 @export var boost_max_speed := 2400.0
@@ -25,6 +27,7 @@ extends Node2D
 @export var temp_pin_color := Color(0.75, 0.85, 0.95)
 
 var _data: ArenaData
+var _flipped := false  # alternating boost patches: true on every other round
 var _origin := Vector2.ZERO
 # Things placed by powers: bricks (temporary walls) and zones (magnet fields, glue puddles).
 var _bricks: Array[Dictionary] = []  # {body, rounds}
@@ -209,7 +212,8 @@ func floor_near_segment(a: Vector2, b: Vector2, margin: float, team := -1) -> bo
 
 ## The velocity a MOVING figure at `pos` with `velocity` has `delta` seconds later because of the floor
 ## (the same maths as the real patches, trail pieces and magnet zones; damping is not included).
-func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float, team := -1) -> Vector2:
+## `damp` is the figure's linear damping (only ice needs it: it cancels part of it).
+func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float, team := -1, damp := 0.0) -> Vector2:
 	if _data != null:
 		for patch in _data.patches:
 			if not _patch_rect(patch).has_point(pos):
@@ -217,8 +221,10 @@ func predict_floor_velocity(pos: Vector2, velocity: Vector2, delta: float, team 
 			match patch.kind:
 				ArenaPatch.Kind.SLOW:
 					velocity -= velocity * slow_damping * patch.strength * delta
+				ArenaPatch.Kind.ICE:
+					velocity += velocity * damp * ice_damping_reduction * patch.strength * delta
 				ArenaPatch.Kind.BOOST:
-					var direction := Vector2.from_angle(deg_to_rad(patch.direction_degrees))
+					var direction := patch_direction(patch)
 					if velocity.dot(direction) < boost_max_speed:
 						velocity += direction * boost_acceleration * patch.strength * delta
 				ArenaPatch.Kind.TURN:
@@ -775,6 +781,12 @@ func _add_zone(kind: int, center: Vector2, radius: float, rounds: int, extra: Di
 
 ## One round has passed: bricks and zones with a limited life count down and vanish.
 func tick_round() -> void:
+	if _data != null:
+		for patch in _data.patches:
+			if patch.alternate:
+				_flipped = not _flipped
+				queue_redraw()
+				break
 	for i in range(_trail.size() - 1, -1, -1):
 		_trail[i].rounds -= 1
 		if _trail[i].rounds <= 0:
@@ -817,6 +829,12 @@ func _apply_zone(zone: Dictionary, figures: Array) -> void:
 			zone.inside[id] = inside
 
 
+## The push direction of a boost patch right now (alternating ones reverse every round).
+func patch_direction(patch: ArenaPatch) -> Vector2:
+	var direction := Vector2.from_angle(deg_to_rad(patch.direction_degrees))
+	return -direction if patch.alternate and _flipped else direction
+
+
 func _patch_rect(patch: ArenaPatch) -> Rect2:
 	return Rect2(_origin + patch.position - patch.size / 2.0, patch.size)
 
@@ -825,8 +843,11 @@ func _apply_patch(patch: ArenaPatch, figure: Figure, delta: float) -> void:
 	match patch.kind:
 		ArenaPatch.Kind.SLOW:
 			figure.apply_central_force(-figure.linear_velocity * slow_damping * patch.strength * figure.mass)
+		ArenaPatch.Kind.ICE:
+			# Cancels part of the figure's own damping (a force, like the mud patch).
+			figure.apply_central_force(figure.linear_velocity * figure.linear_damp * ice_damping_reduction * patch.strength * figure.mass)
 		ArenaPatch.Kind.BOOST:
-			var direction := Vector2.from_angle(deg_to_rad(patch.direction_degrees))
+			var direction := patch_direction(patch)
 			if figure.linear_velocity.dot(direction) < boost_max_speed:
 				figure.apply_central_force(direction * boost_acceleration * patch.strength * figure.mass)
 		ArenaPatch.Kind.TURN:
@@ -871,9 +892,23 @@ func _draw_patch(patch: ArenaPatch) -> void:
 					x += 10.0
 				draw_polyline(points, line_color, 4.0, true)
 				y += 44.0
+		ArenaPatch.Kind.ICE:
+			draw_rect(rect, Color(0.6, 0.85, 1.0, 0.3))
+			var shine := Color(1.0, 1.0, 1.0, 0.45)
+			var gx := rect.position.x - rect.size.y
+			while gx < rect.end.x:
+				var a := Vector2(gx, rect.end.y)
+				var b := Vector2(gx + rect.size.y, rect.position.y)
+				# Clip the diagonal to the rectangle.
+				var t0 := maxf(0.0, (rect.position.x - a.x) / (b.x - a.x))
+				var t1 := minf(1.0, (rect.end.x - a.x) / (b.x - a.x))
+				if t1 > t0:
+					draw_line(a.lerp(b, t0), a.lerp(b, t1), shine, 3.0, true)
+				gx += 90.0
+			draw_rect(rect, Color(0.85, 0.95, 1.0, 0.6), false, 3.0)
 		ArenaPatch.Kind.BOOST:
 			draw_rect(rect, Color(0.2, 0.75, 0.35, 0.28))
-			var direction := Vector2.from_angle(deg_to_rad(patch.direction_degrees))
+			var direction := patch_direction(patch)
 			var side := direction.orthogonal()
 			var arrow_color := Color(0.75, 1.0, 0.7, 0.9)
 			var inner := rect.grow(-34.0)

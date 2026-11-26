@@ -35,6 +35,7 @@ strength = 1.0
 [resource]
 script = ExtResource("1")
 display_name = "Crosswinds"
+difficulty = 1
 creeper_safe = false
 walls = Array[ExtResource("2")]([])
 pins = Array[ExtResource("3")]([])

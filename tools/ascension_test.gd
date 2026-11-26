@@ -54,7 +54,7 @@ func _all() -> void:
 	var Setup = load("res://scripts/sandbox_setup.gd")
 
 	print("Data-driven levels")
-	_check(cfg.max_level == cfg.level_names.size() - 1 and cfg.max_level == 11, "max_level follows the list (%d)" % cfg.max_level)
+	_check(cfg.max_level == cfg.level_names.size() - 1 and cfg.max_level == 12, "max_level follows the list (%d)" % cfg.max_level)
 	_check(cfg.level_descriptions.size() == cfg.level_names.size(), "a description for every level")
 	_check(cfg.level_name(5) == "Upgraded Enemies" and cfg.level_name(11) == "Double Boss", "names: 5 Upgraded Enemies, 11 Double Boss")
 	_check(cfg.level_name(25) == "Ascension 25", "an undefined level still has a fallback name")

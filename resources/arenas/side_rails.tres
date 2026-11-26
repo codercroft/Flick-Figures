@@ -20,6 +20,7 @@ rotation_degrees = 0.0
 [resource]
 script = ExtResource("1")
 display_name = "Side Rails"
+difficulty = 0
 creeper_safe = true
 walls = Array[ExtResource("2")]([SubResource("wall_1"), SubResource("wall_2")])
 pins = Array[ExtResource("3")]([])

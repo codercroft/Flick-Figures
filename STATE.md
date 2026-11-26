@@ -48,7 +48,7 @@ Godot 4.3, GDScript, GL Compatibility renderer, portrait 1080 wide (height varie
 - Column 2 (the 3rd row) is the **chest row**: every node there is a Treasure node, so every path passes exactly one chest (3-4 chests exist per map).
 - Shops: 1-3 per act (weights 1:2:1, avg 2.0), at most one per row, never in the chest row. Events: 1-3 per act (avg 2.0), same rules, placed on plain combat nodes. NOTE: the config says "from column 2", but column 2 is the chest row, so in practice the first shop/event can appear in column 3 (the 4th row).
 - Elites: at least one per act (avg 1.55, max seen 5), only from column 3, chosen at 25% per eligible node, always avoidable.
-- The first combat of a run is always plain Grunts (4, or 5 at Ascension 10) on a random arena. Later combats use hand-made encounters (never repeating until all are used).
+- EASY START: the first two regular combats of act 1 are always on an Easy arena (`RunConfig.easy_start_combats` 2). Combat 1 is plain Grunts (4, or 5 at Ascension 10). Combat 2 is drawn from `RunConfig.easy_encounters` (Bent Lane, Glass Cannons, Rookies = 3 Grunts + Rally); if its fixed arena is not Easy (Glass Cannons' Pinball) it is moved to a random Easy arena for that fight. From combat 3 on: the normal act 1 encounter pool (never repeating until all are used) and the arena odds below. At Ascension 12 the first two combats roll Easy or Medium arenas (60/40) instead.
 - Node flow: Combat/Elite/Boss -> combat scene -> reward screens -> map. Shop -> shop scene. Treasure -> reward scene. Event -> event scene. Run ends on loss or after the last boss (Ascension 11: after the second act 3 boss).
 
 ### Combat lineups
@@ -378,7 +378,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Rarity | Relic | Effect (as coded) |
 |---|---|---|
 | Common | Aim Assist | The aim line shows the first bounce off a wall, pin or figure. |
-| Common | Grippy Table | Your figures stop 30% sooner. |
+| Common | Grippy Table | During the enemy's turns your figures stop 30% sooner. |
 | Common | Costume Change | Equip, unequip and swap equipment in the Inventory during combat, on your own turn (nothing moving, not mid-aim). Costs no flick; effects apply at once. |
 | Common | Home Field | Your figures take half knockback in your bottom third of the board. |
 | Common | Lucky Coin (economy) | +$2 after every won combat. |
@@ -398,7 +398,7 @@ Every draftable figure (not the Grunt) has an `UpgradeTree` (`resources/upgrades
 | Boss | Extra Pocket | +1 deck slot. |
 | Boss | Second Wind | The first of your figures knocked off each combat returns to the deck strip. (Only from boss rewards.) |
 
-Exact numbers: Blast Cap x1.5 radius; Bully x2 within 200 px of the edge; Grippy Table: damping x1/0.7; Home Field x0.5 in the bottom third; Last One Standing x2 power, x0.5 knockback; Opening Act first flick x2; Underdog x1.5 power; Gravity Well x2 pulls (Magnet, Magnet Charm, Magnet Throw); Trophy Case +1 figure choice; Extra Pocket +1 deck slot (Boss rarity, boss reward only); Starter Walls pops a 190 x 26 wall above every unflicked deck figure before the enemy's first turn (lasts that turn); Second Wind returns the first knocked-off figure each combat to its deck slot; Clean Sheet gives a random power if no figure was lost; Aim Assist shows the first bounce.
+Exact numbers: Blast Cap x1.5 radius; Bully x2 within 200 px of the edge; Grippy Table: damping x1/0.7 during the ENEMY's turns only (`Main._apply_grip` / `Figure.set_grip` at each turn change; the enemy-side relic version still applies to the enemy figures all the time); Home Field x0.5 in the bottom third; Last One Standing x2 power, x0.5 knockback; Opening Act first flick x2; Underdog x1.5 power; Gravity Well x2 pulls (Magnet, Magnet Charm, Magnet Throw); Trophy Case +1 figure choice; Extra Pocket +1 deck slot (Boss rarity, boss reward only); Starter Walls pops a 190 x 26 wall above every unflicked deck figure before the enemy's first turn (lasts that turn); Second Wind returns the first knocked-off figure each combat to its deck slot; Clean Sheet gives a random power if no figure was lost; Aim Assist shows the first bounce.
 The enemy-side versions (Ascension 8+/act 3 elites) exist for Blast Cap, Home Field, Underdog, Bully, Grippy Table, Last One Standing, Opening Act, Wet Explosions (the enemy's explosions Douse your figures) and Safety Net (a wall covers the TOP edge during your second turn, so enemies cannot be knocked off the top); never economy relics, never Rich Boys or Out the Gate.
 
 ### Powers (12; 3 slots; used up when used; using one never ends the turn)
@@ -450,22 +450,30 @@ Gear rules: gear that would do nothing for a figure is never rolled (e.g. Glow n
 ---
 
 ## 5. Arenas and floor elements
-Positions are board space (900 x 1000, enemies at the top). Floor patches only act on MOVING figures. Arena constants: wall bounce 0.8; pins bounce 1.0 and kick figures x1.3; SLOW patch adds damping 3.0; BOOST patch 470 px/s^2 (cap 2400); TURN patch rotates a moving figure's velocity 110 deg/s (speed kept). "Creeper-safe" arenas are the only ones The Wall can use (it only appears in boss fights, which always use Open Field, so this only matters for the pool).
-| Layout | Contents | Creeper-safe |
-|---|---|---|
-| Open Field | nothing (also every boss fight) | yes |
-| Corner Posts | 6 wall segments: an L of two walls (260 x 36 and 36 x 260) in each top corner, and one 36 x 260 wall at each bottom side corner | yes |
-| Open Corners | top wall 560 wide + two side walls 640 tall, corners open | yes |
-| Side Rails | two full-height side walls | yes |
-| Divider | three 40-thick wall segments at y 560 with two gaps (widths 200 / 140 / 200) | no |
-| The Funnel | two angled walls (about 29 deg) at y 610 narrowing to the middle | no |
-| Pinball | 4 round pins (radius 28) at (200,560) (700,560) (325,780) (575,780) | no |
-| Mud Flats | 3 SLOW patches (260x200, 260x200, 180x140) | no |
-| Speedway | two side walls (y 640, 720 tall), two BOOST lanes (150 x 420, up) at x 270 and 630 and a short reverse BOOST (200 x 140, down) | no |
-| Whirlpool | center pin (radius 36) inside a 320 x 320 TURN patch plus two 220 x 200 TURN patches low on the sides | no |
-| Crosswinds | three 440 x 110 BOOST strips at y 450 (right), 620 (left), 790 (right), centred | no |
-| Fortress Walls | top wall 460 wide, two side walls 560 tall, two 170 x 36 bunkers at y 600 | no |
-Random pool (`RunConfig.arenas`): all but Fortress Walls, never the same twice in a row. Fortress Walls is used only by encounters (Fortress, Siege). Temporary floor things created in play: Juicer trail pieces, Alchemist zones, Pinhead pins, Engineer turrets, Shieldon/Starter walls, Bricks, Magnet-Throw fields, Glue Puddles.
+Positions are board space (900 x 1000, enemies at the top). Floor patches only act on MOVING figures. Arena constants: wall bounce 0.8; pins bounce 1.0 and kick figures x1.3; SLOW patch adds damping 3.0; BOOST patch 470 px/s^2 (cap 2400); TURN patch rotates a moving figure's velocity 110 deg/s (speed kept); ICE patch cancels 60% of the figure's own damping while it moves on it (`Arena.ice_damping_reduction`, about 2.5x the slide; the enemy AI's `predict_floor_velocity(..., damp)` and `_simulate_flight` (150 steps) follow it); a BOOST patch with `alternate` reverses its push every round (`Arena.tick_round`). "Creeper-safe" arenas are the only ones The Wall can use (it only appears in boss fights, which always use Open Field, so this only matters for the pool).
+| Layout | Difficulty | Contents | Creeper-safe |
+|---|---|---|---|
+| Open Field | Easy | nothing (also every boss fight) | yes |
+| Corner Posts | Easy | 6 wall segments: an L of two walls (260 x 36 and 36 x 260) in each top corner, and one 36 x 260 wall at each bottom side corner | yes |
+| Open Corners | Easy | top wall 560 wide + two side walls 640 tall, corners open | yes |
+| Side Rails | Easy | two full-height side walls | yes |
+| Divider | Hard | three 40-thick wall segments at y 560 with two gaps (widths 200 / 140 / 200) | no |
+| The Funnel | Hard | two angled walls (about 29 deg) at y 610 narrowing to the middle | no |
+| Pinball | Hard | 4 round pins (radius 28) at (200,560) (700,560) (325,780) (575,780) | no |
+| Mud Flats | Easy | 3 SLOW patches (260x200, 260x200, 180x140) | no |
+| Speedway | Medium | two side walls (y 640, 720 tall), two BOOST lanes (150 x 420, up) at x 270 and 630 and a short reverse BOOST (200 x 140, down) | no |
+| Whirlpool | Medium | center pin (radius 36) inside a 320 x 320 TURN patch plus two 220 x 200 TURN patches low on the sides | no |
+| Crosswinds | Medium | three 440 x 110 BOOST strips at y 450 (right), 620 (left), 790 (right), centred | no |
+| Fortress Walls | Medium | top wall 460 wide, two side walls 560 tall, two 170 x 36 bunkers at y 600 | no |
+| Sand Traps | Easy | two 120 x 1000 SLOW strips (strength 2) along both side edges: figures brake before sliding off | no |
+| Playground | Easy | two 36 x 500 side walls (middle half of each side) and a 280 x 260 SLOW sandpit in the centre | no |
+| Diamond | Medium | four 200 x 30 walls at +-45 degrees forming a diamond about 360 px across centred at (450, 560), with gaps at the points | no |
+| Bumper Cars | Medium | two full-height side walls and two pins (radius 34) at (330, 560) and (570, 560) | no |
+| Conveyor | Medium | side walls and a 600 x 200 BOOST belt at y 560 pushing sideways; the direction reverses every round (starts right) | no |
+| Gauntlet | Hard | two vertical wall lines at x 350 and 550 (each 3 segments with 100 px gaps) forming a narrow corridor up the middle | no |
+| Pachinko | Hard | 7 pins (radius 30) staggered in two rows (y 440: 3, y 580: 4) | no |
+| Ice Rink | Hard | one 840 x 940 ICE patch over the whole board (not the deck strip) | no |
+RANDOM ARENAS (`RunManager._pick_arena`): a difficulty is rolled first from `RunConfig.arena_odds_by_act` (Easy/Medium/Hard weights: act 1 60/40/0, act 2 30/45/25, act 3 33/34/33), then an arena of that difficulty (`ArenaData.difficulty`), never the same arena twice in a row (a difficulty with no usable arena is skipped). The pool (`RunConfig.arenas`) is all 20 layouts (7 Easy, 7 Medium, 6 Hard; Fortress Walls is now in it too). Encounters with a fixed arena keep it; boss fights use Open Field. Ascension 12 (Rough Terrain) shifts the odds one act harder (act 1 uses act 2's, act 2 uses act 3's, act 3 `AscensionConfig.terrain_act3_odds` 20/40/40). The arena name and difficulty show in the fight banner and the sandbox's Arena tab. The arena test (`tools/arena_test.gd`) checks that no default spawn row or encounter start position overlaps a wall or pin. Temporary floor things created in play: Juicer trail pieces, Alchemist zones, Pinhead pins, Engineer turrets, Shieldon/Starter walls, Bricks, Magnet-Throw fields, Glue Puddles.
 
 ---
 
@@ -507,7 +515,7 @@ Every encounter has fixed start positions inside its arena (checked headless: no
 | 3 | The Collector | Eater (size and mass x1.3, feeds on its own Grunts) + 4 Grunt | random | 1 |
 | 3 | Siege | Engineer (turret placed before your first flick), 2 Shieldon Ooper, Duwall | Fortress Walls | 1 |
 | 3 | Bloodbath | 2 Bloodluster + Alchemist (+ Grunts when the count is higher) | random | 1 |
-Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a fight shows the encounter name (gold), the arena and any enemy relic.
+Elite fights pay +$2 and the elite rewards (section 2). Banner at the start of a fight shows the encounter name (gold), the arena with its difficulty ("Pinball (Hard)") and any enemy relic.
 
 ---
 
@@ -539,7 +547,7 @@ Each act picks one of its three bosses at random at run start (no repeats). Boss
 
 ---
 
-## 9. Ascension (0-11, data-driven)
+## 9. Ascension (0-12, data-driven)
 The level list is `AscensionConfig.level_names` / `level_descriptions` (`max_level` = list size - 1, no cap in code; each system reads its level number from the "Level numbers" exports, e.g. `level_upgraded`). Selector on New Run (a scrolling grid); highest unlocked level saved in `user://ascension.json` (version 2: an older file's level 5+ is shifted up by one on load); winning at the highest unlocked level unlocks the next. Level shown in the top bar ("A3"), saved with the run, recorded in run history, per-level win stats in Run History. Every number is in `resources/ascension_config.tres`.
 
 ### Ascension 0 baseline (flat)
@@ -559,6 +567,7 @@ The level list is `AscensionConfig.level_names` / `level_descriptions` (`max_lev
 | 9 | Boss Upgrades | The Wall creeps x1.5 faster; Sniper Squad 7 snipers; Trangle spin x1.5 and 3 flicks/turn; Slime splits into 3 at both sizes; Skull-o-tron 4 arms; Mad Creator's Grunt space summons a Bombo; Slippery Jim starts with 7 stacks; Bomb Duo's bodies carry tier 3 upgrades (Fuse: 2-hit fuse; Multi-Mine: Minefield); Fat Man needs 6 hits. |
 | 10 | Bigger Squads | +1 enemy in every regular combat (on top of Level 3's 4/5/6). |
 | 11 | Double Boss | After the act 3 boss you fight the other act 3 boss immediately (no rewards between). Winning both wins the run. |
+| 12 | Rough Terrain | Harder arenas: act 1 uses act 2's arena odds (30/45/25), act 2 act 3's (33/34/33), act 3 20/40/40. The first two combats are Easy or Medium (60/40) instead of always Easy. |
 
 Migration: saved unlock progress and in-progress runs from before the insertion (no version stored) shift a level of 5+ up by one (`AscensionProgress.migrate_level`). Run history entries keep their stored number; older entries (no `asc_version`) at level 5+ display the old name ("Ascension 6 (old: Fewer Offers)") and are counted apart in the per-level stats.
 

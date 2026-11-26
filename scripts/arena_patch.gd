@@ -4,7 +4,8 @@ extends Resource
 ## are already moving, so a resting figure is never nudged. Rectangle, in board space
 ## ((0, 0) = top-left corner of the board).
 
-enum Kind { SLOW, BOOST, TURN }
+## ICE lowers damping, so moving figures slide much farther.
+enum Kind { SLOW, BOOST, TURN, ICE }
 enum Turn { LEFT, RIGHT }
 
 @export var kind := Kind.SLOW
@@ -18,3 +19,5 @@ enum Turn { LEFT, RIGHT }
 @export var turn := Turn.RIGHT
 ## Multiplies the strength set on the Arena node (slow drag, boost push or turn rate).
 @export var strength := 1.0
+## BOOST only: the push reverses every round (a conveyor belt that changes direction).
+@export var alternate := false

@@ -78,7 +78,7 @@ const TOUCH_MARGIN := 4.0
 ## The stepped simulation of a shot's path (patches, Juicer trails, magnets): step length in seconds and
 ## the most steps. It is only used when the floor has something that changes a path.
 @export var sim_step := 0.08
-@export var sim_max_steps := 80
+@export var sim_max_steps := 150
 
 @export_group("Ability combos")
 ## Score for each player figure an explosion is predicted to push (scaled by how hard).
@@ -1123,7 +1123,7 @@ func _simulate_flight(figure: Figure, from: Vector2, velocity: Vector2) -> Dicti
 		if vel.length() <= figure.stop_speed:
 			break
 		if _arena != null:
-			vel = _arena.predict_floor_velocity(pos, vel, sim_step, figure.team)
+			vel = _arena.predict_floor_velocity(pos, vel, sim_step, figure.team, figure.linear_damp)
 		for source in _pull_sources:
 			if source != figure:
 				vel += source.ability.get_path_pull(source, pos, figure.team) * sim_step

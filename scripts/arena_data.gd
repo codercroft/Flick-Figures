@@ -4,13 +4,27 @@ extends Resource
 ## Inspector, then add it to the `arenas` list in resources/run_config.tres.
 ## Everything goes inside the board: keep the deck strip below it clear.
 
+enum Difficulty { EASY, MEDIUM, HARD }
+const DIFFICULTY_NAMES := ["Easy", "Medium", "Hard"]
+const DIFFICULTY_COLORS := [Color(0.55, 0.9, 0.55), Color(1.0, 0.82, 0.3), Color(1.0, 0.45, 0.4)]
+
 @export var display_name := "Arena"
+## How hard the layout is for the player. Random arenas roll a difficulty first (RunConfig.arena_odds_by_act).
+@export var difficulty := Difficulty.EASY
 ## Whether a creeping boss (The Wall) can use this arena. Turn this off for layouts with walls, pins
 ## or patches in its path, since they would block or bend its creep.
 @export var creeper_safe := true
 @export var walls: Array[ArenaWall] = []
 @export var pins: Array[ArenaPin] = []
 @export var patches: Array[ArenaPatch] = []
+
+
+func difficulty_name() -> String:
+	return DIFFICULTY_NAMES[difficulty]
+
+
+func difficulty_color() -> Color:
+	return DIFFICULTY_COLORS[difficulty]
 
 
 ## Boost patches must stay at least this far (px) from the left and right edges of the board.

@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[sub_resource type="Resource" id="pin_0"]
+script = ExtResource("3")
+position = Vector2(225, 440)
+radius = 30
+
+[sub_resource type="Resource" id="pin_1"]
+script = ExtResource("3")
+position = Vector2(450, 440)
+radius = 30
+
+[sub_resource type="Resource" id="pin_2"]
+script = ExtResource("3")
+position = Vector2(675, 440)
+radius = 30
+
+[sub_resource type="Resource" id="pin_3"]
+script = ExtResource("3")
+position = Vector2(150, 580)
+radius = 30
+
+[sub_resource type="Resource" id="pin_4"]
+script = ExtResource("3")
+position = Vector2(337, 580)
+radius = 30
+
+[sub_resource type="Resource" id="pin_5"]
+script = ExtResource("3")
+position = Vector2(562, 580)
+radius = 30
+
+[sub_resource type="Resource" id="pin_6"]
+script = ExtResource("3")
+position = Vector2(750, 580)
+radius = 30
+
+[resource]
+script = ExtResource("1")
+display_name = "Pachinko"
+difficulty = 2
+creeper_safe = false
+walls = Array[ExtResource("2")]([])
+pins = Array[ExtResource("3")]([SubResource("pin_0"), SubResource("pin_1"), SubResource("pin_2"), SubResource("pin_3"), SubResource("pin_4"), SubResource("pin_5"), SubResource("pin_6")])
+patches = Array[ExtResource("4")]([])

@@ -159,7 +159,7 @@ func _ready() -> void:
 	if RunManager.encounter_name != "":
 		banner.append(RunManager.encounter_name)
 	if RunManager.arena != null:
-		banner.append(RunManager.arena.display_name)
+		banner.append("%s (%s)" % [RunManager.arena.display_name, RunManager.arena.difficulty_name()])
 	if RunManager.penalty_text != "":
 		banner.append(RunManager.penalty_text)
 	if not RunManager.enemy_relics.is_empty():
@@ -379,6 +379,7 @@ func _start_player_turn(new_round := true) -> void:
 	arena.prune_temp_pins()
 	arena.prune_turrets()
 	turret_side = Figure.Team.PLAYER
+	_apply_grip()
 	_state = State.PLAYER_TURN
 	_busy_time = 0.0
 	_touch_index = -1
@@ -961,6 +962,7 @@ func _begin_manual_enemy_turn() -> void:
 	_clear_temp_buffs(Figure.Team.ENEMY)
 	_manual_enemy = true
 	turret_side = Figure.Team.ENEMY
+	_apply_grip()
 	for enemy in _enemies:
 		if _is_alive(enemy):
 			enemy.turn_flicks = 0
@@ -1002,6 +1004,7 @@ func _run_enemy_turn() -> void:
 	var serial := _turn_serial
 	_state = State.ENEMY_TURN
 	turret_side = Figure.Team.ENEMY
+	_apply_grip()
 	ui.show_enemy_turn()
 	ai.clear_debug()
 	for enemy in _enemies:
@@ -1453,6 +1456,14 @@ func _check_game_over() -> bool:
 	return false
 
 
+## Grippy Table: the player's figures only slide shorter during the ENEMY's turns.
+func _apply_grip() -> void:
+	var factor := RunManager.relic_player_damping() if turret_side == Figure.Team.ENEMY else 1.0
+	for figure in _players:
+		if _is_alive(figure):
+			figure.set_grip(factor)
+
+
 func _end_game(won: bool) -> void:
 	_state = State.GAME_OVER
 	turret_side = -1
@@ -1594,7 +1605,7 @@ func _spawn_enemies() -> void:
 func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: EquipmentData = null,
 		finish: FinishData = null, upgrade_state := Vector2i(-1, 0), scale := {}, elite := false) -> Figure:
 	var figure: Figure = figure_scene.instantiate()
-	var damping := figure_damping * (RunManager.relic_player_damping() if team == Figure.Team.PLAYER else RunManager.enemy_relic_damping())
+	var damping := figure_damping * (1.0 if team == Figure.Team.PLAYER else RunManager.enemy_relic_damping())  # (Grippy Table acts per turn: _apply_grip)
 	figure.setup(data, team, damping, stop_speed, settle_frames, item, finish, RunManager.owned_upgrades(data, upgrade_state), scale, elite)
 	figure.upgrade_state = upgrade_state
 	figure.flicked.connect(game_feel.on_flicked)
@@ -1606,6 +1617,8 @@ func _spawn_figure(team: Figure.Team, data: FigureData, pos: Vector2, item: Equi
 	figure.on_deck = team == Figure.Team.PLAYER
 	figure.position = pos
 	figures_root.add_child(figure)
+	if team == Figure.Team.PLAYER and turret_side == Figure.Team.ENEMY:
+		figure.set_grip(RunManager.relic_player_damping())
 	return figure
 
 

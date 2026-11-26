@@ -1,6 +1,6 @@
 class_name GrippyTableEffect
 extends RelicEffect
-## Your figures stop sooner.
+## Your figures stop sooner during the enemy's turns (Main applies it per turn).
 
 ## Share of the usual slide distance your figures lose (0.3 = they stop 30% sooner).
 @export_range(0.0, 0.9) var shorter_slide := 0.3

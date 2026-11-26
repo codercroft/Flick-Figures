@@ -26,6 +26,7 @@ rotation_degrees = 0.0
 [resource]
 script = ExtResource("1")
 display_name = "Open Corners"
+difficulty = 0
 creeper_safe = true
 walls = Array[ExtResource("2")]([SubResource("wall_1"), SubResource("wall_2"), SubResource("wall_3")])
 pins = Array[ExtResource("3")]([])

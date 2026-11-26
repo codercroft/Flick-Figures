@@ -50,6 +50,10 @@ var used_events: Array[EventData] = []
 ## gets compatible gear), then the flag clears. `penalty_text` says what happened (shown in the combat banner).
 ## The first combat of a run is always 4 Grunts (no encounter); this is set once it has been entered.
 var first_combat_played := false
+## Regular combats started this run (the first act-1 ones are the easy start).
+var regular_combats_played := 0
+## True while building the lineup of an easy-start combat (act 1, one of the first regular combats).
+var easy_start := false
 var minigame_penalty := false
 ## True while the current combat is a penalty fight (harder after a lost minigame): its rewards are better.
 var harder_fight := false
@@ -154,6 +158,7 @@ func start_new_run(ascension_level := 0) -> void:
 	used_encounters.clear()
 	used_events.clear()
 	first_combat_played = false
+	regular_combats_played = 0
 	harder_fight = false
 	harder_note = ""
 	minigame_penalty = false
@@ -936,6 +941,7 @@ func _build_lineup() -> void:
 	elite_encounter = false
 	encounter_name = ""
 	encounter_arena = null
+	easy_start = false
 	enemy_flick_per_unit = false
 	harder_fight = false
 	harder_note = ""
@@ -949,15 +955,21 @@ func _build_lineup() -> void:
 	elif node.type == MapNode.Type.COMBAT:
 		if sandbox_encounter != null:
 			encounter = sandbox_encounter
+		elif easy_start_active() and regular_combats_played == 1:
+			encounter = _pick_easy_encounter()  # the second combat: a light encounter on an Easy arena
 		elif first_combat_played:
 			encounter = _pick_regular_encounter()  # (the very first combat is plain Grunts: no encounter)
+		easy_start = easy_start_active()
 		first_combat_played = true
+		regular_combats_played += 1
 	if encounter != null:
 		_build_encounter(encounter)
+		if easy_start and node.type == MapNode.Type.COMBAT and (encounter_arena == null or encounter_arena.difficulty != ArenaData.Difficulty.EASY):
+			encounter_arena = _random_arena_of(ArenaData.Difficulty.EASY)  # an easy-start encounter is always on an Easy arena
 		# Regular combats have a fixed enemy count (4 in the base game): hand-made lineups are topped up / cut to it.
 		if node.type == MapNode.Type.COMBAT:
 			while enemies.size() < _enemy_count():
-				_add_grunt(encounter.arena)
+				_add_grunt(encounter_arena)
 			if enemies.size() > _enemy_count():
 				_trim_lineup(_enemy_count())
 	elif node.type == MapNode.Type.BOSS:
@@ -1458,13 +1470,86 @@ func _pick_arena() -> void:
 	for enemy in enemies:
 		if enemy.creep_distance > 0.0:
 			has_creeper = true
-	var candidates: Array[ArenaData] = []
+	# Roll a difficulty from this act's odds, then an arena of it (never the same twice in a row).
+	var odds := arena_odds()
+	var order: Array[int] = []  # difficulties still possible, weighted
+	var weights: Array[float] = []
+	for d in 3:
+		order.append(d)
+		weights.append(maxf(odds[d], 0.0))
+	var picked: ArenaData = null
+	while not order.is_empty() and picked == null:
+		var total := 0.0
+		for w in weights:
+			total += w
+		var index := 0
+		if total > 0.0:
+			var roll := randf() * total
+			for i in order.size():
+				roll -= weights[i]
+				if roll <= 0.0:
+					index = i
+					break
+		else:
+			index = randi() % order.size()
+		var candidates := _arena_candidates(order[index], has_creeper)
+		if not candidates.is_empty():
+			picked = candidates.pick_random()
+		else:  # no arena of that difficulty: roll again among the others
+			order.remove_at(index)
+			weights.remove_at(index)
+	if picked == null:
+		picked = config.arenas.pick_random() if not config.arenas.is_empty() else null
+	arena = picked
+
+
+## Arenas of one difficulty that can be used now (not the last one; creeper-safe when a creeper is in the fight).
+func _arena_candidates(difficulty: int, has_creeper: bool) -> Array[ArenaData]:
+	var result: Array[ArenaData] = []
 	for candidate in config.arenas:
-		if candidate != arena and (candidate.creeper_safe or not has_creeper):
-			candidates.append(candidate)
-	if candidates.is_empty():
-		candidates = config.arenas
-	arena = candidates.pick_random() if not candidates.is_empty() else null
+		if candidate.difficulty == difficulty and candidate != arena and (candidate.creeper_safe or not has_creeper):
+			result.append(candidate)
+	return result
+
+
+## A random arena of `difficulty` that is not the previous one (any of that difficulty if there is no other).
+func _random_arena_of(difficulty: int) -> ArenaData:
+	var result := _arena_candidates(difficulty, false)
+	if result.is_empty():
+		for candidate in config.arenas:
+			if candidate.difficulty == difficulty:
+				result.append(candidate)
+	return result.pick_random() if not result.is_empty() else null
+
+
+## The arena difficulty weights (Easy, Medium, Hard) for the combat being built. The easy start is all Easy
+## (Easy or Medium at Ascension 12); Ascension 12 shifts every act one step harder.
+func arena_odds() -> Vector3:
+	var table := config.arena_odds_by_act
+	if table.is_empty():
+		return Vector3(1, 0, 0)
+	var index := clampi(act, 0, table.size() - 1)
+	if easy_start:
+		return table[0] if asc(config.ascension.level_terrain) else Vector3(1, 0, 0)
+	if asc(config.ascension.level_terrain):
+		if act >= table.size() - 1:
+			return config.ascension.terrain_act3_odds
+		return table[index + 1]
+	return table[index]
+
+
+## True for the first regular combats of act 1 (the easy start). Only valid while `regular_combats_played` has not been bumped.
+func easy_start_active() -> bool:
+	return act == 0 and regular_combats_played < config.easy_start_combats and node != null and node.type == MapNode.Type.COMBAT \
+			and sandbox_encounter == null
+
+
+## A light encounter for the second combat of act 1 (null if the pool is empty).
+func _pick_easy_encounter() -> EncounterData:
+	var pool: Array[EncounterData] = []
+	for encounter in config.easy_encounters:
+		pool.append(encounter)
+	return pool.pick_random() if not pool.is_empty() else null
 
 
 ## Sandbox mode: an empty enemy side (the sandbox then adds figures itself).

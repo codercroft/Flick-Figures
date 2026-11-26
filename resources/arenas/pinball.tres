@@ -28,6 +28,7 @@ radius = 28.0
 [resource]
 script = ExtResource("1")
 display_name = "Pinball"
+difficulty = 2
 creeper_safe = false
 walls = Array[ExtResource("2")]([])
 pins = Array[ExtResource("3")]([SubResource("pin_1"), SubResource("pin_2"), SubResource("pin_3"), SubResource("pin_4")])

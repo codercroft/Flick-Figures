@@ -37,6 +37,7 @@ static func save(run, pending_node := -1) -> void:
 		"money": run.money,
 		"money_spent": run.money_spent,
 		"first_combat_played": run.first_combat_played,
+		"regular_combats_played": run.regular_combats_played,
 		"minigame_penalty": run.minigame_penalty,
 		"harder_fight": run.harder_fight,
 		"penalty_text": run.penalty_text,
@@ -87,6 +88,7 @@ static func load_into(run) -> int:
 	run.money = int(data.get("money", 0))
 	run.money_spent = int(data.get("money_spent", 0))
 	run.first_combat_played = bool(data.get("first_combat_played", true))
+	run.regular_combats_played = int(data.get("regular_combats_played", 99))  # old saves: no easy start
 	run.minigame_penalty = bool(data.get("minigame_penalty", false))
 	run.harder_fight = bool(data.get("harder_fight", false))
 	run.penalty_text = str(data.get("penalty_text", ""))

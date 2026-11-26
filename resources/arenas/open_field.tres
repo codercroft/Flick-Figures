@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Open Field"
+difficulty = 0
 creeper_safe = true
 walls = Array[ExtResource("2")]([])
 pins = Array[ExtResource("3")]([])

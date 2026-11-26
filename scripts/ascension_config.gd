@@ -15,7 +15,7 @@ var max_level: int:
 ## One entry per level, index 0 = the base game. Short names and one-line descriptions (shown in the selector).
 @export var level_names: Array[String] = [
 	"Base game", "Geared Enemies", "Harsher Events", "Rising Threat", "Leaner Economy", "Upgraded Enemies",
-	"Hardened Elites", "Fewer Offers", "Elite Relics", "Boss Upgrades", "Bigger Squads", "Double Boss"]
+	"Hardened Elites", "Fewer Offers", "Elite Relics", "Boss Upgrades", "Bigger Squads", "Double Boss", "Rough Terrain"]
 @export var level_descriptions: Array[String] = [
 	"The normal game.",
 	"Regular enemies roll finishes and equipment (more in later acts). Elites and bosses roll like the next act.",
@@ -28,7 +28,8 @@ var max_level: int:
 	"Elites carry an enemy relic in every act.",
 	"Bosses are tougher: The Wall creeps faster, 7 snipers, Trangle spins faster and flicks 3 times, Slimes split into 3, Skull-o-tron has 4 arms, Mad Creator summons a Bombo instead of a Grunt, Slippery Jim starts with 7 stacks, Bomb Duo's Aggro-bom and Land Miner carry tier 3 upgrades, Fat Man needs 5 hits.",
 	"+1 enemy in every regular combat (on top of Rising Threat).",
-	"After the act 3 boss you fight the other act 3 boss straight away. Beat both to win."]
+	"After the act 3 boss you fight the other act 3 boss straight away. Beat both to win.",
+	"Harder arenas: act 1 uses act 2's arena odds, act 2 uses act 3's and act 3 is 20% Easy / 40% Medium / 40% Hard. The first two combats are Easy or Medium."]
 
 @export_group("Level numbers")
 ## Which level switches each system on (edit these if you reorder or insert levels).
@@ -43,6 +44,7 @@ var max_level: int:
 @export var level_bosses := 9
 @export var level_squads := 10
 @export var level_double := 11
+@export var level_terrain := 12
 
 @export_group("Geared Enemies")
 ## Finish / equipment chances per act (elites and bosses use the next act's rates).
@@ -123,3 +125,8 @@ func act_chance(values: Array, act: int) -> float:
 	if values.is_empty():
 		return 0.0
 	return values[clampi(act, 0, values.size() - 1)]
+
+
+@export_group("Rough Terrain")
+## Arena difficulty odds (Easy, Medium, Hard) for act 3 at the Rough Terrain level. Acts 1 and 2 use the next act's normal odds.
+@export var terrain_act3_odds := Vector3(20, 40, 40)

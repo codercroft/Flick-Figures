@@ -47,6 +47,7 @@ strength = 1.0
 [resource]
 script = ExtResource("1")
 display_name = "Speedway"
+difficulty = 1
 creeper_safe = false
 walls = Array[ExtResource("2")]([SubResource("wall_1"), SubResource("wall_2")])
 pins = Array[ExtResource("3")]([])

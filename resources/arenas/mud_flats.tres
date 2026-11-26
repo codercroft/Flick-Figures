@@ -35,6 +35,7 @@ strength = 1.0
 [resource]
 script = ExtResource("1")
 display_name = "Mud Flats"
+difficulty = 0
 creeper_safe = false
 walls = Array[ExtResource("2")]([])
 pins = Array[ExtResource("3")]([])

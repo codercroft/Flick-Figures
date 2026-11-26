@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="ArenaData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/arena_wall.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/arena_pin.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/arena_patch.gd" id="4"]
+
+[sub_resource type="Resource" id="wall_0"]
+script = ExtResource("2")
+position = Vector2(18.0, 500.0)
+size = Vector2(36.0, 1000.0)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="wall_1"]
+script = ExtResource("2")
+position = Vector2(882.0, 500.0)
+size = Vector2(36.0, 1000.0)
+rotation_degrees = 0.0
+
+[sub_resource type="Resource" id="pin_0"]
+script = ExtResource("3")
+position = Vector2(330, 560)
+radius = 34
+
+[sub_resource type="Resource" id="pin_1"]
+script = ExtResource("3")
+position = Vector2(570, 560)
+radius = 34
+
+[resource]
+script = ExtResource("1")
+display_name = "Bumper Cars"
+difficulty = 1
+creeper_safe = false
+walls = Array[ExtResource("2")]([SubResource("wall_0"), SubResource("wall_1")])
+pins = Array[ExtResource("3")]([SubResource("pin_0"), SubResource("pin_1")])
+patches = Array[ExtResource("4")]([])

@@ -15,6 +15,8 @@ extends Resource
 @export var elite_encounters: Array[EncounterData] = []
 ## The hand-made encounters regular combats pick from (by act, no repeats within a run where possible).
 @export var regular_encounters: Array[EncounterData] = []
+## The light encounters the SECOND regular combat of act 1 draws from (an easy start; its arena is always Easy).
+@export var easy_encounters: Array[EncounterData] = []
 ## The map events (see EventData). Each Event node picks one at random, avoiding repeats in a run.
 @export var event_pool: Array[EventData] = []
 ## Rewards and opponent strength for the minigame events.
@@ -31,6 +33,11 @@ extends Resource
 @export var map: MapConfig
 ## The arena layouts a combat can use (one is picked at random for each combat).
 @export var arenas: Array[ArenaData] = []
+## Chance weights (Easy, Medium, Hard) for the arena difficulty of a random arena, one entry per act.
+## A difficulty is rolled first, then an arena of that difficulty.
+@export var arena_odds_by_act: Array[Vector3] = [Vector3(60, 40, 0), Vector3(30, 45, 25), Vector3(33, 34, 33)]
+## How many of the first regular combats of act 1 are an easy start (Easy arena; the 2nd uses `easy_encounters`).
+@export var easy_start_combats := 2
 ## Money the run starts with.
 ## Multiplies the push of EVERY explosion (Bombo, Sneaky Bomber, Land Miner, Short Fuse, Bomb Drop).
 @export var explosion_force_multiplier := 1.3

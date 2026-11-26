@@ -235,6 +235,18 @@ func _rebuild_ability() -> void:
 			ability = CombinedAbility.new(ability, extra)
 
 
+## Extra damping factor from the Grippy Table relic (1 = none). Only set during the enemy's turns.
+var grip := 1.0
+
+
+## Sets the Grippy Table damping factor, keeping everything else that scales linear_damp.
+func set_grip(multiplier: float) -> void:
+	if is_equal_approx(multiplier, grip):
+		return
+	linear_damp *= multiplier / grip
+	grip = multiplier
+
+
 ## Costume Change relic: swap this figure's equipment during a combat. Stat changes and the effect apply at once;
 ## the old item's effect is gone (its per-combat state, e.g. a used Parachute, starts fresh with a new copy).
 func set_equipment(item: EquipmentData) -> void:
@@ -1030,7 +1042,7 @@ func transform_into(new_data: FigureData) -> void:
 		data.mass *= scale_factors.get("mass", 1.0)
 		data.bounce = clampf(data.bounce + scale_factors.get("bounce", 0.0), 0.0, 1.0)
 	var new_mass := data.mass
-	linear_damp = _base_damping * data.damping_multiplier
+	linear_damp = _base_damping * data.damping_multiplier * grip
 	if equipment != null:
 		new_mass *= equipment.mass_multiplier
 		linear_damp *= equipment.damping_multiplier
