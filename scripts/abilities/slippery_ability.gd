@@ -4,6 +4,8 @@ extends FigureAbility
 ## that hit it bounces off as if it had hit a wall. Only hits on the PLAYER's turn use a stack up (one per hit, and at most
 ## every separate hit or explosion strips one; the same continuous contact (a figure grinding against it) counts once until that figure
 ## separates); hits on its own side's turn are nullified for free.
+## A Blastoid rocket PIERCES the coat: it strips one stack (its direct hit and blast together count once, only on the player's turn) and
+## still pushes him with full force (a "Pierced!" starburst shows it).
 ## Stacks never come back. At 0 it is a normal figure. Pips show the stacks left.
 
 ## Stacks at the start of a fight (Boss Upgrades adds 2, see AscensionConfig).
@@ -20,6 +22,9 @@ var _left := -1
 var _max := 0
 var _touching := {}  # figure instance id -> figure whose hit already counted and that is still in contact
 var _flash_ms := -100000
+var _pierce_ms := -100000
+var _last_rocket := 0
+var _skip_exploded_until := 0
 
 
 func _ensure() -> void:
@@ -56,6 +61,18 @@ func get_explosion_multiplier(_figure: Figure, _source: Figure) -> float:
 	return 0.0 if is_slippery() else 1.0
 
 
+## A rocket from the player's side on the player's turn pierces: one stack per rocket, full knockback.
+func on_pierced(figure: Figure, source: Figure, rocket_id: int) -> bool:
+	if not is_slippery() or figure.knocked_off or source == null or source.team != Figure.Team.PLAYER or not _player_turn():
+		return false
+	if rocket_id != _last_rocket:  # (its direct hit and its blast are one rocket)
+		_last_rocket = rocket_id
+		_pierce_ms = Time.get_ticks_msec()
+		_lose_stack(figure, null, true)
+	_skip_exploded_until = Time.get_ticks_msec() + 150  # (the blast's on_exploded must not strip a second stack)
+	return true
+
+
 func _player_turn() -> bool:
 	var combat = RunManager.combat
 	return combat != null and combat.turret_side == Figure.Team.PLAYER
@@ -77,6 +94,8 @@ func on_impact(figure: Figure, other: Figure, speed: float, _point: Vector2) -> 
 func on_exploded(figure: Figure, source: Figure) -> void:
 	if figure.knocked_off or not is_slippery():
 		return
+	if Time.get_ticks_msec() < _skip_exploded_until:
+		return
 	if (source == null or source.team == Figure.Team.PLAYER) and _player_turn():
 		_lose_stack(figure, null)
 
@@ -90,7 +109,7 @@ func on_physics_process(figure: Figure, _delta: float) -> void:
 			_touching.erase(id)
 
 
-func _lose_stack(figure: Figure, hitter: Figure) -> void:
+func _lose_stack(figure: Figure, hitter: Figure, pierced := false) -> void:
 	_ensure()
 	if _left <= 0:
 		return
@@ -100,7 +119,9 @@ func _lose_stack(figure: Figure, hitter: Figure) -> void:
 		_touching[hitter.get_instance_id()] = hitter
 	_flash_ms = Time.get_ticks_msec()
 	_left -= 1
-	if _left <= 0:
+	if pierced:
+		figure.show_popup("Pierced! %d left" % _left if _left > 0 else "Pierced! Open!", Color(1.0, 0.55, 0.15))
+	elif _left <= 0:
 		figure.show_popup("Slip! Open!", Color(1.0, 0.85, 0.3))
 	else:
 		figure.show_popup("Slip! %d left" % _left, Color(0.55, 0.92, 1.0))
@@ -114,6 +135,13 @@ func draw_overlay(figure: Figure) -> void:
 	if age < 0.45:
 		var t := age / 0.45
 		figure.draw_arc(Vector2.ZERO, figure.radius * (1.0 + 0.7 * t), 0.0, TAU, 40, Color(pip_color, 1.0 - t), 8.0 * (1.0 - t) + 2.0, true)
+	var pierce_age := (Time.get_ticks_msec() - _pierce_ms) / 1000.0
+	if pierce_age < 0.6:  # a starburst: the rocket went through the coat
+		var t := pierce_age / 0.6
+		for i in 12:
+			var dir := Vector2.from_angle(TAU * i / 12.0)
+			figure.draw_line(dir * figure.radius * (0.7 + 0.5 * t), dir * figure.radius * (1.1 + 1.1 * t), Color(1.0, 0.55, 0.15, 1.0 - t), 7.0 * (1.0 - t) + 2.0, true)
+		figure.queue_redraw()
 	if _left <= 0:
 		return
 	figure.draw_arc(Vector2.ZERO, figure.radius + 5.0, 0.0, TAU, 40, Color(pip_color, 0.55), 6.0, true)

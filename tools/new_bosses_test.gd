@@ -181,6 +181,24 @@ func _slippery(grunt, jim, jim_boss) -> void:
 	own.on_exploded(jimf, null)
 	_check(own.stacks_left() == 4, "an explosion on the player's turn costs one stack")
 	_check(own.get_explosion_multiplier(jimf, null) == 0.0, "explosions do not push him while slippery")
+	# Blastoid rockets pierce: one stack per rocket (direct hit + blast share it), full push, player's turn only
+	var pj = jim.ability.duplicate()
+	pj._left = 5
+	pj._max = 5
+	var rocket: int = 4242
+	_check(pj.on_pierced(jimf, shooter, rocket) and pj.stacks_left() == 4, "a rocket pierces and strips one stack")
+	_check(pj.on_pierced(jimf, shooter, rocket) and pj.stacks_left() == 4, "the same rocket's blast strips no second stack but still pushes")
+	pj.on_exploded(jimf, shooter)
+	_check(pj.stacks_left() == 4, "its on_exploded is not counted again")
+	_check(pj.on_pierced(jimf, shooter, rocket + 1) and pj.stacks_left() == 3, "the next rocket strips another")
+	_main.turret_side = 1
+	_check(not pj.on_pierced(jimf, shooter, rocket + 2) and pj.stacks_left() == 3, "not on the enemy's turn")
+	_main.turret_side = 0
+	jimf.ability = pj
+	var push_before: Vector2 = jimf.linear_velocity
+	jimf.take_explosion(Vector2(0, -900), shooter, rocket + 3)
+	_check(jimf.linear_velocity != push_before or pj.stacks_left() == 2, "take_explosion with a rocket id pushes and strips (stacks %d)" % pj.stacks_left())
+	jimf.ability = jim.ability
 	# a real enemy turn: he attacks like a strong Grunt
 	await _start([_entry(grunt, 0, Vector2(540, 1000)), _entry(jim, 1, Vector2(540, 600))], null, false)
 	var before: int = _main.enemy_flicks_made
@@ -208,6 +226,7 @@ func _bomb_duo(grunt, duo_boss) -> void:
 		else:
 			miner = e
 	_check(bomb != null and miner != null, "both bodies are on the table")
+	_check(duo_boss.back_wall, "Bomb Duo has the back wall")
 	_check(bomb.ability.collisions_needed == 3, "Aggro-bom carries Hair Trigger (3 collisions)")
 	_check(is_equal_approx(miner.ability.mine_spacing, 400.0 * 0.67), "Land Miner carries More Mines (spacing x0.67)")
 	_check(_main._enemy_flicks_now() == 2, "two flicks a turn while both live")

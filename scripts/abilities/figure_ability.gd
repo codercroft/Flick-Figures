@@ -31,6 +31,12 @@ func on_exploded(_figure: Figure, _source: Figure) -> void:
 	pass
 
 
+## A Blastoid rocket pierces this figure's explosion immunity. Return true to let the rocket's full push through
+## (the figure may also pay a cost, e.g. Slippery Jim loses a stack). `rocket_id` identifies the rocket (its direct hit and its blast share it).
+func on_pierced(_figure: Figure, _source: Figure, _rocket_id: int) -> bool:
+	return false
+
+
 ## Called every physics frame (for abilities that act continuously, like a magnet).
 func on_physics_process(_figure: Figure, _delta: float) -> void:
 	pass

@@ -44,6 +44,7 @@ func _on_body_entered(body: Node) -> void:
 	if other != null and other.team == owner_figure.team and other.on_deck:
 		return  # passes through its own side's figures on the deck, like their flicks do
 	if other != null and is_instance_valid(owner_figure):
+		owner_figure.set_meta("rocket_id", get_instance_id())  # (the ability reads it for the direct-hit push)
 		owner_figure.ability.on_projectile_hit(owner_figure, other, direction)
 	_explode()
 
@@ -53,7 +54,7 @@ func _explode() -> void:
 		return
 	_done = true
 	var reach := blast_radius * RunManager.relic_explosion_multiplier(owner_figure.team if is_instance_valid(owner_figure) else -1)  # Blast Cap
-	Figure.blast(get_tree(), global_position, reach, blast_force, owner_figure)
+	Figure.blast(get_tree(), global_position, reach, blast_force, owner_figure, null, -1, get_instance_id())  # (rockets pierce Slippery Jim)
 	var effect := BlastEffect.new()
 	effect.position = position
 	effect.z_index = 6

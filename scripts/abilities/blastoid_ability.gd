@@ -66,7 +66,7 @@ func on_projectile_hit(figure: Figure, target: Figure, direction := Vector2.ZERO
 		# `direct_hit_multiplier` x the rocket's normal knockback on a figure it touches (`direct_hit_falloff` of its force; the Nuke
 		# path's small blast radius would otherwise leave the target out of its own blast). The blast itself still goes off.
 		var push := direction.normalized() * blast_force * RunManager.explosion_force_multiplier() * direct_hit_falloff * direct_hit_multiplier
-		target.take_explosion(push, figure)
+		target.take_explosion(push, figure, int(figure.get_meta("rocket_id", 0)))
 	if not earthquake_on_hit:
 		return
 	for node in figure.get_tree().get_nodes_in_group("figures"):

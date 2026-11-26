@@ -796,9 +796,12 @@ func take_knockback(impulse: Vector2, source: Figure = null) -> void:
 
 ## Pushed by an explosion: breaks any glue, then the push is scaled by the ability's
 ## get_explosion_multiplier (0 = immune).
-func take_explosion(impulse: Vector2, source: Figure) -> void:
+## `rocket_id` != 0 = a Blastoid rocket: it can pierce an explosion-proof coat (Slippery Jim, `FigureAbility.on_pierced`).
+func take_explosion(impulse: Vector2, source: Figure, rocket_id := 0) -> void:
 	unglue()
 	var multiplier := ability.get_explosion_multiplier(self, source)
+	if rocket_id != 0 and multiplier < 1.0 and ability.on_pierced(self, source, rocket_id):
+		multiplier = 1.0
 	# Shell damage is separate from the push: it uses the raw impulse times the ability's damage multiplier
 	# (Bomb Shelter blocks the push but only halves the damage).
 	var damage_multiplier := ability.get_explosion_damage_multiplier(self)
@@ -976,7 +979,7 @@ func explode(blast_radius: float, force: float, spared: Figure = null) -> void:
 ## An explosion at `center` (set off by `source`, which may be null for a power) that pushes every
 ## figure within blast_radius away, except `source` and `spared`.
 static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: float,
-		source: Figure = null, spared: Figure = null, source_team := -1) -> void:
+		source: Figure = null, spared: Figure = null, source_team := -1, rocket_id := 0) -> void:
 	if source != null:
 		source_team = source.team
 	force *= RunManager.explosion_force_multiplier()
@@ -997,7 +1000,7 @@ static func blast(tree: SceneTree, center: Vector2, blast_radius: float, force: 
 		if blast_immune(other, source_team):
 			other.ability.on_exploded.call_deferred(other, source)  # (it still reacts, e.g. a Bombo chain, but is not pushed)
 			continue
-		other.take_explosion(direction * force * (1.0 - distance / blast_radius), source)
+		other.take_explosion(direction * force * (1.0 - distance / blast_radius), source, rocket_id)
 		other.ability.on_exploded.call_deferred(other, source)
 		if source_team >= 0 and other.team != source_team:  # Wet Explosions: the figures it pushes get Doused
 			var douse := RunManager.explosion_douse(source_team)

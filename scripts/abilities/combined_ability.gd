@@ -32,6 +32,12 @@ func on_stopped(figure: Figure) -> void:
 	second.on_stopped(figure)
 
 
+func on_pierced(figure: Figure, source: Figure, rocket_id: int) -> bool:
+	var a := first.on_pierced(figure, source, rocket_id)
+	var b := second.on_pierced(figure, source, rocket_id)
+	return a or b
+
+
 func on_exploded(figure: Figure, source: Figure) -> void:
 	first.on_exploded(figure, source)
 	second.on_exploded(figure, source)

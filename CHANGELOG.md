@@ -4,6 +4,12 @@ One dated entry per prompt/task: a few lines on what changed, plus any deviation
 The code is the source of truth (see CLAUDE.md): where an entry says "deviation", the code keeps that behaviour on purpose.
 Full current behaviour lives in STATE.md.
 
+## 2026-11-27: Blastoid rockets pierce Slippery Jim; Bomb Duo gets the back wall
+- New hook `FigureAbility.on_pierced(figure, source, rocket_id)` (Combined: OR). `Figure.blast` / `take_explosion` take an optional `rocket_id`; `Projectile` passes its instance id for its blast and (via the `rocket_id` meta on the owner) for the Quake Warheads direct push, so every Blastoid rocket (direct hit, blast, Twin Rockets, set-off rockets, Rocket Ring, Nuke) pierces. Slippery Jim: a player rocket on the player's turn strips ONE stack per rocket (the direct hit and blast of the same rocket count once; the blast's `on_exploded` is skipped for 150 ms) and the explosion push goes through at full strength. Enemy-turn rockets are still nullified. Feedback: "Pierced! n left" popup in orange and an orange starburst (a normal hit says "Slip!" in blue).
+- Descriptions: Blastoid ("rockets pierce Slippery Jim's coat") and Jim ("Blastoid rockets pierce the coat").
+- Bomb Duo: `back_wall = true` (full-width top wall, like Slime, Trangle and Skull-o-tron).
+- Tests: `tools/new_bosses_test.gd` (pierce rules, back wall).
+
 ## 2026-11-26: Nine events (The Gamer, Finisher, Gear Man, Punching Bag, Cup Toss, Vending Machine, Recycler, Duelist, King of the Hill)
 - The event pool is now 10 events. Bocce, Curling, Bowling and Mini-Golf are no longer events: **The Gamer** offers 3 of them (`RunConfig.gamer_games`, `MinigameConfig.gamer_choices`). Win = $6 + an Upgrade step + a finish; loss = the existing penalty rules (Ascension 2's double penalty included) and that fight's rewards add an Upgrade step (`RewardConfig.harder_fight_extra_upgrade`, on top of the existing $5 + extra item); tie = nothing. The old `win_item_kinds` setting is gone. Scenes and rules of the games are unchanged.
 - **The Finisher** (3 finishes that fit a deck figure, pick one and a figure), **Gear Man** (3 equipment items, attached permanently), **Vending Machine** ($4, +$2 per buy, 15% jam), **Recycler** (rarity rewards). Gear Man's items are locked: `RunManager.deck_locked` makes `equip` / `unequip` refuse, the Inventory shows "permanently attached" and disables Unequip, a lock is drawn on the badge (table, deck strip); replacing or removing the figure loses the item. A figure with a permanent item cannot get another from Gear Man.

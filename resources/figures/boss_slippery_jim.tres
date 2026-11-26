@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Slippery Jim"
-description = "A strong, aggressive Grunt in a slippery coat. Each of your hits only strips one Slippery stack (2 stacks); until they are gone nothing moves him, and magnets and glue do nothing to him."
+description = "A strong, aggressive Grunt in a slippery coat. Each of your hits only strips one Slippery stack (2 stacks); until they are gone nothing moves him, and magnets and glue do nothing to him. Blastoid rockets pierce the coat."
 map_label = "SJ"
 map_color = Color(0.3, 0.8, 0.9, 1)
 map_icon = 37
